@@ -9,7 +9,9 @@ def save(client, project, config, revision=0):
         json=dict(expected_revision=revision, configuration=config),
     )
     assert response.status_code == 200, response.text
-    return response.json()
+    result = response.json()
+    assert result["name"] == project["name"]
+    return result
 
 
 def test_shared_counts_and_resource_limit(client, catalog, config, project):

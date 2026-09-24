@@ -29,9 +29,10 @@ export function AccessorySuggestionCard(props: Props) {
   const existing = configuration.devices.filter((item) =>
     suggestion.rule.target_variant_ids.includes(item.variant_id),
   );
-  const amount = quantity ?? suggestion.missing ?? undefined;
+  const hasMissing = suggestion.missing !== null && Number(suggestion.missing) > 0;
+  const amount = quantity ?? (hasMissing ? suggestion.missing! : undefined);
   const applicable =
-    !busy && !stale && suggestion.status === "pass" && Number(suggestion.missing) > 0;
+    !busy && !stale && suggestion.status === "pass" && hasMissing;
   return (
     <Card
       size="small"
@@ -63,74 +64,80 @@ export function AccessorySuggestionCard(props: Props) {
         {suggestion.rule.evidence}
         {suggestion.calculation ? `；${suggestion.calculation.engine}` : ""}
       </Typography.Paragraph>
-      <Space wrap align="end">
-        <Select
-          value={action}
-          style={{ width: 150 }}
-          onChange={setAction}
-          options={[
-            { value: "new", label: "新增清单项" },
-            { value: "existing", label: "关联已有设备" },
-          ]}
-        />
-        {action === "new" ? (
-          <>
-            <Select
-              style={{ width: 250 }}
-              placeholder="选择配套配置"
-              value={chosenId}
-              options={variantOptions(candidates)}
-              onChange={(value) => {
-                setVariantId(value);
-                setSourceId(undefined);
-              }}
-            />
-            <Select
-              style={{ width: 210 }}
-              placeholder="选择资料来源"
-              value={chosenSource}
-              options={sourceOptions(variant)}
-              onChange={setSourceId}
-            />
-          </>
-        ) : (
+      {hasMissing ? (
+        <Space wrap align="end">
           <Select
-            style={{ width: 300 }}
-            placeholder="选择已有设备"
-            value={deviceId}
-            options={existing.map((item) => ({
-              value: item.id,
-              label: `${item.name} · 可用数量 ${item.quantity}`,
-            }))}
-            onChange={setDeviceId}
+            value={action}
+            style={{ width: 150 }}
+            onChange={setAction}
+            options={[
+              { value: "new", label: "新增清单项" },
+              { value: "existing", label: "关联已有设备" },
+            ]}
           />
-        )}
-        <InputNumber
-          stringMode
-          min="0.000001"
-          value={amount}
-          onChange={(value) => setQuantity(value === null ? undefined : String(value))}
-          addonBefore="分配数量"
-        />
-        <Button
-          type="primary"
-          disabled={
-            !applicable ||
-            !amount ||
-            (action === "new" ? !(chosenId && chosenSource) : !deviceId)
-          }
-          onClick={() =>
-            onApply(
-              suggestion,
-              action === "new"
-                ? { variantId: chosenId!, sourceId: chosenSource!, quantity: amount }
-                : { existingDeviceId: deviceId!, quantity: amount },
-            )
-          }
-        >
-          {action === "new" ? "补入所选配置" : "确认抵扣"}
-        </Button>
-      </Space>
+          {action === "new" ? (
+            <>
+              <Select
+                style={{ width: 250 }}
+                placeholder="选择配套配置"
+                value={chosenId}
+                options={variantOptions(candidates)}
+                onChange={(value) => {
+                  setVariantId(value);
+                  setSourceId(undefined);
+                }}
+              />
+              <Select
+                style={{ width: 210 }}
+                placeholder="选择资料来源"
+                value={chosenSource}
+                options={sourceOptions(variant)}
+                onChange={setSourceId}
+              />
+            </>
+          ) : (
+            <Select
+              style={{ width: 300 }}
+              placeholder="选择已有设备"
+              value={deviceId}
+              options={existing.map((item) => ({
+                value: item.id,
+                label: `${item.name} · 可用数量 ${item.quantity}`,
+              }))}
+              onChange={setDeviceId}
+            />
+          )}
+          <Space orientation="vertical" size={2}>
+            <Typography.Text type="secondary">分配数量</Typography.Text>
+            <InputNumber
+              stringMode
+              min="0.000001"
+              value={amount}
+              onChange={(value) =>
+                setQuantity(value === null ? undefined : String(value))
+              }
+            />
+          </Space>
+          <Button
+            type="primary"
+            disabled={
+              !applicable ||
+              !amount ||
+              (action === "new" ? !(chosenId && chosenSource) : !deviceId)
+            }
+            onClick={() =>
+              onApply(
+                suggestion,
+                action === "new"
+                  ? { variantId: chosenId!, sourceId: chosenSource!, quantity: amount }
+                  : { existingDeviceId: deviceId!, quantity: amount },
+              )
+            }
+          >
+            {action === "new" ? "补入所选配置" : "确认抵扣"}
+          </Button>
+        </Space>
+      ) : null}
     </Card>
   );
 }

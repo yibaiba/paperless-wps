@@ -64,7 +64,16 @@ export function ProjectChecks({
       ) : null}
       <Table
         size="small"
-        rowKey={(_, i) => String(i)}
+        rowKey={(item) =>
+          [
+            item.kind,
+            item.device_id,
+            item.requirement_id,
+            item.demand_id,
+            item.resource,
+            item.message,
+          ].join(":")
+        }
         dataSource={checked?.checks}
         columns={[
           {

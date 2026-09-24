@@ -153,7 +153,7 @@ class ProjectConfigurations:
         options = dict(entity_id=record.id, expected_revision=actual) if record else {}
         result = self.entities.save("project", payload, **options)
         self._project_items(project_id, checked["configuration"])
-        return result
+        return {**result, "name": project.name}
 
     def _project_items(self, project_id, data):
         self.session.execute(delete(ProjectItem).where(ProjectItem.project_id == project_id))
