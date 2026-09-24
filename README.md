@@ -156,6 +156,12 @@ npm --prefix frontend run build
 
 ## 产品搭配知识与统一项目配置
 
-新增产品整理、搭配知识、AI 资料整理及项目“需求选配与拓扑”入口。功能、数据状态、后台工作进程启动方式及验收范围见 [配置平台实施记录](docs/configuration-implementation.md) 和 [验证记录](docs/configuration-verification.md)。
+产品整理、搭配知识和项目“需求选配与拓扑”组成业务主流程。候选筛选、环境检查、配套数量和已有设备抵扣都由结构化知识、Python 业务代码与内嵌 ZEN 计算完成，不依赖模型实时响应。AI 资料整理只是可选的录入助手；未配置模型时，人工仍可完整维护知识和使用项目配置。
+
+旧配套规则可从“搭配知识”统一迁移：原规则和历史继续保留，迁入内容保持草稿，重复迁移不会产生副本。“每组”等口径不明确的规则必须先补充系统、房间或项目范围，不能直接用于补料。统一项目计算支持设备、系统、房间和项目四种范围，并以明确的分配记录核对已有配套；软件、授权、硬件和配件分别计量。
+
+当前业务库的五套无纸化工作表共有 144 条来源，已全部建立独立配置归属；全工作簿 459 条来源中已整理 163 条。5 条旧规则已迁入统一知识库且全部保持草稿。红盾 Windows 试点已确认 RS-MSC100 服务端软件和 PCS-6580T 桌面终端的已知操作系统条件；容量、共享部署、授权以及升降器完整配套仍显示资料不足，未作为整套方案验收。
+
+功能、数据状态、后台工作进程启动方式及验收范围见 [配置平台实施记录](docs/configuration-implementation.md) 和 [验证记录](docs/configuration-verification.md)。
 
 新增依赖通过 `.venv/bin/pip install -e './backend[dev]'` 安装；升级后先运行 `.venv/bin/python scripts/migrate_configuration.py`，再重启后端，并单独启动 `.venv/bin/python -m presales.configuration.extraction.worker`。模型连接在后台页面配置；未配置模型也能维护产品、知识和项目。

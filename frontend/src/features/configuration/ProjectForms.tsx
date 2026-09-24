@@ -202,7 +202,8 @@ export function DeploymentForm({
           <Select
             options={[
               { value: "hardware", label: "硬件" },
-              { value: "software", label: "软件 / 授权" },
+              { value: "software", label: "软件" },
+              { value: "license", label: "授权" },
               { value: "accessory", label: "配件" },
             ]}
           />
