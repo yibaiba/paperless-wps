@@ -62,6 +62,37 @@ def test_legacy_api_writes_draft_knowledge_and_migration_stays_idempotent(client
 def test_migrated_legacy_update_writes_unified_knowledge(client, catalog):
     rule = legacy_rule(client, catalog)
     post(client, "/knowledge/migration-apply", {"rule_ids": [rule["id"]]})
+    current = next(
+        item
+        for item in client.get(BASE + "/knowledge").json()
+        if (item.get("migration_source") or {}).get("legacy_rule_id") == rule["id"]
+    )
+    generated = {k: v for k, v in current.items() if k not in {"id", "revision", "updated_at"}}
+    generated.update(
+        calculation_scope="system",
+        quantity_source="environment",
+        quantity_key="terminal_count",
+        output_kind="license",
+        allocation_mode="shareable",
+        system="无纸化",
+        role="服务端",
+        conditions=[
+            {
+                "field": "product.cpu_arch",
+                "operator": "eq",
+                "value": "x86",
+                "minimum": None,
+                "maximum": None,
+                "unit": "",
+            }
+        ],
+    )
+    generated["selector"] = {**generated["selector"], "category": "服务器"}
+    response = client.put(
+        BASE + "/knowledge/" + current["id"],
+        json={"expected_revision": current["revision"], "payload": generated},
+    )
+    assert response.status_code == 200, response.text
     payload = {
         k: rule[k]
         for k in (
@@ -88,4 +119,12 @@ def test_migrated_legacy_update_writes_unified_knowledge(client, catalog):
         if (item.get("migration_source") or {}).get("legacy_rule_id") == rule["id"]
     )
     assert migrated["factor"] == "3"
+    assert migrated["calculation_scope"] == "system"
+    assert migrated["quantity_source"] == "environment"
+    assert migrated["quantity_key"] == "terminal_count"
+    assert migrated["output_kind"] == "license"
+    assert migrated["allocation_mode"] == "shareable"
+    assert migrated["system"] == "无纸化" and migrated["role"] == "服务端"
+    assert migrated["selector"]["category"] == "服务器"
+    assert migrated["conditions"][0]["field"] == "product.cpu_arch"
     assert migrated["migration_source"]["legacy_rule_revision"] == 2

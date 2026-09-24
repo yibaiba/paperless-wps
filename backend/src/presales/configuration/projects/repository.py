@@ -207,7 +207,9 @@ class ProjectConfigurations:
         if request.existing_device_id:
             if data.get("calculation_version", 1) < 2:
                 raise ValueError("请先按最新计算方式重新检查，再关联已有设备")
-            self._validate_existing_allocation(data, suggestion, device_id, amount)
+            self._validate_existing_allocation(
+                checked, suggestion=suggestion, device_id=device_id, amount=amount
+            )
         else:
             self._append_suggested_device(data, suggestion, request, device_id, amount)
         data["accessory_allocations"].append(
@@ -241,13 +243,21 @@ class ProjectConfigurations:
         )
 
     @staticmethod
-    def _validate_existing_allocation(data, suggestion, device_id, amount):
+    def _validate_existing_allocation(checked, *, suggestion, device_id, amount):
+        data = checked["configuration"]
         device = next((item for item in data["devices"] if item["id"] == device_id), None)
         if not device or device["variant_id"] not in suggestion["rule"]["target_variant_ids"]:
             raise ValueError("已有设备不属于该配套需求的候选配置")
         allocations = data.get("accessory_allocations", [])
+        demand_rules = {item["id"]: item["rule"] for item in checked["suggestions"]}
         used = sum(
-            (Decimal(item["quantity"]) for item in allocations if item["device_id"] == device_id),
+            (
+                Decimal(item["quantity"])
+                for item in allocations
+                if item["device_id"] == device_id
+                and demand_rules[item["demand_id"]].get("allocation_mode", "consumable")
+                == "consumable"
+            ),
             Decimal(0),
         )
         if suggestion["rule"].get("allocation_mode", "consumable") == "consumable":

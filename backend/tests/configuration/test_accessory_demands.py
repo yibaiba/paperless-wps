@@ -134,6 +134,52 @@ def test_existing_device_allocation_offsets_demand_without_double_use(
     assert "可分配数量不足" in response.text
 
 
+@pytest.mark.parametrize("order", [("shareable", "consumable"), ("consumable", "shareable")])
+def test_shareable_and_consumable_allocations_are_order_independent(
+    client, catalog, config, order
+):
+    config = version_two(config)
+    rules = {
+        mode: accessory_rule(
+            client,
+            catalog["variants"][0],
+            catalog["variants"][1],
+            name="共享需求" if mode == "shareable" else "耗用需求",
+            need_key=mode,
+            factor="1",
+            allocation_mode=mode,
+        )
+        for mode in order
+    }
+    config["devices"].append(
+        {
+            **config["devices"][0],
+            "id": "mixed-accessory",
+            "variant_id": catalog["variants"][1]["id"],
+            "source_id": catalog["sources"][1]["id"],
+            "kind": "accessory",
+        }
+    )
+    checked = post(client, "/check", {"configuration": config})
+    for mode in order:
+        suggestion = next(
+            item for item in checked["suggestions"] if item["rule"]["id"] == rules[mode]["id"]
+        )
+        checked = post(
+            client,
+            "/apply",
+            {
+                "configuration": checked["configuration"],
+                "fingerprint": checked["fingerprint"],
+                "suggestion_id": suggestion["id"],
+                "existing_device_id": "mixed-accessory",
+                "quantity": "1",
+            },
+        )
+    assert all(item["missing"] == "0" for item in checked["suggestions"])
+    assert not any(item["status"] == "conflict" for item in checked["checks"])
+
+
 def test_draft_and_cycle_never_create_applicable_purchase(client, catalog, config):
     config = version_two(config)
     draft = accessory_rule(

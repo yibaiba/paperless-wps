@@ -11,6 +11,23 @@ from .schemas import KnowledgeInput, with_completion
 
 
 class LegacyKnowledgeMigration:
+    PRESERVED_FIELDS = (
+        "status",
+        "effect",
+        "system",
+        "role",
+        "conditions",
+        "need_key",
+        "need_name",
+        "accessory_type",
+        "calculation_scope",
+        "quantity_source",
+        "quantity_key",
+        "output_kind",
+        "allocation_mode",
+        "shared_roles",
+    )
+
     def __init__(self, session):
         self.session = session
         self.entities = Entities(session)
@@ -31,8 +48,10 @@ class LegacyKnowledgeMigration:
             if item["blocking"]:
                 results.append({**item, "action": "skipped"})
                 continue
-            payload = KnowledgeInput.model_validate(item["knowledge"])
             current = item.get("knowledge_record")
+            payload = KnowledgeInput.model_validate(
+                self._preserve_unified_fields(item["knowledge"], current)
+            )
             migrated_revision = (current or {}).get("migration_source", {}).get(
                 "legacy_rule_revision"
             )
@@ -62,40 +81,31 @@ class LegacyKnowledgeMigration:
                 raise ValueError("旧规则更新后无法映射到具体配置：" + "；".join(item["blocking"]))
             return None
         if current:
-            self._ensure_legacy_compatible(current, rule)
             options = dict(entity_id=current["id"], expected_revision=current["revision"])
         else:
             options = dict(create_id=self._knowledge_id(rule["id"]))
+        knowledge = self._preserve_unified_fields(item["knowledge"], current)
         return self.entities.save(
-            "knowledge", KnowledgeInput.model_validate(item["knowledge"]), **options
+            "knowledge", KnowledgeInput.model_validate(knowledge), **options
         )
 
     @staticmethod
     def _knowledge_id(rule_id: str) -> str:
         return str(uuid5(NAMESPACE_URL, "presales:legacy-knowledge:" + rule_id))
 
-    @staticmethod
-    def _ensure_legacy_compatible(current: dict, rule: dict):
-        expected_scope = None if rule["mode"] == "per_group" else "device"
-        incompatible = any(
-            (
-                current.get("status") != "draft",
-                bool(current.get("conditions")),
-                bool(current.get("system")),
-                bool(current.get("role")),
-                bool(current.get("selector", {}).get("category")),
-                bool(current.get("selector", {}).get("series")),
-                bool(current.get("selector", {}).get("exclude_variant_ids")),
-                current.get("calculation_scope") != expected_scope,
-                current.get("quantity_source", "device_quantity") != "device_quantity",
-                bool(current.get("quantity_key")),
-                current.get("allocation_mode", "consumable") != "consumable",
-                current.get("output_kind", "accessory") != "accessory",
-                bool(current.get("shared_roles")),
-            )
-        )
-        if incompatible:
-            raise ValueError("该迁移知识已使用旧规则无法表达的字段，请在统一搭配知识中维护")
+    @classmethod
+    def _preserve_unified_fields(cls, generated: dict, current: dict | None):
+        if not current:
+            return generated
+        preserved = {key: current[key] for key in cls.PRESERVED_FIELDS}
+        current_selector = current["selector"]
+        selector = {
+            **generated["selector"],
+            "category": current_selector["category"],
+            "series": current_selector["series"],
+            "exclude_variant_ids": current_selector["exclude_variant_ids"],
+        }
+        return {**generated, **preserved, "selector": selector}
 
     def _preview(self, rule: dict, current: dict | None) -> dict:
         source_ids, missing_sources = self._variants([p["id"] for p in rule["sources"]])
