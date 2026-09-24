@@ -11,6 +11,9 @@ const fields: Record<string, string> = {
   width: "宽度",
   height: "高度",
   depth: "深度",
+  terminal_count: "终端数量",
+  user_count: "用户人数",
+  display_inches: "屏幕尺寸（英寸）",
 };
 function fieldName(raw: unknown) {
   const [scope, key] = String(raw).split(".");

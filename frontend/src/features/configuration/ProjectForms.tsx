@@ -9,6 +9,8 @@ import {
   Space,
 } from "antd";
 import type { Configuration, Deployment, Requirement } from "./types";
+import { SystemTypeInput } from "./SystemTypeInput";
+import { RoleInput } from "./RoleInput";
 import {
   AttributeEditor,
   AuthorFields,
@@ -36,7 +38,6 @@ export function SystemForm({
       <Form
         form={form}
         layout="vertical"
-        initialValues={{ kind: "无纸化" }}
         onFinish={(v) => {
           const old = configuration.rooms.find((r) => r.name === v.room);
           const room = old ?? { id: crypto.randomUUID(), name: v.room };
@@ -62,13 +63,13 @@ export function SystemForm({
         <Form.Item name="name" label="系统名称" rules={required}>
           <Input placeholder="一楼无纸化" />
         </Form.Item>
-        <Form.Item name="kind" label="系统类型" rules={required}>
-          <Select
-            options={["无纸化", "会议预约"].map((value) => ({
-              value,
-              label: value,
-            }))}
-          />
+        <Form.Item
+          name="kind"
+          label="系统 / 方案版本"
+          rules={required}
+          extra="选择具体版本；Windows、麒麟等运行环境在角色需求中填写。"
+        >
+          <SystemTypeInput />
         </Form.Item>
       </Form>
     </Modal>
@@ -77,11 +78,13 @@ export function SystemForm({
 export function RequirementForm({
   initial,
   systemId,
+  systemName,
   onApply,
   onClose,
 }: {
   initial?: Requirement;
   systemId: string;
+  systemName: string;
   onApply: (r: Requirement) => void;
   onClose: () => void;
 }) {
@@ -113,7 +116,7 @@ export function RequirementForm({
         }}
       >
         <Form.Item name="role" label="需要的角色" rules={required}>
-          <Input />
+          <RoleInput system={systemName} />
         </Form.Item>
         <AttributeEditor name="environment" />
         <Form.List name="resources">

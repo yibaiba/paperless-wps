@@ -35,7 +35,8 @@ export function ProjectCandidates({
   busy,
 }: Props) {
   const [search, setSearch] = useState(""),
-    [page, setPage] = useState(1);
+    [page, setPage] = useState(1),
+    [includeAll, setIncludeAll] = useState(false);
   const system = configuration.systems.find(
     (s) => s.id === requirement?.system_id,
   );
@@ -46,6 +47,8 @@ export function ProjectCandidates({
       system?.kind,
       requirement?.role,
       requirement?.environment,
+      configuration.knowledge_snapshot_id,
+      includeAll,
     ],
     enabled: !!requirement,
     queryFn: () =>
@@ -55,16 +58,21 @@ export function ProjectCandidates({
           system: system!.kind,
           role: requirement!.role,
           environment: requirement!.environment,
+          knowledge_snapshot_id: configuration.knowledge_snapshot_id ?? null,
+          include_all: includeAll,
         }),
       }),
   });
   const [sourceIds, setSourceIds] = useState<Record<string, string>>({});
+  const [kinds, setKinds] = useState<Record<string, Deployment["kind"]>>({});
   const [expanded, setExpanded] = useState<string>();
   const choose = (variant: Variant) => {
     const sourceId =
       sourceIds[variant.id] ??
       (variant.source_ids.length === 1 ? variant.source_ids[0] : undefined);
     if (!sourceId) return;
+    const kind = kinds[variant.id];
+    if (!kind) return;
     onSelect(
       {
         id: crypto.randomUUID(),
@@ -72,7 +80,7 @@ export function ProjectCandidates({
         variant_id: variant.id,
         source_id: sourceId,
         quantity: "1",
-        kind: "hardware",
+        kind,
         note: "",
         variant_snapshot: variant,
         source_snapshot: null,
@@ -105,8 +113,17 @@ export function ProjectCandidates({
     >
       {query.error ? <Alert type="error" title={query.error.message} /> : null}
       <Typography.Paragraph type="secondary">
-        未知或冲突的选择可以保留，检查结果会持续展示。
+        默认只显示当前版本和角色已有知识关联的配置；草稿候选会显示为资料不足。
       </Typography.Paragraph>
+      <Button
+        style={{ marginBottom: 16 }}
+        onClick={() => {
+          setIncludeAll((value) => !value);
+          setPage(1);
+        }}
+      >
+        {includeAll ? "仅看相关产品" : "查看其他产品"}
+      </Button>
       <Select
         placeholder="关联已有设备（明确共用）"
         style={{ width: "100%", marginBottom: 16 }}
@@ -141,28 +158,44 @@ export function ProjectCandidates({
             extra={<Status value={c.status} />}
           >
             <Typography.Paragraph>{c.variant.name}</Typography.Paragraph>
-            <Select
-              style={{ width: "100%" }}
-              placeholder="选择采购资料来源"
-              disabled={!c.variant.source_ids.length}
-              value={
-                sourceIds[c.variant.id] ??
-                (c.variant.source_ids.length === 1
-                  ? c.variant.source_ids[0]
-                  : undefined)
-              }
-              options={sourceOptions(c.variant)}
-              onChange={(id) =>
-                setSourceIds({ ...sourceIds, [c.variant.id]: id })
-              }
-            />
+            <Space wrap style={{ width: "100%" }}>
+              <Select
+                style={{ minWidth: 260 }}
+                placeholder="选择采购资料来源"
+                disabled={!c.variant.source_ids.length}
+                value={
+                  sourceIds[c.variant.id] ??
+                  (c.variant.source_ids.length === 1
+                    ? c.variant.source_ids[0]
+                    : undefined)
+                }
+                options={sourceOptions(c.variant)}
+                onChange={(id) =>
+                  setSourceIds((current) => ({ ...current, [c.variant.id]: id }))
+                }
+              />
+              <Select
+                style={{ width: 150 }}
+                placeholder="选择清单类型"
+                value={kinds[c.variant.id]}
+                onChange={(kind) =>
+                  setKinds((current) => ({ ...current, [c.variant.id]: kind }))
+                }
+                options={[
+                  { value: "hardware", label: "硬件" },
+                  { value: "software", label: "软件" },
+                  { value: "license", label: "授权" },
+                  { value: "accessory", label: "配件" },
+                ]}
+              />
+            </Space>
             <Space style={{ marginTop: 10 }}>
               <Button
                 disabled={
                   busy ||
                   !(
                     sourceIds[c.variant.id] || c.variant.source_ids.length === 1
-                  )
+                  ) || !kinds[c.variant.id]
                 }
                 onClick={() => choose(c.variant)}
               >
@@ -213,7 +246,13 @@ export function ProjectCandidates({
         style={{ marginTop: 16 }}
       />
       {!candidates.length ? (
-        <Empty description="尚未整理产品配置，请先完成产品库核对" />
+        <Empty
+          description={
+            includeAll
+              ? "尚未整理产品配置，请先完成产品库核对"
+              : "当前版本和角色还没有关联候选，可查看其他产品或维护搭配知识"
+          }
+        />
       ) : null}
     </Card>
   );

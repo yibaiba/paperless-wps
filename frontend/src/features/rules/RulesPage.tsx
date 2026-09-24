@@ -8,6 +8,7 @@ import {PageHeader} from '../../shared/PageHeader';
 import {RuleDrawer} from './RuleDrawer';
 import {modeLabels,relationLabels,statusLabels} from './types';
 import type {AccessoryRule} from './types';
+import {Link} from 'react-router-dom';
 
 export default function RulesPage(){
   const [editing,setEditing] = useState<AccessoryRule>();
@@ -15,8 +16,8 @@ export default function RulesPage(){
   const rules = useQuery({queryKey:['rules'],queryFn:()=>api<AccessoryRule[]>('/rules')});
   return <>
     <PageHeader title="配套规则" description="把已明确的配套关系变成可维护、可试算的数量规则。" actions={<Button type="primary" icon={<PlusOutlined/>} onClick={()=>setCreating(true)}>新建规则</Button>}/>
-    <Alert className="section-bottom" type="info" showIcon title="GoRules ZEN 已接入，只有启用的规则参与项目计算。"
-      description="支持按产品属性匹配、多个型号合计容量、必须配套及候选选择检查。规则以区域 / 系统分组；共享条件由维护人确认，原文备注不会自动变成规则。"/>
+    <Alert className="section-bottom" type="warning" showIcon title="这是旧配套规则页面，仅用于历史查看和兼容维护。"
+      description={<>新项目统一使用<Link to="/knowledge">搭配知识</Link>。可在搭配知识页预览并迁移旧规则；原规则和历史不会删除。</>}/>
     {rules.error?<Alert type="error" title={rules.error.message} className="section-bottom"/>:null}
     <Card><Table<AccessoryRule> rowKey="id" loading={rules.isLoading} dataSource={rules.data} scroll={{x:1050}}
       locale={{emptyText:<Empty description="还没有配套规则，请选择真实产品并录入已确认的配套关系"/>}} columns={[

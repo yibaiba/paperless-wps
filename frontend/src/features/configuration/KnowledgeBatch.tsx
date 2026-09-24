@@ -1,10 +1,14 @@
 import { Form, Input, Modal, Select } from "antd";
 import type { Knowledge } from "./types";
+import { SystemTypeInput } from "./SystemTypeInput";
 import { AuthorFields, useVariants, variantOptions } from "./shared";
 export function knowledgePayload(item: Knowledge) {
   return Object.fromEntries(
     Object.entries(item).filter(
-      ([key]) => !["id", "revision", "updated_at"].includes(key),
+      ([key]) =>
+        !["id", "revision", "updated_at", "completion", "missing_fields"].includes(
+          key,
+        ),
     ),
   );
 }
@@ -68,14 +72,8 @@ export function KnowledgeBatch({
             ]}
           />
         </Form.Item>
-        <Form.Item name="system" label="统一系统类型（留空保持原值）">
-          <Select
-            allowClear
-            options={["无纸化", "会议预约"].map((value) => ({
-              value,
-              label: value,
-            }))}
-          />
+        <Form.Item name="system" label="统一系统 / 方案版本（留空保持原值）">
+          <SystemTypeInput />
         </Form.Item>
         <Form.Item name="role" label="统一角色（留空保持原值）">
           <Input />

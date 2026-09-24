@@ -51,7 +51,11 @@ class ProjectConfigurations:
             raise ValueError("项目不存在")
         record = self.record(project_id)
         if record:
-            return {**view(record), "name": project.name}
+            result = view(record)
+            result["configuration"] = Configuration.model_validate(
+                result["configuration"]
+            ).model_dump(mode="json")
+            return {**result, "name": project.name}
         count = len(
             list(
                 self.session.scalars(

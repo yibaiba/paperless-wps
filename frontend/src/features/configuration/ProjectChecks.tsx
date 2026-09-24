@@ -1,18 +1,14 @@
-import { useState } from "react";
-import { Alert, Button, Card, Select, Space, Table, Typography } from "antd";
-import type { Checked, Configuration, Suggestion } from "./types";
-import { Status, useVariants, variantOptions, sourceOptions } from "./shared";
+import { Alert, Button, Card, Space, Table } from "antd";
+import type { ApplyChoice, Checked, Configuration, Suggestion } from "./types";
+import { Status, useVariants } from "./shared";
 import { EvidenceDetails } from "./EvidenceDetails";
+import { AccessorySuggestionCard } from "./AccessorySuggestionCard";
 interface Props {
   checked?: Checked;
   configuration: Configuration;
   stale: boolean;
   busy: boolean;
-  onApply: (
-    suggestion: Suggestion,
-    variantId: string,
-    sourceId: string,
-  ) => void;
+  onApply: (suggestion: Suggestion, choice: ApplyChoice) => void;
   onCheck: (refresh: boolean) => void;
 }
 export function ProjectChecks({
@@ -24,8 +20,6 @@ export function ProjectChecks({
   onCheck,
 }: Props) {
   const variants = useVariants();
-  const [choices, setChoices] = useState<Record<string, string>>({}),
-    [sources, setSources] = useState<Record<string, string>>({});
   const names = new Map(configuration.devices.map((d) => [d.id, d.name]));
   return (
     <Card
@@ -57,7 +51,13 @@ export function ProjectChecks({
           description={checked.version_changes
             .map(
               (v) =>
-                `${v.kind === "knowledge" ? "搭配知识" : "产品配置"}：${v.used ?? "未纳入"} → v${v.current}`,
+                `${
+                  v.kind === "knowledge"
+                    ? "搭配知识"
+                    : v.kind === "calculation"
+                      ? "计算方式"
+                      : "产品配置"
+                }：${v.used ?? "未纳入"} → v${v.current}`,
             )
             .join("；")}
         />
@@ -82,6 +82,7 @@ export function ProjectChecks({
                 compatibility: "适配",
                 sharing: "共用部署",
                 capacity: "资源容量",
+                accessory_allocation: "配套分配",
               })[c.kind] ?? c.kind,
           },
           { title: "结果", render: (_, c) => <Status value={c.status} /> },
@@ -111,68 +112,17 @@ export function ProjectChecks({
         }}
       />
       <Space orientation="vertical" style={{ width: "100%" }}>
-        {checked?.suggestions.map((s) => {
-          const candidates = variants.data?.filter((v) =>
-            s.rule.target_variant_ids.includes(v.id),
-          );
-          const chosen =
-            choices[s.id] ??
-            (candidates?.length === 1 ? candidates[0].id : undefined);
-          const variant = candidates?.find((v) => v.id === chosen);
-          const source =
-            sources[s.id] ??
-            (variant?.source_ids.length === 1
-              ? variant.source_ids[0]
-              : undefined);
-          return (
-            <Card size="small" key={s.id} title={s.rule.name}>
-              <Typography.Paragraph>
-                {names.get(s.parent_id)} ·{" "}
-                {
-                  { required: "必需", recommended: "推荐", optional: "可选" }[
-                    s.rule.accessory_type
-                  ]
-                }{" "}
-                · 缺量 {s.missing ?? "条件待确认"}
-              </Typography.Paragraph>
-              <Space wrap>
-                <Select
-                  style={{ width: 240 }}
-                  placeholder="选择一个配件候选"
-                  value={chosen}
-                  options={variantOptions(candidates)}
-                  onChange={(v) => {
-                    setChoices({ ...choices, [s.id]: v });
-                    setSources({ ...sources, [s.id]: "" });
-                  }}
-                />
-                <Select
-                  style={{ width: 190 }}
-                  placeholder="选择资料来源"
-                  value={source}
-                  options={sourceOptions(variant)}
-                  onChange={(id) => setSources({ ...sources, [s.id]: id })}
-                />
-                <Button
-                  disabled={
-                    busy ||
-                    stale ||
-                    s.status !== "pass" ||
-                    !Number(s.missing) ||
-                    !chosen ||
-                    !source
-                  }
-                  onClick={() => onApply(s, chosen!, source!)}
-                >
-                  补入所选配件
-                </Button>
-              </Space>
-              <Typography.Paragraph type="secondary">
-                {s.rule.evidence}
-              </Typography.Paragraph>
-            </Card>
-          );
-        })}
+        {checked?.suggestions.map((suggestion) => (
+          <AccessorySuggestionCard
+            key={suggestion.id}
+            suggestion={suggestion}
+            configuration={configuration}
+            variants={variants.data}
+            busy={busy}
+            stale={stale}
+            onApply={onApply}
+          />
+        ))}
       </Space>
     </Card>
   );

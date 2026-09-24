@@ -32,7 +32,7 @@ export function Workbench() {
           { key: 'knowledge', icon: <ApartmentOutlined />, label: '搭配知识' },
           { key: 'extraction', icon: <AuditOutlined />, label: 'AI 资料整理' },
           { key: 'issues', icon: <AuditOutlined />, label: '资料核对' },
-          { key: 'rules', icon: <ApartmentOutlined />, label: '配套规则' },
+          { key: 'rules', icon: <ApartmentOutlined />, label: '旧配套规则' },
           { key: 'topologies', icon: <ApartmentOutlined />, label: '方案拓扑' },
           { key: 'projects', icon: <ProfileOutlined />, label: '项目清单' },
         ]} />

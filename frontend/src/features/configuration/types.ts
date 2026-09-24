@@ -61,11 +61,24 @@ export interface Knowledge extends Authored {
   system: string;
   role: string;
   conditions: Condition[];
+  need_key: string;
+  need_name: string;
   target_variant_ids: string[];
   accessory_type: "required" | "recommended" | "optional";
-  mode: "per_unit" | "per_capacity" | "per_group";
-  factor: string;
+  calculation_scope: "device" | "system" | "room" | "project" | null;
+  quantity_source: "device_quantity" | "environment";
+  quantity_key: string;
+  mode: "per_unit" | "per_capacity" | "per_group" | null;
+  factor: string | null;
+  output_kind: "hardware" | "software" | "license" | "accessory";
+  allocation_mode: "consumable" | "shareable";
   shared_roles: string[];
+  completion?: "complete" | "incomplete";
+  missing_fields?: string[];
+  migration_source?: {
+    legacy_rule_id: string;
+    legacy_rule_revision: number;
+  } | null;
 }
 export interface Room {
   id: string;
@@ -96,17 +109,26 @@ export interface Deployment {
   variant_id: string;
   source_id: string;
   quantity: string;
-  kind: "hardware" | "software" | "accessory";
+  kind: "hardware" | "software" | "license" | "accessory";
   note: string;
   variant_snapshot: Variant | null;
   source_snapshot: Record<string, unknown> | null;
   origin_suggestion: string | null;
 }
+export interface AccessoryAllocation {
+  id: string;
+  demand_id: string;
+  device_id: string;
+  quantity: string;
+  evidence: string;
+}
 export interface Configuration extends Authored {
+  calculation_version: 1 | 2;
   rooms: Room[];
   systems: System[];
   requirements: Requirement[];
   devices: Deployment[];
+  accessory_allocations: AccessoryAllocation[];
   drawing_xml: string;
   knowledge_snapshot: Knowledge[] | null;
   knowledge_snapshot_id?: string | null;
@@ -116,6 +138,7 @@ export interface Check {
   status: "pass" | "conflict" | "unknown";
   device_id?: string;
   requirement_id?: string;
+  demand_id?: string;
   message?: string;
   resource?: string;
   unit?: string;
@@ -128,9 +151,20 @@ export interface Suggestion {
   parent_id: string;
   rule: Knowledge;
   status: string;
-  required?: string;
-  missing?: string;
+  scope?: "device" | "system" | "room" | "project" | null;
+  scope_id?: string;
+  need_key?: string;
+  need_name?: string;
+  required?: string | null;
+  missing?: string | null;
   existing?: string;
+  surplus?: string;
+  missing_information?: string[];
+  calculation?: {
+    engine: string;
+    expression: string;
+    input: Record<string, string>;
+  } | null;
 }
 export interface Checked {
   version_changes?: {
@@ -144,7 +178,11 @@ export interface Checked {
   suggestions: Suggestion[];
   fingerprint: string;
   versions: { id: string; revision: number }[];
+  calculation_version: number;
 }
+export type ApplyChoice =
+  | { variantId: string; sourceId: string; quantity?: string }
+  | { existingDeviceId: string; quantity?: string };
 export interface ProjectConfiguration extends Checked {
   id?: string;
   name: string;

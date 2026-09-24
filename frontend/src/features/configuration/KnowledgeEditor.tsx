@@ -9,6 +9,8 @@ import {
   Space,
 } from "antd";
 import type { Knowledge } from "./types";
+import { AccessoryKnowledgeFields } from "./AccessoryKnowledgeFields";
+import { SystemTypeInput } from "./SystemTypeInput";
 import {
   AuthorFields,
   required,
@@ -31,10 +33,17 @@ export const emptyKnowledge = {
   system: "",
   role: "",
   conditions: [],
+  need_key: "",
+  need_name: "",
   target_variant_ids: [],
   accessory_type: "required",
+  calculation_scope: "device",
+  quantity_source: "device_quantity",
+  quantity_key: "",
   mode: "per_unit",
   factor: "1",
+  output_kind: "accessory",
+  allocation_mode: "consumable",
   shared_roles: [],
 };
 export function ConditionsEditor() {
@@ -202,15 +211,14 @@ export function KnowledgeFields() {
         <Select mode="multiple" options={variantOptions(variants.data)} />
       </Form.Item>
       {kind === "suitability" ? (
-        <Space>
-          <Form.Item name="system" label="系统类型" rules={required}>
-            <Select
-              style={{ width: 180 }}
-              options={["无纸化", "会议预约"].map((value) => ({
-                value,
-                label: value,
-              }))}
-            />
+        <Space wrap align="start">
+          <Form.Item
+            name="system"
+            label="系统 / 方案版本"
+            rules={required}
+            style={{ width: 320 }}
+          >
+            <SystemTypeInput />
           </Form.Item>
           <Form.Item name="role" label="承担角色" rules={required}>
             <Input placeholder="服务端" />
@@ -221,46 +229,18 @@ export function KnowledgeFields() {
         <Form.Item
           name="shared_roles"
           label="允许共用的系统 / 角色"
-          extra="例如：无纸化/服务端、会议预约/服务端"
+          extra="填写具体系统版本和角色；各自可用不代表能够共用部署。"
         >
           <Select
             mode="tags"
-            options={["无纸化/服务端", "会议预约/服务端"].map((value) => ({
-              value,
-              label: value,
-            }))}
+            options={[
+              ...new Set(variants.data?.flatMap((v) => v.systems) ?? []),
+            ].map((system) => ({ value: system + "/服务端" }))}
           />
         </Form.Item>
       ) : null}
       {kind === "accessory" ? (
-        <>
-          <Form.Item name="target_variant_ids" label="配件候选配置">
-            <Select mode="multiple" options={variantOptions(variants.data)} />
-          </Form.Item>
-          <Space>
-            <Form.Item name="accessory_type" label="配套性质">
-              <Select
-                options={[
-                  { value: "required", label: "必需" },
-                  { value: "recommended", label: "推荐" },
-                  { value: "optional", label: "可选" },
-                ]}
-              />
-            </Form.Item>
-            <Form.Item name="mode" label="数量方式">
-              <Select
-                options={[
-                  { value: "per_unit", label: "每件乘系数" },
-                  { value: "per_capacity", label: "按容量向上取整" },
-                  { value: "per_group", label: "每个部署项最低数量" },
-                ]}
-              />
-            </Form.Item>
-            <Form.Item name="factor" label="数量 / 容量">
-              <InputNumber stringMode min="0" />
-            </Form.Item>
-          </Space>
-        </>
+        <AccessoryKnowledgeFields />
       ) : null}
       <ConditionsEditor />
       <AuthorFields />
@@ -295,6 +275,8 @@ export function KnowledgeEditor({
         onFinish={(values) =>
           onSave({
             ...values,
+            completion: undefined,
+            missing_fields: undefined,
             conditions: (values.conditions ?? []).map(
               (c: Knowledge["conditions"][number]) => ({
                 ...c,

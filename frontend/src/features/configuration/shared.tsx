@@ -99,6 +99,9 @@ const attributeNames = [
   "width",
   "height",
   "depth",
+  "terminal_count",
+  "user_count",
+  "display_inches",
 ];
 const attributeLabels = [
   "CPU 架构",
@@ -111,6 +114,9 @@ const attributeLabels = [
   "宽度",
   "高度",
   "深度",
+  "终端数量",
+  "用户人数",
+  "屏幕尺寸（英寸）",
 ];
 export function AttributeEditor({ name = "attributes" }: { name?: string }) {
   const form = Form.useFormInstance();
@@ -186,7 +192,10 @@ export function cleanAttributes(values: Attribute[] = []) {
   return values.map((a) => ({
     ...a,
     unit: a.kind === "quantity" ? a.unit || "" : "",
-    value: a.value ?? null,
+    value:
+      a.value === "" || (Array.isArray(a.value) && a.value.length === 0)
+        ? null
+        : a.value ?? null,
   }));
 }
 

@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { App } from "antd";
 import { api } from "../../../shared/api";
 import type {
+  ApplyChoice,
   Checked,
   Configuration,
   Deployment,
@@ -90,6 +91,7 @@ export function useProjectEditor({
         body: JSON.stringify({
           configuration: draft.current.current,
           refresh_knowledge: refresh,
+          upgrade_calculation: refresh,
         }),
       }),
     onSuccess: (result) => {
@@ -119,15 +121,7 @@ export function useProjectEditor({
     onError: (e) => message.error(e.message),
   });
   const apply = useMutation({
-    mutationFn: ({
-      suggestion,
-      variantId,
-      sourceId,
-    }: {
-      suggestion: Suggestion;
-      variantId: string;
-      sourceId: string;
-    }) =>
+    mutationFn: ({ suggestion, choice }: { suggestion: Suggestion; choice: ApplyChoice }) =>
       api<Checked>(ROOT + "/apply", {
         method: "POST",
         body: JSON.stringify({
@@ -135,8 +129,16 @@ export function useProjectEditor({
           refresh_knowledge: false,
           fingerprint: checked!.fingerprint,
           suggestion_id: suggestion.id,
-          variant_id: variantId,
-          source_id: sourceId,
+          ...("existingDeviceId" in choice
+            ? {
+                existing_device_id: choice.existingDeviceId,
+                quantity: choice.quantity,
+              }
+            : {
+                variant_id: choice.variantId,
+                source_id: choice.sourceId,
+                quantity: choice.quantity,
+              }),
         }),
       }),
     onSuccess: (result) => {

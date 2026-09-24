@@ -275,6 +275,9 @@ function ConfigurationEditor({
                       ? { ...r, device_id: null }
                       : r,
                   ),
+                  accessory_allocations: config.accessory_allocations.filter(
+                    (item) => item.device_id !== editingDevice.id,
+                  ),
                 },
                 removeId: editingDevice.id,
               });
@@ -311,8 +314,8 @@ function ConfigurationEditor({
         }
         busy={busy}
         onCheck={(refresh) => check.mutate(refresh)}
-        onApply={(suggestion, variantId, sourceId) =>
-          apply.mutate({ suggestion, variantId, sourceId })
+        onApply={(suggestion, choice) =>
+          apply.mutate({ suggestion, choice })
         }
       />
       {systemModal ? (
@@ -332,6 +335,9 @@ function ConfigurationEditor({
       {requirementModal ? (
         <RequirementForm
           systemId={requirementModal.systemId}
+          systemName={
+            config.systems.find((s) => s.id === requirementModal.systemId)!.kind
+          }
           initial={requirementModal.initial}
           onClose={() => setRequirementModal(undefined)}
           onApply={(r) =>
