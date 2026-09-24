@@ -38,7 +38,17 @@ def create_rule(data: RuleInput, session: Session = Depends(session_dependency))
 
 @router.put("/rules/{rule_id}")
 def update_rule(rule_id: str, data: RuleUpdate, session: Session = Depends(session_dependency)):
-    return execute(lambda: RuleRepository(session).update(rule_id, data))
+    def update():
+        from presales.configuration.knowledge.migration import LegacyKnowledgeMigration
+
+        rule = RuleRepository(session).update(rule_id, data, commit=False)
+        if rule is None:
+            return None
+        LegacyKnowledgeMigration(session).sync(rule)
+        session.commit()
+        return rule
+
+    return execute(update)
 
 
 @router.get("/rules/{rule_id}/history")

@@ -136,7 +136,7 @@ class RuleRepository:
         self.save_revision(rule, commit=commit)
         return self.view(rule)
 
-    def update(self, rule_id: str, data: RuleUpdate) -> dict | None:
+    def update(self, rule_id: str, data: RuleUpdate, *, commit: bool = True) -> dict | None:
         rule = self.session.scalar(
             select(AccessoryRule).where(AccessoryRule.id == rule_id).with_for_update()
         )
@@ -148,7 +148,7 @@ class RuleRepository:
         rule.payload = data.model_dump(mode="json", exclude={"expected_revision"})
         rule.revision += 1
         rule.updated_at = now()
-        self.save_revision(rule)
+        self.save_revision(rule, commit=commit)
         return self.view(rule)
 
     def resolved_revision(self, rule: AccessoryRule) -> dict:

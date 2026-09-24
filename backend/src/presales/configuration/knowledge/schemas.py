@@ -69,18 +69,53 @@ class KnowledgeInput(Authored):
     system: str = ""
     role: str = ""
     conditions: list[Condition] = Field(default_factory=list)
+    need_key: str = ""
+    need_name: str = ""
     target_variant_ids: list[str] = Field(default_factory=list)
     accessory_type: Literal["required", "recommended", "optional"] = "required"
-    mode: Literal["per_unit", "per_capacity", "per_group"] = "per_unit"
-    factor: Decimal = Field(default=Decimal(1), gt=0, allow_inf_nan=False)
+    calculation_scope: Literal["device", "system", "room", "project"] | None = "device"
+    quantity_source: Literal["device_quantity", "environment"] = "device_quantity"
+    quantity_key: str = ""
+    mode: Literal["per_unit", "per_capacity", "per_group"] | None = "per_unit"
+    factor: Decimal | None = Field(default=Decimal(1), gt=0, allow_inf_nan=False)
+    output_kind: Literal["hardware", "software", "license", "accessory"] = "accessory"
+    allocation_mode: Literal["consumable", "shareable"] = "consumable"
     shared_roles: list[str] = Field(default_factory=list)
+    migration_source: dict | None = None
 
     @model_validator(mode="after")
     def complete_relation(self):
         if self.kind == "suitability" and not (self.system and self.role):
             raise ValueError("适用关系需要系统和角色")
-        if self.kind == "accessory" and not self.target_variant_ids:
-            raise ValueError("配件关系需要候选配置")
+        if self.kind == "accessory" and self.status == "confirmed":
+            missing = accessory_missing_fields(self)
+            if missing:
+                raise ValueError("已确认配套缺少：" + "、".join(missing))
         if self.kind == "sharing" and len(set(self.shared_roles)) < 2:
             raise ValueError("共享条件至少指定两个系统/角色（例如 无纸化/服务端）")
         return self
+
+
+def accessory_missing_fields(data: KnowledgeInput | dict) -> list[str]:
+    value = data if isinstance(data, dict) else data.model_dump(mode="json")
+    if value.get("kind") != "accessory":
+        return []
+    missing = []
+    if not value.get("target_variant_ids"):
+        missing.append("候选配置")
+    if not value.get("calculation_scope"):
+        missing.append("计算范围")
+    if not value.get("mode") or value.get("factor") is None:
+        missing.append("数量公式")
+    if value.get("quantity_source") == "environment" and not value.get("quantity_key"):
+        missing.append("需求参数")
+    return missing
+
+
+def with_completion(view: dict) -> dict:
+    missing = accessory_missing_fields(view)
+    return {
+        **view,
+        "completion": "incomplete" if missing else "complete",
+        "missing_fields": missing,
+    }

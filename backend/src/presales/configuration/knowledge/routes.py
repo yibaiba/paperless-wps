@@ -8,7 +8,8 @@ from presales.rules.routes import execute
 from ..catalog.routes import commit
 from ..catalog.service import CatalogService
 from ..common import Change, Entities, Input
-from .schemas import KnowledgeInput
+from .migration import LegacyKnowledgeMigration
+from .schemas import KnowledgeInput, with_completion
 
 router = APIRouter(prefix="/api/configuration/knowledge")
 
@@ -22,12 +23,12 @@ def save(session, data, **options):
 
 @router.get("")
 def list_knowledge(session: Session = Depends(session_dependency)):
-    return Entities(session).list("knowledge")
+    return [with_completion(item) for item in Entities(session).list("knowledge")]
 
 
 @router.post("")
 def create(data: KnowledgeInput, session: Session = Depends(session_dependency)):
-    return execute(lambda: commit(session, lambda: save(session, data)))
+    return execute(lambda: with_completion(commit(session, lambda: save(session, data))))
 
 
 @router.put("/{knowledge_id}")
@@ -43,6 +44,20 @@ def update(knowledge_id: str, data: Change, session: Session = Depends(session_d
             ),
         )
     )
+
+
+@router.get("/migration-preview")
+def migration_preview(session: Session = Depends(session_dependency)):
+    return execute(lambda: LegacyKnowledgeMigration(session).preview())
+
+
+class MigrationApply(Input):
+    rule_ids: list[str] = Field(default_factory=list)
+
+
+@router.post("/migration-apply")
+def migration_apply(data: MigrationApply, session: Session = Depends(session_dependency)):
+    return execute(lambda: LegacyKnowledgeMigration(session).apply(data.rule_ids or None))
 
 
 class BatchItem(Change):
