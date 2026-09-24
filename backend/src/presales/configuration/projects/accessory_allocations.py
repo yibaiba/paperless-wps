@@ -2,6 +2,27 @@ from collections import defaultdict
 from decimal import Decimal
 
 
+def prune_stale_allocations(data, demands):
+    valid_demands = {item["id"] for item in demands}
+    allocations = data.get("accessory_allocations", [])
+    removed = [item for item in allocations if item["demand_id"] not in valid_demands]
+    if not removed:
+        return []
+    data["accessory_allocations"] = [
+        item for item in allocations if item["demand_id"] in valid_demands
+    ]
+    return [
+        dict(
+            kind="accessory_allocation_cleanup",
+            demand_id=item["demand_id"],
+            device_id=item["device_id"],
+            status="pass",
+            message="原配套需求已不存在，已移除对应分配",
+        )
+        for item in removed
+    ]
+
+
 def accessory_allocation_checks(data, demands):
     by_id = {item["id"]: item for item in demands}
     devices = {item["id"]: item for item in data["devices"]}

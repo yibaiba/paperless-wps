@@ -5,7 +5,7 @@ from presales.rules.calculation import digest
 
 from ..knowledge.evaluator import candidate_check, context_for, evaluate_rules, scope_matches
 from .accessories import accessory_suggestions
-from .accessory_allocations import accessory_allocation_checks
+from .accessory_allocations import accessory_allocation_checks, prune_stale_allocations
 
 
 def sharing_checks(device, requirements, *, variant, knowledge):
@@ -65,7 +65,7 @@ def sharing_checks(device, requirements, *, variant, knowledge):
     return checks
 
 
-def evaluate_configuration(data, *, variants, engine):
+def evaluate_configuration(data, *, variants, catalog_variants, engine):
     knowledge = data["knowledge_snapshot"]
     systems = {s["id"]: s for s in data["systems"]}
     devices = {d["id"]: d for d in data["devices"]}
@@ -100,8 +100,11 @@ def evaluate_configuration(data, *, variants, engine):
         checks.extend(
             sharing_checks(device, served, variant=variants[device["id"]], knowledge=knowledge)
         )
-    suggestions = accessory_suggestions(data, variants=variants, engine=engine)
+    suggestions = accessory_suggestions(
+        data, variants=variants, catalog_variants=catalog_variants, engine=engine
+    )
     if data.get("calculation_version", 1) >= 2:
+        checks.extend(prune_stale_allocations(data, suggestions))
         checks.extend(accessory_allocation_checks(data, suggestions))
     return dict(
         checks=checks,

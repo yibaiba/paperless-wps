@@ -45,7 +45,7 @@ def test_incomplete_accessory_draft_exposes_missing_fields(client, catalog):
     assert "候选配置" in response.text
 
 
-def test_legacy_migration_is_idempotent_and_keeps_drafts(client, catalog):
+def test_legacy_api_writes_draft_knowledge_and_migration_stays_idempotent(client, catalog):
     rules = [legacy_rule(client, catalog, mode=mode) for mode in ("per_unit", "per_group")]
     preview = client.get(BASE + "/knowledge/migration-preview").json()
     assert len(preview) == 2
@@ -53,8 +53,8 @@ def test_legacy_migration_is_idempotent_and_keeps_drafts(client, catalog):
     assert group["knowledge"]["calculation_scope"] is None
     assert "旧“每组”需要确认" in group["unresolved"][0]
     first = post(client, "/knowledge/migration-apply", {"rule_ids": []})
-    assert [item["action"] for item in first] == ["created", "created"]
-    assert all(item["saved"]["status"] == "draft" for item in first)
+    assert [item["action"] for item in first] == ["unchanged", "unchanged"]
+    assert all(item["knowledge_record"]["status"] == "draft" for item in first)
     repeated = post(client, "/knowledge/migration-apply", {"rule_ids": []})
     assert [item["action"] for item in repeated] == ["unchanged", "unchanged"]
 

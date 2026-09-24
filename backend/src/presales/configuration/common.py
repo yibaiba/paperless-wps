@@ -51,7 +51,7 @@ class Entities:
             raise ValueError("记录不存在或类型不匹配，请重新选择")
         return record
 
-    def save(self, kind, data, *, entity_id=None, expected_revision=None):
+    def save(self, kind, data, *, entity_id=None, expected_revision=None, create_id=None):
         payload = data.model_dump(mode="json") if isinstance(data, BaseModel) else data
         if entity_id:
             record = self.get(entity_id, kind=kind, lock=True)
@@ -61,7 +61,7 @@ class Entities:
             record.revision += 1
             record.updated_at = now()
         else:
-            record = Entity(kind=kind, payload=payload)
+            record = Entity(id=create_id, kind=kind, payload=payload)
             self.session.add(record)
         self.session.flush()
         self.session.add(Revision(entity_id=record.id, revision=record.revision, payload=payload))

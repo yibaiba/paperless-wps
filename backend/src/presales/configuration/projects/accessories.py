@@ -5,11 +5,13 @@ from presales.rules.calculation import digest
 from ..knowledge.evaluator import context_for, evaluate_rules, scope_matches
 
 
-def accessory_suggestions(data, *, variants, engine):
+def accessory_suggestions(data, *, variants, catalog_variants, engine):
     if data.get("calculation_version", 1) >= 2:
         from .accessory_demands import calculate_accessory_demands
 
-        return calculate_accessory_demands(data, variants=variants, engine=engine)
+        return calculate_accessory_demands(
+            data, variants=variants, catalog_variants=catalog_variants, engine=engine
+        )
     return legacy_accessory_suggestions(data, variants=variants, engine=engine)
 
 

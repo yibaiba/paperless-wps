@@ -112,8 +112,8 @@ def test_software_counts_separately_and_unknown_saved(client, catalog, config, p
     ) == ["1", "20"]
 
 
-def test_legacy_rule_apply_projects_to_canonical_configuration(client, catalog, config, project):
-    save(client, project, config)
+def test_unified_project_rejects_legacy_rule_calculation(client, catalog, config, project):
+    original = save(client, project, config)
     rule = client.post(
         "/api/rules",
         json=dict(
@@ -129,15 +129,19 @@ def test_legacy_rule_apply_projects_to_canonical_configuration(client, catalog, 
     )
     assert rule.status_code == 200
     path = "/api/projects/" + project["id"]
-    preview = client.get(path + "/rule-preview").json()
+    preview = client.get(path + "/rule-preview")
+    assert preview.status_code == 422
+    assert "统一配置" in preview.text
     result = client.post(
         path + "/rule-apply",
         json=dict(
-            fingerprint=preview["fingerprint"],
-            suggestion_ids=[s["id"] for s in preview["suggestions"]],
+            fingerprint="旧入口不应继续计算",
+            suggestion_ids=["旧入口不应应用"],
         ),
     )
-    assert result.status_code == 200, result.text
+    assert result.status_code == 422
+    assert "统一配置" in result.text
     updated = client.get(BASE + "/projects/" + project["id"]).json()
-    assert sorted(d["quantity"] for d in updated["configuration"]["devices"]) == ["1", "2"]
-    assert len(client.get(path).json()["items"]) == 2
+    assert updated["revision"] == original["revision"]
+    assert len(updated["configuration"]["devices"]) == 1
+    assert len(client.get(path).json()["items"]) == 1

@@ -6,9 +6,9 @@ from presales.rules.calculation import digest
 from ..knowledge.evaluator import context_for, evaluate_rules, scope_matches
 
 
-def calculate_accessory_demands(data, *, variants, engine):
+def calculate_accessory_demands(data, *, variants, catalog_variants, engine):
     rules = [item for item in data["knowledge_snapshot"] if item["kind"] == "accessory"]
-    cycles = cyclic_rule_ids(rules)
+    cycles = cyclic_rule_ids(rules, catalog_variants.values())
     demands = []
     for rule in (item for item in rules if item["effect"] == "allow"):
         sources = [
@@ -236,13 +236,15 @@ def denial_rules(data, rule, variant):
     ]
 
 
-def cyclic_rule_ids(rules):
+def cyclic_rule_ids(rules, variants):
     graph = defaultdict(set)
     owners = defaultdict(set)
+    catalog = list(variants)
     for rule in rules:
         if rule["status"] != "confirmed" or rule["effect"] != "allow":
             continue
-        for source in rule["selector"].get("variant_ids", []):
+        sources = [item["id"] for item in catalog if scope_matches(item, rule["selector"])]
+        for source in sources:
             for target in rule.get("target_variant_ids", []):
                 graph[source].add(target)
                 owners[(source, target)].add(rule["id"])

@@ -264,6 +264,15 @@ function ConfigurationEditor({
               })
             }
             onDelete={() => {
+              const removedDemandIds = new Set(
+                (checked?.suggestions ?? [])
+                  .filter(
+                    (item) =>
+                      item.scope === "device" &&
+                      item.scope_id === editingDevice.id,
+                  )
+                  .map((item) => item.id),
+              );
               drawing.mutate({
                 next: {
                   ...config,
@@ -276,7 +285,9 @@ function ConfigurationEditor({
                       : r,
                   ),
                   accessory_allocations: config.accessory_allocations.filter(
-                    (item) => item.device_id !== editingDevice.id,
+                    (item) =>
+                      item.device_id !== editingDevice.id &&
+                      !removedDemandIds.has(item.demand_id),
                   ),
                 },
                 removeId: editingDevice.id,

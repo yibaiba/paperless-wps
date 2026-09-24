@@ -158,6 +158,72 @@ def test_draft_and_cycle_never_create_applicable_purchase(client, catalog, confi
     )
 
 
+@pytest.mark.parametrize("selector_kind", ["category", "series"])
+def test_category_and_series_selectors_participate_in_cycle_detection(
+    client, catalog, config, selector_kind
+):
+    config = version_two(config)
+    if selector_kind == "series":
+        for variant in catalog["variants"]:
+            payload = {
+                k: v
+                for k, v in variant.items()
+                if k not in {"id", "revision", "updated_at", "product"}
+            }
+            payload["series"] = ["共享平台"]
+            response = client.put(
+                BASE + "/variants/" + variant["id"],
+                json={"expected_revision": 1, "payload": payload},
+            )
+            assert response.status_code == 200, response.text
+        selector = {"series": ["共享平台"]}
+    else:
+        selector = {"category": "服务器"}
+    rule = accessory_rule(
+        client,
+        catalog["variants"][0],
+        catalog["variants"][1],
+        selector=selector,
+        factor="1",
+    )
+    suggestions = post(client, "/check", {"configuration": config})["suggestions"]
+    demand = next(item for item in suggestions if item["rule"]["id"] == rule["id"])
+    assert demand["status"] == "conflict"
+    assert "循环" in "".join(demand["missing_information"])
+
+
+def test_source_deletion_prunes_obsolete_allocation_on_save(client, catalog, config, project):
+    config = version_two(config)
+    accessory_rule(client, catalog["variants"][0], catalog["variants"][1], factor="1")
+    checked = post(client, "/check", {"configuration": config})
+    suggestion = checked["suggestions"][0]
+    applied = post(
+        client,
+        "/apply",
+        {
+            "configuration": checked["configuration"],
+            "fingerprint": checked["fingerprint"],
+            "suggestion_id": suggestion["id"],
+            "variant_id": catalog["variants"][1]["id"],
+            "source_id": catalog["sources"][1]["id"],
+            "quantity": "1",
+        },
+    )
+    deleted = applied["configuration"]
+    deleted["devices"] = [item for item in deleted["devices"] if item["id"] != "device-1"]
+    deleted["requirements"][0]["device_id"] = None
+    response = client.put(
+        BASE + "/projects/" + project["id"],
+        json={"expected_revision": 0, "configuration": deleted},
+    )
+    assert response.status_code == 200, response.text
+    saved = response.json()
+    assert saved["configuration"]["accessory_allocations"] == []
+    assert any(item["kind"] == "accessory_allocation_cleanup" for item in saved["checks"])
+    reopened = client.get(BASE + "/projects/" + project["id"]).json()
+    assert reopened["configuration"]["accessory_allocations"] == []
+
+
 def test_calculation_version_only_upgrades_explicitly(client, config):
     assert post(client, "/check", {"configuration": config})["calculation_version"] == 1
     upgraded = post(

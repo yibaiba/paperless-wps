@@ -19,6 +19,10 @@ class ProjectRules:
         self.engine = engine
 
     def preview(self, project_id: str, *, lock: bool = False) -> dict | None:
+        from presales.configuration.projects.repository import ProjectConfigurations
+
+        if ProjectConfigurations(self.session, self.engine).record(project_id):
+            raise ValueError("该项目已使用统一配置，请在“需求选配与拓扑”中检查和应用配套")
         project_query = select(Project).where(Project.id == project_id)
         project = self.session.scalar(project_query.with_for_update() if lock else project_query)
         if project is None:
@@ -74,26 +78,7 @@ class ProjectRules:
             raise RuleConflict("清单或规则已变化，请重新计算后再应用")
         chosen = self.select_suggestions(preview, data.suggestion_ids)
         items = [self.create_item(project_id, suggestion) for suggestion in chosen]
-        from presales.configuration.projects.legacy import LegacyProjection
-        from presales.configuration.projects.repository import ProjectConfigurations
-        from presales.projects.schemas import ItemInput
-
-        if ProjectConfigurations(self.session, self.engine).record(project_id):
-            items = [
-                LegacyProjection(self.session, self.engine).change(
-                    project_id,
-                    action="add",
-                    data=ItemInput(
-                        product_id=i.product_id,
-                        quantity=i.quantity,
-                        group_name=i.group_name,
-                        note=i.note,
-                    ),
-                )[1]
-                for i in items
-            ]
-        else:
-            self.session.add_all(items)
+        self.session.add_all(items)
         self.session.flush()
         application = RuleApplication(
             project_id=project_id,

@@ -91,16 +91,21 @@ class ProjectConfigurations:
             self.session, data=result, refresh=refresh
         )
         result["drawing_xml"] = project_drawing(result["drawing_xml"], devices=result["devices"])
-        return result, variants
+        return result, variants, current
 
     def check(self, data, *, refresh=False, upgrade=False):
-        payload, variants = self.prepare(data, refresh=refresh)
+        payload, variants, catalog_variants = self.prepare(data, refresh=refresh)
         if upgrade:
             payload["calculation_version"] = 2
         return dict(
             configuration=payload,
             version_changes=self._version_changes(payload),
-            **evaluate_configuration(payload, variants=variants, engine=self.engine),
+            **evaluate_configuration(
+                payload,
+                variants=variants,
+                catalog_variants=catalog_variants,
+                engine=self.engine,
+            ),
         )
 
     def _version_changes(self, payload):

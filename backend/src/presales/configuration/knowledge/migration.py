@@ -1,5 +1,8 @@
+from uuid import NAMESPACE_URL, uuid5
+
 from sqlalchemy import select
 
+from presales.rules.models import AccessoryRule
 from presales.rules.repository import RuleRepository
 
 from ..common import Entities, view
@@ -12,15 +15,17 @@ class LegacyKnowledgeMigration:
         self.session = session
         self.entities = Entities(session)
 
-    def preview(self) -> list[dict]:
+    def preview(self, *, lock=False) -> list[dict]:
+        query = select(AccessoryRule).order_by(AccessoryRule.updated_at.desc())
+        records = list(self.session.scalars(query.with_for_update() if lock else query))
+        rules = RuleRepository(self.session).views(records, lock_sources=lock)
         existing = self._existing()
-        rules = RuleRepository(self.session).list()
         return [self._preview(rule, existing.get(rule["id"])) for rule in rules]
 
     def apply(self, rule_ids: list[str] | None = None) -> list[dict]:
         wanted = set(rule_ids or [])
         results = []
-        for item in self.preview():
+        for item in self.preview(lock=True):
             if wanted and item["legacy_rule"]["id"] not in wanted:
                 continue
             if item["blocking"]:
@@ -39,30 +44,65 @@ class LegacyKnowledgeMigration:
                 if current
                 else {}
             )
-            saved = self.entities.save("knowledge", payload, **options)
+            saved = self.entities.save(
+                "knowledge",
+                payload,
+                create_id=self._knowledge_id(item["legacy_rule"]["id"]),
+                **options,
+            )
             results.append({**item, "action": "updated" if current else "created", "saved": saved})
         self.session.commit()
         return results
 
     def sync(self, rule: dict):
         current = self._existing().get(rule["id"])
-        if not current:
-            return None
-        self._ensure_legacy_compatible(current)
         item = self._preview(rule, current)
         if item["blocking"]:
-            raise ValueError("旧规则更新后无法映射到具体配置：" + "；".join(item["blocking"]))
+            if current:
+                raise ValueError("旧规则更新后无法映射到具体配置：" + "；".join(item["blocking"]))
+            return None
+        if current:
+            self._ensure_legacy_compatible(current, rule)
+            options = dict(entity_id=current["id"], expected_revision=current["revision"])
+        else:
+            options = dict(create_id=self._knowledge_id(rule["id"]))
         return self.entities.save(
-            "knowledge",
-            KnowledgeInput.model_validate(item["knowledge"]),
-            entity_id=current["id"],
-            expected_revision=current["revision"],
+            "knowledge", KnowledgeInput.model_validate(item["knowledge"]), **options
         )
+
+    @staticmethod
+    def _knowledge_id(rule_id: str) -> str:
+        return str(uuid5(NAMESPACE_URL, "presales:legacy-knowledge:" + rule_id))
+
+    @staticmethod
+    def _ensure_legacy_compatible(current: dict, rule: dict):
+        expected_scope = None if rule["mode"] == "per_group" else "device"
+        incompatible = any(
+            (
+                current.get("status") != "draft",
+                bool(current.get("conditions")),
+                bool(current.get("system")),
+                bool(current.get("role")),
+                bool(current.get("selector", {}).get("category")),
+                bool(current.get("selector", {}).get("series")),
+                bool(current.get("selector", {}).get("exclude_variant_ids")),
+                current.get("calculation_scope") != expected_scope,
+                current.get("quantity_source", "device_quantity") != "device_quantity",
+                bool(current.get("quantity_key")),
+                current.get("allocation_mode", "consumable") != "consumable",
+                current.get("output_kind", "accessory") != "accessory",
+                bool(current.get("shared_roles")),
+            )
+        )
+        if incompatible:
+            raise ValueError("该迁移知识已使用旧规则无法表达的字段，请在统一搭配知识中维护")
 
     def _preview(self, rule: dict, current: dict | None) -> dict:
         source_ids, missing_sources = self._variants([p["id"] for p in rule["sources"]])
         target_ids, missing_targets = self._variants([p["id"] for p in rule["targets"]])
         blocking = [*("触发来源未整理：" + i for i in missing_sources)]
+        if not source_ids:
+            blocking.append("触发条件当前未匹配到已整理配置")
         unresolved = [*blocking]
         unresolved.extend("配套来源未整理：" + i for i in missing_targets)
         scope = None if rule["mode"] == "per_group" else "device"
@@ -137,15 +177,3 @@ class LegacyKnowledgeMigration:
             return "new"
         source = current.get("migration_source") or {}
         return "current" if source.get("legacy_rule_revision") == rule["revision"] else "outdated"
-
-    @staticmethod
-    def _ensure_legacy_compatible(current: dict):
-        incompatible = current.get("conditions") or (
-            current.get("quantity_source", "device_quantity") != "device_quantity"
-        )
-        incompatible = incompatible or (
-            current.get("allocation_mode", "consumable") != "consumable"
-        )
-        incompatible = incompatible or current.get("output_kind", "accessory") != "accessory"
-        if incompatible:
-            raise ValueError("该迁移知识已使用旧规则无法表达的条件，请在统一搭配知识中维护")
