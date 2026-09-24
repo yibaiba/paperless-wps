@@ -59,7 +59,9 @@ def check(
         lambda: commit(
             session,
             lambda: ProjectConfigurations(session, engine).check(
-                data.configuration, refresh=data.refresh_knowledge
+                data.configuration,
+                refresh=data.refresh_knowledge,
+                upgrade=data.upgrade_calculation,
             ),
         )
     )

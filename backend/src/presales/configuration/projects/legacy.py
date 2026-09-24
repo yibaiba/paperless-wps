@@ -29,6 +29,11 @@ class LegacyProjection:
             self._update(config, item_id, data)
         elif action == "remove":
             config["devices"] = [d for d in config["devices"] if d["id"] != item_id]
+            config["accessory_allocations"] = [
+                item
+                for item in config.get("accessory_allocations", [])
+                if item["device_id"] != item_id
+            ]
             config["requirements"] = [
                 dict(r, device_id=None) if r["device_id"] == item_id else r
                 for r in config["requirements"]

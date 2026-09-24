@@ -18,12 +18,14 @@ from .snapshots import SnapshotResolver
 
 def empty_configuration():
     return dict(
+        calculation_version=2,
         actor="",
         evidence="",
         rooms=[],
         systems=[],
         requirements=[],
         devices=[],
+        accessory_allocations=[],
         drawing_xml="",
         knowledge_snapshot=None,
         knowledge_snapshot_id=None,
@@ -87,8 +89,10 @@ class ProjectConfigurations:
         result["drawing_xml"] = project_drawing(result["drawing_xml"], devices=result["devices"])
         return result, variants
 
-    def check(self, data, *, refresh=False):
+    def check(self, data, *, refresh=False, upgrade=False):
         payload, variants = self.prepare(data, refresh=refresh)
+        if upgrade:
+            payload["calculation_version"] = 2
         return dict(
             configuration=payload,
             version_changes=self._version_changes(payload),
@@ -103,6 +107,8 @@ class ProjectConfigurations:
             for key, revision in current.items()
             if used.get(key) != revision
         ]
+        if payload.get("calculation_version", 1) < 2:
+            changes.append(dict(kind="calculation", id="project", used=1, current=2))
         for device in payload["devices"]:
             snapshot = device["variant_snapshot"]
             for kind, old in (("variant", snapshot), ("product", snapshot["product"])):
@@ -170,7 +176,11 @@ class ProjectConfigurations:
         self.session.flush()
 
     def apply(self, request):
-        checked = self.check(request.configuration, refresh=request.refresh_knowledge)
+        checked = self.check(
+            request.configuration,
+            refresh=request.refresh_knowledge,
+            upgrade=request.upgrade_calculation,
+        )
         if checked["fingerprint"] != request.fingerprint:
             raise RuleConflict("配置已变化，请重新检查后应用配套")
         suggestion = next(
@@ -178,23 +188,61 @@ class ProjectConfigurations:
         )
         if not suggestion or suggestion["status"] != "pass":
             raise ValueError("配套条件未通过或建议不存在")
-        if request.variant_id not in suggestion["rule"]["target_variant_ids"]:
-            raise ValueError("请选择建议范围内的配套配置")
         if Decimal(suggestion["missing"]) <= 0:
             return checked
         data = checked["configuration"]
-        data["devices"].append(
+        amount = request.quantity or Decimal(suggestion["missing"])
+        if amount > Decimal(suggestion["missing"]):
+            raise ValueError("分配数量不能超过当前缺量")
+        device_id = request.existing_device_id or identifier()
+        if request.existing_device_id:
+            if data.get("calculation_version", 1) < 2:
+                raise ValueError("请先按最新计算方式重新检查，再关联已有设备")
+            self._validate_existing_allocation(data, suggestion, device_id, amount)
+        else:
+            self._append_suggested_device(data, suggestion, request, device_id, amount)
+        data["accessory_allocations"].append(
             dict(
                 id=identifier(),
-                name=suggestion["rule"]["name"],
+                demand_id=suggestion["id"],
+                device_id=device_id,
+                quantity=str(amount),
+                evidence="根据配套检查由售前确认分配",
+            )
+        )
+        return self.check(Configuration.model_validate(data))
+
+    @staticmethod
+    def _append_suggested_device(data, suggestion, request, device_id, amount):
+        if request.variant_id not in suggestion["rule"]["target_variant_ids"]:
+            raise ValueError("请选择建议范围内的配套配置")
+        data["devices"].append(
+            dict(
+                id=device_id,
+                name=suggestion["rule"].get("need_name") or suggestion["rule"]["name"],
                 variant_id=request.variant_id,
                 source_id=request.source_id,
-                quantity=suggestion["missing"],
-                kind="accessory",
+                quantity=str(amount),
+                kind=suggestion["rule"].get("output_kind", "accessory"),
                 note="",
                 variant_snapshot=None,
                 source_snapshot=None,
                 origin_suggestion=suggestion["id"],
             )
         )
-        return self.check(Configuration.model_validate(data))
+
+    @staticmethod
+    def _validate_existing_allocation(data, suggestion, device_id, amount):
+        device = next((item for item in data["devices"] if item["id"] == device_id), None)
+        if not device or device["variant_id"] not in suggestion["rule"]["target_variant_ids"]:
+            raise ValueError("已有设备不属于该配套需求的候选配置")
+        allocations = data.get("accessory_allocations", [])
+        used = sum(
+            (Decimal(item["quantity"]) for item in allocations if item["device_id"] == device_id),
+            Decimal(0),
+        )
+        if suggestion["rule"].get("allocation_mode", "consumable") == "consumable":
+            if used + amount > Decimal(device["quantity"]):
+                raise ValueError("已有设备的可分配数量不足")
+        elif amount > Decimal(device["quantity"]):
+            raise ValueError("共享设备的单次分配数量超过设备数量")

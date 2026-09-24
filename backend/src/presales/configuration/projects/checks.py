@@ -5,6 +5,7 @@ from presales.rules.calculation import digest
 
 from ..knowledge.evaluator import candidate_check, context_for, evaluate_rules, scope_matches
 from .accessories import accessory_suggestions
+from .accessory_allocations import accessory_allocation_checks
 
 
 def sharing_checks(device, requirements, *, variant, knowledge):
@@ -100,9 +101,12 @@ def evaluate_configuration(data, *, variants, engine):
             sharing_checks(device, served, variant=variants[device["id"]], knowledge=knowledge)
         )
     suggestions = accessory_suggestions(data, variants=variants, engine=engine)
+    if data.get("calculation_version", 1) >= 2:
+        checks.extend(accessory_allocation_checks(data, suggestions))
     return dict(
         checks=checks,
         suggestions=suggestions,
         fingerprint=digest([{k: v for k, v in data.items() if k != "drawing_xml"}, suggestions]),
         versions=[dict(id=k["id"], revision=k["revision"]) for k in knowledge],
+        calculation_version=data.get("calculation_version", 1),
     )

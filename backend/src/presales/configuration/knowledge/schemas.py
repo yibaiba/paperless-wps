@@ -61,6 +61,8 @@ class Resource(Input):
 
 
 class KnowledgeInput(Authored):
+    completion: Literal["complete", "incomplete"] | None = Field(default=None, exclude=True)
+    missing_fields: list[str] = Field(default_factory=list, exclude=True)
     name: Text
     kind: Literal["suitability", "accessory", "sharing"]
     status: Literal["draft", "confirmed", "disabled"] = "draft"

@@ -34,14 +34,16 @@ def create(data: KnowledgeInput, session: Session = Depends(session_dependency))
 @router.put("/{knowledge_id}")
 def update(knowledge_id: str, data: Change, session: Session = Depends(session_dependency)):
     return execute(
-        lambda: commit(
-            session,
-            lambda: save(
+        lambda: with_completion(
+            commit(
                 session,
-                KnowledgeInput.model_validate(data.payload),
-                entity_id=knowledge_id,
-                expected_revision=data.expected_revision,
-            ),
+                lambda: save(
+                    session,
+                    KnowledgeInput.model_validate(data.payload),
+                    entity_id=knowledge_id,
+                    expected_revision=data.expected_revision,
+                ),
+            )
         )
     )
 

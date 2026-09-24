@@ -6,6 +6,14 @@ from ..knowledge.evaluator import context_for, evaluate_rules, scope_matches
 
 
 def accessory_suggestions(data, *, variants, engine):
+    if data.get("calculation_version", 1) >= 2:
+        from .accessory_demands import calculate_accessory_demands
+
+        return calculate_accessory_demands(data, variants=variants, engine=engine)
+    return legacy_accessory_suggestions(data, variants=variants, engine=engine)
+
+
+def legacy_accessory_suggestions(data, *, variants, engine):
     suggestions = []
     for device in data["devices"]:
         variant = variants[device["id"]]
