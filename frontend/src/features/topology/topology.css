@@ -1,0 +1,53 @@
+.topology-full { width: 100%; }
+.topology-workspace { --drawing-ink: #243b36; --drawing-muted: #687971; --drawing-border: #e5eae7; border: 1px solid var(--drawing-border); border-radius: 14px; background: #fff; overflow: hidden; color: var(--drawing-ink); }
+.topology-heading { display: flex; align-items: center; gap: 12px; height: 76px; flex-shrink: 0; padding: 0 24px; background: #fff; }
+.topology-heading > .ant-btn { flex-shrink: 0; height: 40px; min-width: 40px; }
+.topology-heading-title { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.topology-title-button.ant-btn { height: auto; line-height: 1.4; box-shadow: none; display: flex; align-items: center; gap: 10px; border: 0; background: none; color: var(--drawing-ink); padding: 0; width: fit-content; max-width: 100%; font: inherit; font-size: 16px; font-weight: 600; text-align: left; cursor: pointer; }
+.topology-title-button > span:first-child { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.topology-title-button > .anticon { font-size: 12px; color: var(--drawing-muted); flex-shrink: 0; }
+.topology-title-button:focus-visible { outline: 2px solid #24775d; outline-offset: 4px; border-radius: 4px; }
+.topology-save-state { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--drawing-muted); }
+.topology-save-state.is-dirty { color: #976718; }
+.topology-save-button { box-shadow: none; padding-inline: 20px; }
+.topology-commandbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 54px; padding: 8px 24px; border-top: 1px solid #f1f3f2; border-bottom: 1px solid var(--drawing-border); background: #fff; flex-shrink: 0; }
+.topology-command-group { display: flex; align-items: center; gap: 4px; }
+.topology-commandbar .ant-btn { height: 36px; border-radius: 8px; color: #476258; font-size: 13px; }
+.topology-commandbar .ant-btn:disabled { color: #a5ada9; }
+.topology-commandbar .topology-add-product { background: #eff6f2; border-color: transparent; color: #20563f; box-shadow: none; }
+.topology-count { display: inline-flex; align-items: center; justify-content: center; min-width: 21px; height: 20px; padding-inline: 5px; border-radius: 5px; background: #f0f3f1; color: #56665c; font-size: 12px; }
+.topology-count-pending { background: #fff4db; color: #8a621b; }
+.drawio-shell { position: relative; height: max(620px, calc(100dvh - 290px)); }
+.drawio-frame { width: 100%; height: 100%; display: block; border: 0; background: #f6f8f7; }
+.drawio-loading { position: absolute; inset: 0; display: grid; place-items: center; background: #f6f8f7ed; z-index: 1; color: #526b5f; }
+.drawio-busy .drawio-frame { pointer-events: none; }
+.topology-status { display: flex; justify-content: space-between; gap: 12px; padding: 9px 24px; font-size: 12px; color: var(--drawing-muted); border-top: 1px solid var(--drawing-border); background: #fff; flex-shrink: 0; }
+.topology-status-divider { padding-inline: 10px; color: #cad3cd; }
+.topology-expanded { position: fixed; inset: 0; z-index: 1000; border-radius: 0; border: 0; display: flex; flex-direction: column; }
+.topology-expanded .drawio-shell { flex: 1; height: auto; min-height: 0; }
+.topology-product { display: flex; flex-direction: column; gap: 5px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; overflow-wrap: anywhere; }
+.topology-busy { pointer-events: none; opacity: .7; }
+.drawing-shape-label { overflow-wrap: anywhere; }
+.topology-info-actions { display: flex; justify-content: flex-end; gap: 8px; }
+@media (max-width: 600px) {
+  .topology-heading { height: 70px; padding-inline: 10px; gap: 8px; }
+  .topology-title-button.ant-btn { height: auto; line-height: 1.4; box-shadow: none; font-size: 14px; }
+  .topology-title-button > .anticon { display: none; }
+  .topology-save-button { padding-inline: 12px; }
+  .topology-commandbar { padding: 6px 10px; gap: 4px; }
+  .topology-commandbar .ant-btn { padding-inline: 8px; }
+  .topology-business-tools { gap: 0; }
+  .topology-status { padding: 8px 12px; }
+  .topology-status > span:last-child { display: none; }
+  .drawio-shell { height: 680px; }
+}
+@media (max-width: 420px) {
+  .topology-business-tools .ant-btn-icon { display: none; }
+  .topology-commandbar .ant-btn { font-size: 12px; padding-inline: 6px; }
+  .topology-command-group { gap: 0; }
+}
+
+.topology-product.is-selected { border-color: #43866b; background: #f3f9f5; }
+.topology-product-actions { position: sticky; bottom: -24px; background: #fff; padding: 14px 0 8px; margin-top: 12px; border-top: 1px solid #e5eae7; z-index: 1; }
+.topology-product-selection { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.topology-product-actions .ant-alert { margin-bottom: 10px; }

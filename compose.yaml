@@ -1,0 +1,26 @@
+services:
+  diagrams:
+    image: jgraph/drawio:29.6.5
+    ports:
+      - "127.0.0.1:8086:8080"
+    environment:
+      DRAWIO_LANG: zh
+      DRAWIO_SERVER_URL: http://127.0.0.1:5176/diagram-editor/
+    restart: unless-stopped
+  database:
+    image: postgres:17-alpine
+    ports:
+      - "127.0.0.1:25432:5432"
+    environment:
+      POSTGRES_DB: presales
+      POSTGRES_USER: presales
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Create .env using scripts/setup.py}
+    volumes:
+      - presales_database:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U presales -d presales"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+volumes:
+  presales_database:

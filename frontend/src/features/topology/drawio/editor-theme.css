@@ -1,0 +1,15 @@
+/* Cosmetic integration with the pinned draw.io Sketch UI; no diagram styles are changed. */
+body.geEditor { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+.geDiagramContainer { background-color: #f5f7f5 !important; }
+.geToolbarContainer, .mxWindow {
+  background-color: #fff !important;
+  border: 1px solid #e3e9e4 !important;
+  border-radius: 10px !important;
+  box-shadow: 0 2px 8px #203d2c0a !important;
+}
+.geBackgroundPage { box-shadow: 0 0 0 1px #e3e9e4 !important; }
+.geToolbarContainer .geStatusDiv { display: none; }
+.geToolbarContainer:has(> .geButtonContainer > .geStatusDiv) {
+  border: 0 !important; background: transparent !important; box-shadow: none !important;
+}
+.geToolbarContainer .geButton:hover, .geToolbarContainer .geItem:hover { background-color: #edf4ef !important; }

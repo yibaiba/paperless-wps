@@ -1,0 +1,44 @@
+"""Add configuration tables without replacing or rewriting existing business data."""
+
+import os
+from pathlib import Path
+
+from dotenv import load_dotenv
+from presales.configuration.models import (
+    Entity,
+    ExtractionJob,
+    Revision,
+    SourceLink,
+    SourceRevision,
+)
+from presales.storage import Base
+from sqlalchemy import create_engine, inspect
+
+ROOT = Path(__file__).resolve().parents[1]
+NEW_TABLES = (
+    Entity.__table__,
+    Revision.__table__,
+    SourceLink.__table__,
+    SourceRevision.__table__,
+    ExtractionJob.__table__,
+)
+
+
+def migrate(engine):
+    with engine.begin() as connection:
+        existing = set(inspect(connection).get_table_names())
+        if "product_records" not in existing:
+            raise ValueError(
+                "未找到现有产品库，请核对 DATABASE_URL；本迁移不创建替代数据库"
+            )
+        Base.metadata.create_all(connection, tables=NEW_TABLES, checkfirst=True)
+        return [table.name for table in NEW_TABLES if table.name not in existing]
+
+
+if __name__ == "__main__":
+    load_dotenv(ROOT / ".env")
+    engine = create_engine(os.environ["DATABASE_URL"])
+    try:
+        print("新增配置表：", ", ".join(migrate(engine)) or "已迁移，无需更改")
+    finally:
+        engine.dispose()

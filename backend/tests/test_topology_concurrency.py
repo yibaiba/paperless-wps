@@ -1,0 +1,72 @@
+import os
+from concurrent.futures import ThreadPoolExecutor
+from uuid import uuid4
+
+import pytest
+from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.schema import CreateSchema, DropSchema
+
+from presales.main import create_app
+from presales.storage import Base
+
+
+@pytest.mark.skipif(not os.environ.get("TEST_DATABASE_URL"), reason="需要 PostgreSQL 测试连接")
+def test_concurrent_topology_save_and_rule_conversion(workbook):
+    engine = create_engine(os.environ["TEST_DATABASE_URL"])
+    schema = "topology_test_" + uuid4().hex
+    with engine.begin() as connection:
+        connection.execute(CreateSchema(schema))
+    isolated = engine.execution_options(schema_translate_map={None: schema})
+    try:
+        Base.metadata.create_all(isolated)
+        with TestClient(
+            create_app(session_factory=sessionmaker(isolated, expire_on_commit=False))
+        ) as client:
+            run_concurrent_checks(client, workbook)
+    finally:
+        with engine.begin() as connection:
+            connection.execute(DropSchema(schema, cascade=True))
+        engine.dispose()
+
+
+def run_concurrent_checks(client, workbook):
+    imported = client.post("/api/imports", files={"file": ("concurrency.xlsx", workbook)}).json()
+    products = client.get("/api/products", params={"import_id": imported["id"]}).json()
+    data = {
+        "name": "并发测试",
+        "actor": "测试",
+        "devices": [
+            {"id": "a", "product_id": products[0]["id"], "position": {"x": 0, "y": 0}},
+            {"id": "b", "product_id": products[1]["id"], "position": {"x": 200, "y": 0}},
+        ],
+        "relations": [
+            {"id": "r", "source": "a", "target": "b", "kind": "required", "evidence": "测试"}
+        ],
+    }
+    response = client.post("/api/topologies", json=data)
+    response.raise_for_status()
+    path = f"/api/topologies/{response.json()['id']}"
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        futures = [
+            executor.submit(client.put, path, json={**data, "expected_revision": 1})
+            for _ in range(2)
+        ]
+        assert sorted(f.result(timeout=15).status_code for f in futures) == [200, 409]
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        futures = [
+            executor.submit(
+                client.post,
+                path + "/relations/r/rule",
+                json={
+                    "expected_revision": 2,
+                    "actor": "测试",
+                },
+            )
+            for _ in range(2)
+        ]
+        assert sorted(f.result(timeout=15).status_code for f in futures) == [200, 409]
+    assert len(client.get("/api/rules").json()) == 1
+    assert len(client.get(path).json()["rules"]) == 1
+    assert len(client.get(path + "/history").json()) == 2
