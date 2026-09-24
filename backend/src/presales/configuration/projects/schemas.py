@@ -99,6 +99,8 @@ class CandidateRequest(Input):
     system: Text
     role: Text
     environment: list[Attribute] = Field(default_factory=list)
+    knowledge_snapshot_id: str | None = None
+    include_all: bool = False
 
 
 class CheckRequest(Input):

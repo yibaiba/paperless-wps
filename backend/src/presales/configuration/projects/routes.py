@@ -7,10 +7,11 @@ from presales.rules.routes import execute, quantity_engine
 
 from ..catalog.routes import commit
 from ..catalog.service import CatalogService
-from ..common import Entities, Input
-from ..knowledge.evaluator import candidate_check
+from ..common import Input
+from ..knowledge.evaluator import candidate_check, scope_matches
 from .drawing import project_drawing, remove_device_references
 from .importing import legacy_preview
+from .knowledge_snapshot import candidate_knowledge
 from .repository import ProjectConfigurations
 from .schemas import CandidateRequest, CheckRequest, ConfigurationSave, Deployment, SuggestionApply
 
@@ -19,13 +20,28 @@ router = APIRouter(prefix="/api/configuration")
 
 @router.post("/candidates")
 def candidates(data: CandidateRequest, session: Session = Depends(session_dependency)):
-    knowledge = Entities(session).list("knowledge")
-    return execute(
-        lambda: [
+    def find_candidates():
+        knowledge = candidate_knowledge(session, data.knowledge_snapshot_id)
+        variants = CatalogService(session).variants()
+        if not data.include_all:
+            variants = [
+                variant
+                for variant in variants
+                if any(
+                    item["kind"] == "suitability"
+                    and item["status"] != "disabled"
+                    and item["system"] == data.system
+                    and item["role"] == data.role
+                    and scope_matches(variant, item["selector"])
+                    for item in knowledge
+                )
+            ]
+        return [
             candidate_check(v, requirement=data.model_dump(mode="json"), knowledge=knowledge)
-            for v in CatalogService(session).variants()
+            for v in variants
         ]
-    )
+
+    return execute(find_candidates)
 
 
 @router.get("/projects/{project_id}")

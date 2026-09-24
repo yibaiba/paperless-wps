@@ -3,9 +3,11 @@ from copy import deepcopy
 from .conftest import BASE, knowledge, post
 
 
-def candidates(client, environment=None):
+def candidates(client, environment=None, **extra):
     return post(
-        client, "/candidates", dict(system="无纸化", role="服务端", environment=environment or [])
+        client,
+        "/candidates",
+        dict(system="无纸化", role="服务端", environment=environment or [], **extra),
     )
 
 
@@ -31,7 +33,9 @@ def test_architecture_os_unknown_and_exclusions(client, catalog):
     result = next(r for r in candidates(client) if r["variant"]["id"] == variant["id"])
     assert result["status"] == "conflict"
     assert result["evidence"][0]["conditions"][1]["result"] == "unknown"
-    unknown = next(r for r in candidates(client) if r["variant"]["id"] != variant["id"])
+    unknown = next(
+        r for r in candidates(client, include_all=True) if r["variant"]["id"] != variant["id"]
+    )
     assert unknown["status"] == "unknown"
 
 
@@ -55,7 +59,7 @@ def test_numeric_ranges_sets_and_units(client, catalog):
         effect="deny",
         selector={"category": "服务器", "exclude_variant_ids": [variant["id"]]},
     )
-    checked = candidates(client)
+    checked = candidates(client, include_all=True)
     assert next(r for r in checked if r["variant"]["id"] == variant["id"])["status"] == "pass"
     assert next(r for r in checked if r["variant"]["id"] != variant["id"])["status"] == "conflict"
 
@@ -145,3 +149,34 @@ def test_snapshot_cannot_drop_conflicting_rule(client, catalog, config):
     assert client.post(BASE + "/check", json=dict(configuration=data)).status_code == 422
     data["knowledge_snapshot_id"] = None
     assert client.post(BASE + "/check", json=dict(configuration=data)).status_code == 422
+
+
+def test_candidates_default_to_related_scope_and_can_use_snapshot(client, catalog, config):
+    variant = catalog["variants"][0]
+    rule = knowledge(client, variant)
+    knowledge(client, catalog["variants"][1], status="draft")
+    scoped = candidates(client)
+    assert {item["variant"]["id"] for item in scoped} == {
+        variant["id"],
+        catalog["variants"][1]["id"],
+    }
+    unknown = next(item for item in scoped if item["variant"]["id"] != variant["id"])
+    assert unknown["status"] == "unknown"
+    assert len(candidates(client, include_all=True)) == 2
+    checked = post(client, "/check", dict(configuration=config))
+    payload = {k: v for k, v in rule.items() if k not in {"id", "revision", "updated_at"}}
+    payload["effect"] = "deny"
+    updated = client.put(
+        BASE + "/knowledge/" + rule["id"],
+        json=dict(expected_revision=1, payload=payload),
+    )
+    assert updated.status_code == 200, updated.text
+    assert next(
+        item for item in candidates(client) if item["variant"]["id"] == variant["id"]
+    )["status"] == "conflict"
+    pinned = candidates(
+        client,
+        knowledge_snapshot_id=checked["configuration"]["knowledge_snapshot_id"],
+    )
+    pinned_variant = next(item for item in pinned if item["variant"]["id"] == variant["id"])
+    assert pinned_variant["status"] == "pass"

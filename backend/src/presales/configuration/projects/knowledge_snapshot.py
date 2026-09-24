@@ -48,3 +48,10 @@ def validate_legacy_snapshot(session, supplied):
     if any(p["configuration"]["knowledge_snapshot"] == supplied for p in payloads):
         return
     raise ValueError("知识快照缺少可追溯版本，请按最新资料重新检查")
+
+
+def candidate_knowledge(session, snapshot_id=None):
+    if not snapshot_id:
+        return Entities(session).list("knowledge")
+    bundle = Entities(session).get(snapshot_id, kind="knowledge_snapshot")
+    return bundle.payload["knowledge"]
