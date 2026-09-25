@@ -33,6 +33,8 @@ export interface Variant extends Authored {
     sheet: string;
     row: number;
     import_id: string;
+    specification?: string;
+    note?: string;
   }[];
   source_differences?: string[];
   product: Product;
@@ -190,8 +192,16 @@ export interface ProjectConfiguration extends Checked {
   project_id: string;
   legacy_items?: number;
 }
+export type CandidateMode = "known" | "semantic" | "all";
 export interface Candidate {
   variant: Variant;
   status: "pass" | "conflict" | "unknown";
   evidence: Record<string, unknown>[];
+  ranking: {
+    rank: number;
+    score: number;
+    embedding_model: string;
+    reranker_model: string;
+    document_revision: number;
+  } | null;
 }

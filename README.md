@@ -112,6 +112,7 @@ backend/src/presales/
   catalog/    Excel 读取、来源解析、差异检查、核对历史和数据存取
   projects/   项目清单、输入验证和配置快照
   rules/      ZEN 决策图、配套规则版本、项目计算与应用记录
+  configuration/search/  产品搜索文档、pgvector、模型适配和索引任务
   storage.py  数据库映射及连接工厂
   api.py      HTTP 接口与依赖注入
   main.py     应用装配
@@ -164,4 +165,11 @@ npm --prefix frontend run build
 
 功能、数据状态、后台工作进程启动方式及验收范围见 [配置平台实施记录](docs/configuration-implementation.md) 和 [验证记录](docs/configuration-verification.md)。
 
-新增依赖通过 `.venv/bin/pip install -e './backend[dev]'` 安装；升级后先运行 `.venv/bin/python scripts/migrate_configuration.py`，再重启后端，并单独启动 `.venv/bin/python -m presales.configuration.extraction.worker`。模型连接在后台页面配置；未配置模型也能维护产品、知识和项目。
+新增依赖通过 `.venv/bin/pip install -e './backend[dev]'` 安装；升级后先运行 `.venv/bin/python scripts/migrate_configuration.py`，再重启后端。AI 资料整理与产品智能索引分别使用以下后台工作进程：
+
+```sh
+.venv/bin/python -m presales.configuration.extraction.worker
+.venv/bin/python -m presales.configuration.search.worker
+```
+
+产品整理页新增“智能索引”，项目候选新增“已知候选、智能查找、全部产品”。智能查找使用 PostgreSQL pgvector、Embedding 和 Reranker，只负责召回与排序；兼容性、配套和数量仍由结构化知识、Python 与 ZEN 决定。未配置检索模型时，现有产品、知识和项目流程不受影响。详细说明见 [产品智能召回与候选排序](docs/semantic-product-search.md)。

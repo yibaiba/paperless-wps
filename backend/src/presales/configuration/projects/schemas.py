@@ -101,6 +101,15 @@ class CandidateRequest(Input):
     environment: list[Attribute] = Field(default_factory=list)
     knowledge_snapshot_id: str | None = None
     include_all: bool = False
+    mode: Literal["known", "semantic", "all"] = "known"
+    query_text: str = ""
+    limit: int = Field(default=30, ge=1, le=100)
+
+    @model_validator(mode="after")
+    def semantic_query(self):
+        if self.mode == "semantic" and not self.query_text:
+            raise ValueError("智能查找需要填写需求描述")
+        return self
 
 
 class CheckRequest(Input):

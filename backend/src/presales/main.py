@@ -17,6 +17,9 @@ from .configuration.extraction.routes import router as extraction_router
 from .configuration.extraction.settings import PrivateSettings
 from .configuration.knowledge.routes import router as knowledge_router
 from .configuration.projects.routes import router as configuration_projects_router
+from .configuration.search.provider import SearchModelClient
+from .configuration.search.routes import router as search_router
+from .configuration.search.settings import PrivateSearchSettings
 from .rules.engine import ZenQuantityEngine
 from .rules.routes import router as rules_router
 from .storage import database_factory
@@ -26,7 +29,13 @@ ROOT = Path(__file__).resolve().parents[3]
 
 
 def create_app(
-    *, session_factory=None, quantity_engine=None, model_settings=None, model_provider=None
+    *,
+    session_factory=None,
+    quantity_engine=None,
+    model_settings=None,
+    model_provider=None,
+    search_settings=None,
+    search_provider=None,
 ) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -42,9 +51,15 @@ def create_app(
         app.state.model_settings = model_settings or PrivateSettings(
             ROOT / "data/private/model.json"
         )
+        app.state.search_settings = search_settings or PrivateSearchSettings(
+            ROOT / "data/private/search.json"
+        )
         with httpx.Client() as model_http:
             app.state.model_provider = model_provider or (
                 lambda: ModelClient(model_http, app.state.model_settings.read())
+            )
+            app.state.search_provider = search_provider or (
+                lambda: SearchModelClient(model_http, app.state.search_settings.read())
             )
             yield
 
@@ -70,6 +85,7 @@ def create_app(
     application.include_router(knowledge_router)
     application.include_router(extraction_router)
     application.include_router(configuration_projects_router)
+    application.include_router(search_router)
     return application
 
 

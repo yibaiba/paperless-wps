@@ -34,7 +34,14 @@ class CatalogService:
                 "product": products[v["product_id"]],
                 "source_ids": [s.source_id for s in links if s.variant_id == v["id"]],
                 "source_details": [
-                    dict(id=s.id, sheet=s.sheet, row=s.payload["row"], import_id=s.import_id)
+                    dict(
+                        id=s.id,
+                        sheet=s.sheet,
+                        row=s.payload["row"],
+                        import_id=s.import_id,
+                        specification=s.payload.get("specification", ""),
+                        note=s.payload.get("note", ""),
+                    )
                     for s in sources[v["id"]]
                 ],
                 "source_differences": source_differences(sources[v["id"]]),

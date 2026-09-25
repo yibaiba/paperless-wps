@@ -8,7 +8,7 @@ services:
       DRAWIO_SERVER_URL: http://127.0.0.1:5176/diagram-editor/
     restart: unless-stopped
   database:
-    image: postgres:17-alpine
+    image: pgvector/pgvector:pg17
     ports:
       - "127.0.0.1:25432:5432"
     environment:

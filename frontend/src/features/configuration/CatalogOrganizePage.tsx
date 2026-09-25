@@ -31,6 +31,7 @@ import {
 import { ProductEditor, VariantEditor } from "./CatalogEditor";
 import "./configuration.css";
 import { IndependentSources } from "./IndependentSources";
+import { SearchIndexPanel } from "./SearchIndexPanel";
 interface Row extends Source {
   organized: boolean;
   duplicate_model: boolean;
@@ -270,6 +271,11 @@ export default function CatalogOrganizePage() {
                 ]}
               />
             ),
+          },
+          {
+            key: "search-index",
+            label: "智能索引",
+            children: <SearchIndexPanel />,
           },
           {
             key: "variants",
