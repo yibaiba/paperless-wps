@@ -39,6 +39,18 @@ class RuleSpec:
     conditions: tuple[dict, ...] = ()
 
 
+@dataclass(frozen=True)
+class SuitabilitySpec:
+    key: str
+    name: str
+    status: str
+    sources: tuple[SourceRef, ...]
+    system: str
+    role: str
+    evidence: str
+    conditions: tuple[dict, ...] = ()
+
+
 def source(sheet: str, row: int, model: str) -> SourceRef:
     return SourceRef(sheet=sheet, row=row, model=model)
 
@@ -101,6 +113,28 @@ def payload_for(spec: RuleSpec, variants: dict[SourceRef, str], actor: str) -> K
     )
 
 
+def persist_knowledge(
+    session: Session,
+    *,
+    payloads: list[tuple[str, str, str, KnowledgeInput]],
+    namespace: str,
+    apply: bool,
+) -> list[dict]:
+    entities = Entities(session)
+    plans = []
+    for key, name, status, payload in payloads:
+        knowledge_id = str(uuid5(NAMESPACE_URL, namespace + key))
+        existing = session.get(Entity, knowledge_id)
+        desired = payload.model_dump(mode="json")
+        if existing is not None and (existing.kind != "knowledge" or existing.payload != desired):
+            raise ValueError(f"知识 {name} 已被修改，未自动覆盖，请人工比较：{knowledge_id}")
+        action = "unchanged" if existing else "create"
+        plans.append({"id": knowledge_id, "name": name, "status": status, "action": action})
+        if apply and existing is None:
+            entities.save("knowledge", payload, create_id=knowledge_id)
+    return plans
+
+
 def seed(
     session: Session,
     *,
@@ -112,17 +146,48 @@ def seed(
 ) -> list[dict]:
     refs = {item for spec in specs for item in (*spec.sources, *spec.targets)}
     variants = resolve_variants(session, import_id, refs)
-    entities = Entities(session)
-    plans = []
-    for spec in specs:
-        knowledge_id = str(uuid5(NAMESPACE_URL, namespace + spec.key))
-        payload = payload_for(spec, variants, actor)
-        existing = session.get(Entity, knowledge_id)
-        desired = payload.model_dump(mode="json")
-        if existing is not None and (existing.kind != "knowledge" or existing.payload != desired):
-            raise ValueError(f"知识 {spec.name} 已被修改，未自动覆盖，请人工比较：{knowledge_id}")
-        action = "unchanged" if existing else "create"
-        plans.append({"id": knowledge_id, "name": spec.name, "status": spec.status, "action": action})
-        if apply and existing is None:
-            entities.save("knowledge", payload, create_id=knowledge_id)
-    return plans
+    payloads = [
+        (spec.key, spec.name, spec.status, payload_for(spec, variants, actor))
+        for spec in specs
+    ]
+    return persist_knowledge(
+        session, payloads=payloads, namespace=namespace, apply=apply
+    )
+
+def suitability_payload_for(
+    spec: SuitabilitySpec, variants: dict[SourceRef, str], actor: str
+) -> KnowledgeInput:
+    return KnowledgeInput.model_validate(
+        {
+            "actor": actor,
+            "evidence": spec.evidence,
+            "name": spec.name,
+            "kind": "suitability",
+            "status": spec.status,
+            "effect": "allow",
+            "selector": {"variant_ids": [variants[item] for item in spec.sources]},
+            "system": spec.system,
+            "role": spec.role,
+            "conditions": list(spec.conditions),
+        }
+    )
+
+
+def seed_suitability(
+    session: Session,
+    *,
+    import_id: str,
+    specs: tuple[SuitabilitySpec, ...],
+    actor: str,
+    namespace: str,
+    apply: bool,
+) -> list[dict]:
+    refs = {item for spec in specs for item in spec.sources}
+    variants = resolve_variants(session, import_id, refs)
+    payloads = [
+        (spec.key, spec.name, spec.status, suitability_payload_for(spec, variants, actor))
+        for spec in specs
+    ]
+    return persist_knowledge(
+        session, payloads=payloads, namespace=namespace, apply=apply
+    )
