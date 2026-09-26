@@ -4,6 +4,8 @@ from ..knowledge.evaluator import candidate_check
 from .accessories import accessory_suggestions
 from .accessory_allocations import accessory_allocation_checks, prune_stale_allocations
 from .device_usages import build_device_usages, device_usage_checks
+from .output import project_output
+from .readiness import project_readiness
 
 
 def evaluate_configuration(data, *, variants, catalog_variants, engine):
@@ -37,10 +39,13 @@ def evaluate_configuration(data, *, variants, catalog_variants, engine):
                 knowledge=knowledge,
             )
         )
+    readiness = project_readiness(data, checks, suggestions)
     return {
         "checks": checks,
         "suggestions": suggestions,
         "device_usages": usages,
+        "readiness": readiness,
+        "project_output": project_output(data, usages, readiness),
         "fingerprint": digest(
             [{key: value for key, value in data.items() if key != "drawing_xml"}, suggestions]
         ),

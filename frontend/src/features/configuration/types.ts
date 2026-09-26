@@ -195,6 +195,59 @@ export interface DeviceUsage {
   allocation_demand_ids: string[];
   missing_information: string[];
 }
+export interface ReadinessStage {
+  key: "requirements" | "selection" | "accessories" | "verification" | "output";
+  label: string;
+  status: "pass" | "conflict" | "unknown";
+  message: string;
+}
+export interface ProjectReadiness {
+  status: "pass" | "conflict" | "unknown";
+  ready_for_draft: boolean;
+  ready_for_confirmed_output: boolean;
+  counts: {
+    rooms: number;
+    systems: number;
+    requirements: number;
+    selected_requirements: number;
+    devices: number;
+    conflicts: number;
+    unknowns: number;
+    open_accessories: number;
+  };
+  stages: ReadinessStage[];
+}
+export interface ProjectOutputConsumer {
+  requirement_id: string;
+  system_name: string;
+  role: string;
+  via: "direct" | "accessory";
+}
+export interface ProjectOutputLine {
+  device_id: string;
+  kind: Deployment["kind"];
+  name: string;
+  model: string;
+  specification: string;
+  unit: string;
+  quantity: string;
+  note: string;
+  prices: Record<string, string>;
+  consumers: ProjectOutputConsumer[];
+  source: {
+    id: string;
+    import_id: string | null;
+    sheet: string | null;
+    row: number | null;
+  };
+}
+export interface ProjectOutput {
+  status: "draft" | "confirmed";
+  ready_for_confirmed_output: boolean;
+  knowledge_snapshot_id: string | null;
+  calculation_version: number;
+  lines: ProjectOutputLine[];
+}
 export interface Checked {
   version_changes?: {
     kind: string;
@@ -206,6 +259,8 @@ export interface Checked {
   checks: Check[];
   suggestions: Suggestion[];
   device_usages: DeviceUsage[];
+  readiness: ProjectReadiness;
+  project_output: ProjectOutput;
   fingerprint: string;
   versions: { id: string; revision: number }[];
   calculation_version: number;

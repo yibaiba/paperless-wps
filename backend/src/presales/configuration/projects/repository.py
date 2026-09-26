@@ -10,8 +10,11 @@ from ..catalog.service import CatalogService
 from ..common import Entities, view
 from ..models import Entity
 from .checks import evaluate_configuration
+from .device_usages import build_device_usages
 from .drawing import project_drawing
 from .knowledge_snapshot import knowledge_snapshot
+from .output import project_output
+from .readiness import project_readiness
 from .schemas import Configuration
 from .snapshots import SnapshotResolver
 
@@ -52,10 +55,31 @@ class ProjectConfigurations:
         record = self.record(project_id)
         if record:
             result = view(record)
-            result.setdefault("device_usages", [])
             result["configuration"] = Configuration.model_validate(
                 result["configuration"]
             ).model_dump(mode="json")
+            result.setdefault(
+                "device_usages",
+                build_device_usages(
+                    result["configuration"], result.get("suggestions", [])
+                ),
+            )
+            result.setdefault(
+                "readiness",
+                project_readiness(
+                    result["configuration"],
+                    result.get("checks", []),
+                    result.get("suggestions", []),
+                ),
+            )
+            result.setdefault(
+                "project_output",
+                project_output(
+                    result["configuration"],
+                    result.get("device_usages", []),
+                    result["readiness"],
+                ),
+            )
             return {**result, "name": project.name}
         count = len(
             list(
@@ -64,15 +88,19 @@ class ProjectConfigurations:
                 )
             )
         )
+        configuration = empty_configuration()
+        readiness = project_readiness(configuration, [], [])
         return dict(
             project_id=project_id,
             revision=0,
             name=project.name,
-            configuration=empty_configuration(),
+            configuration=configuration,
             legacy_items=count,
             checks=[],
             suggestions=[],
             device_usages=[],
+            readiness=readiness,
+            project_output=project_output(configuration, [], readiness),
         )
 
     def prepare(self, data, *, refresh=False):

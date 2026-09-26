@@ -21,6 +21,8 @@ import { ProjectOpenItems } from "./projects/ProjectOpenItems";
 import { configurationKeys } from "./queryKeys";
 import { ProjectToolbar } from "./projects/ProjectToolbar";
 import { ProjectSystemPanel } from "./projects/ProjectSystemPanel";
+import { ProjectWorkflowStatus } from "./projects/ProjectWorkflowStatus";
+import { ProjectOutputPanel } from "./projects/ProjectOutputPanel";
 export default function ProjectConfigurationPage() {
   const { projectId } = useParams();
   const query = useQuery({
@@ -79,6 +81,9 @@ function ConfigurationEditor({
     close,
     tree,
   } = editor;
+  const checkedStale =
+    !checked || businessKey(checked.configuration) !== businessKey(config);
+  const savedProjectionStale = checked ? checkedStale : dirty;
   return (
     <div className="configuration-page">
       <ProjectToolbar
@@ -103,6 +108,10 @@ function ConfigurationEditor({
           title={`原项目有 ${initial.legacy_items} 条清单，请先预览导入。原清单未改动。`}
         />
       ) : null}
+      <ProjectWorkflowStatus
+        readiness={checked?.readiness ?? saved.readiness}
+        stale={savedProjectionStale}
+      />
       <div className="config-workspace" inert={busy}>
         <ProjectSystemPanel
           tree={tree}
@@ -156,6 +165,16 @@ function ConfigurationEditor({
                     onAddToDrawing={(id) =>
                       drawing.mutate({ next: config, addIds: [id] })
                     }
+                  />
+                ),
+              },
+              {
+                key: "output",
+                label: `业务清单 ${config.devices.length}`,
+                children: (
+                  <ProjectOutputPanel
+                    output={checked?.project_output ?? saved.project_output}
+                    stale={savedProjectionStale}
                   />
                 ),
               },
@@ -256,9 +275,7 @@ function ConfigurationEditor({
       <ProjectChecks
         checked={checked}
         configuration={config}
-        stale={
-          !checked || businessKey(checked.configuration) !== businessKey(config)
-        }
+        stale={checkedStale}
         busy={busy}
         onCheck={(refresh) => check.mutate(refresh)}
         onApply={(suggestion, choice) =>

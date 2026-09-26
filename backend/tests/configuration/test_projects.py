@@ -188,6 +188,8 @@ def test_configuration_api_contract(client, catalog, config, project):
         "checks",
         "suggestions",
         "device_usages",
+        "readiness",
+        "project_output",
         "fingerprint",
         "versions",
         "calculation_version",
@@ -198,6 +200,11 @@ def test_configuration_api_contract(client, catalog, config, project):
         "allocation_demand_ids",
         "missing_information",
     } <= set(checked["device_usages"][0])
+    output_line = checked["project_output"]["lines"][0]
+    assert {"device_id", "model", "specification", "quantity", "consumers", "source"} <= set(
+        output_line
+    )
+    assert output_line["source"]["id"] == catalog["sources"][0]["id"]
 
     suggestion = checked["suggestions"][0]
     applied = post(
@@ -216,6 +223,8 @@ def test_configuration_api_contract(client, catalog, config, project):
         "checks",
         "suggestions",
         "device_usages",
+        "readiness",
+        "project_output",
         "fingerprint",
     } <= set(applied)
 
@@ -224,3 +233,5 @@ def test_configuration_api_contract(client, catalog, config, project):
     reopened = client.get(BASE + "/projects/" + project["id"])
     assert reopened.status_code == 200, reopened.text
     assert reopened.json()["device_usages"] == saved["device_usages"]
+    assert reopened.json()["readiness"] == saved["readiness"]
+    assert reopened.json()["project_output"] == saved["project_output"]
