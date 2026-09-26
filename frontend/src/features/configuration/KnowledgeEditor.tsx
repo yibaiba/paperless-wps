@@ -247,6 +247,21 @@ export function KnowledgeFields() {
     </>
   );
 }
+export function normalizeKnowledge(values: Knowledge): Knowledge {
+  return {
+    ...values,
+    completion: undefined,
+    missing_fields: undefined,
+    conditions: (values.conditions ?? []).map((condition) => ({
+      ...condition,
+      unit: condition.unit ?? "",
+      value: condition.value ?? null,
+      minimum: condition.minimum ?? null,
+      maximum: condition.maximum ?? null,
+    })),
+  };
+}
+
 export function KnowledgeEditor({
   initial,
   onSave,
@@ -272,22 +287,7 @@ export function KnowledgeEditor({
         form={form}
         layout="vertical"
         initialValues={initial ?? emptyKnowledge}
-        onFinish={(values) =>
-          onSave({
-            ...values,
-            completion: undefined,
-            missing_fields: undefined,
-            conditions: (values.conditions ?? []).map(
-              (c: Knowledge["conditions"][number]) => ({
-                ...c,
-                unit: c.unit ?? "",
-                value: c.value ?? null,
-                minimum: c.minimum ?? null,
-                maximum: c.maximum ?? null,
-              }),
-            ),
-          })
-        }
+        onFinish={(values) => onSave(normalizeKnowledge(values))}
       >
         <KnowledgeFields />
       </Form>

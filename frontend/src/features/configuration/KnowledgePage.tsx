@@ -15,6 +15,7 @@ import { api } from "../../shared/api";
 import type { Knowledge } from "./types";
 import { ROOT, Status, useKnowledge } from "./shared";
 import { KnowledgeEditor } from "./KnowledgeEditor";
+import { KnowledgeQuickCreate } from "./KnowledgeQuickCreate";
 import "./configuration.css";
 import { KnowledgeBatch } from "./KnowledgeBatch";
 import { KnowledgeTrial } from "./KnowledgeTrial";
@@ -31,7 +32,8 @@ export default function KnowledgePage() {
     [systemFilter, setSystemFilter] = useState<string>(),
     [evidence, setEvidence] = useState<string>(),
     [trial, setTrial] = useState<Knowledge>(),
-    [help, setHelp] = useState(false);
+    [help, setHelp] = useState(false),
+    [quickOpen, setQuickOpen] = useState(false);
   const revisions = useQuery({
     queryKey: configurationKeys.history(history),
     enabled: !!history,
@@ -56,6 +58,8 @@ export default function KnowledgePage() {
     onSuccess: () => {
       client.invalidateQueries({ queryKey: configurationKeys.knowledge });
       setEditing(undefined);
+      setQuickOpen(false);
+      message.success("搭配知识已保存");
     },
     onError: (e) => message.error(e.message),
   });
@@ -102,9 +106,10 @@ export default function KnowledgePage() {
           placeholder="查找搭配、系统或角色"
           onChange={(e) => setSearch(e.target.value)}
         />
-        <Button type="primary" onClick={() => setEditing(null)}>
-          新增搭配知识
+        <Button type="primary" onClick={() => setQuickOpen(true)}>
+          快速新增知识
         </Button>
+        <Button onClick={() => setEditing(null)}>高级新增</Button>
         <KnowledgeMigration />
         <Button disabled={!selected.length} onClick={() => setBatchOpen(true)}>
           批量编辑
@@ -265,6 +270,13 @@ export default function KnowledgePage() {
           ]}
         />
       </Modal>
+      {quickOpen ? (
+        <KnowledgeQuickCreate
+          onSave={(values) => save.mutate(values)}
+          onClose={() => setQuickOpen(false)}
+          busy={save.isPending}
+        />
+      ) : null}
       {editing !== undefined ? (
         <KnowledgeEditor
           initial={editing ?? undefined}
