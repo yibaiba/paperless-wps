@@ -4,7 +4,7 @@ import argparse
 import os
 from pathlib import Path
 
-from collaboration_minutes_variants import apply_variant_updates, variant_updates
+from collaboration_minutes_variants import variant_updates
 from dotenv import load_dotenv
 from knowledge_seed import (
     RuleSpec,
@@ -17,6 +17,7 @@ from knowledge_seed import (
 )
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
+from variant_seed import apply_variant_updates
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_FILENAME = "2026艾索软件产品及配套产品报价清单0604（V2.2）.xlsx"

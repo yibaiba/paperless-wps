@@ -6,6 +6,7 @@ from decimal import Decimal
 from pathlib import Path
 from uuid import NAMESPACE_URL, uuid5
 
+from audio_cabling_variants import variant_updates as audio_variant_updates
 from dotenv import load_dotenv
 from knowledge_seed import (
     RuleSpec,
@@ -24,6 +25,7 @@ from presales.configuration.models import Entity, SourceLink
 from presales.storage import ProductRecord
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
+from variant_seed import apply_variant_updates
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_FILENAME = "2026艾索软件产品及配套产品报价清单0604（V2.2）.xlsx"
@@ -321,6 +323,49 @@ def audio_rules() -> tuple[RuleSpec, ...]:
             mode="per_group",
             output_kind="hardware",
         ),
+        RuleSpec(
+            key="eg-extension-cable",
+            name="EG 会议主机 · 按明确布线数量选择会议延长线",
+            status="confirmed",
+            sources=(ref(AI_MINUTES, 13, "EG-620M"), ref(AI_MINUTES, 14, "EG-720M")),
+            targets=(
+                ref(AI_MINUTES, 21, "BE6/10"),
+                ref(AI_MINUTES, 22, "BE6/20"),
+                ref(AI_MINUTES, 23, "BE6/30"),
+                ref(AI_MINUTES, 24, "BE6/50"),
+            ),
+            need_key="eg.extension-cable",
+            need_name="会议延长线",
+            evidence=(
+                f"{AI_MINUTES} 第21-24行提供10、20、30、50米会议延长线。"
+                "具体长度和数量必须来自项目布线或拓扑确认。"
+            ),
+            accessory_type="optional",
+            calculation_scope="device",
+            quantity_source="environment",
+            quantity_key="eg_extension_cable_count",
+            mode="per_unit",
+            output_kind="accessory",
+        ),
+        RuleSpec(
+            key="eg-floor-box",
+            name="EG 会议主机 · 按明确安装数量配置6芯地插盒",
+            status="confirmed",
+            sources=(ref(AI_MINUTES, 13, "EG-620M"), ref(AI_MINUTES, 14, "EG-720M")),
+            targets=(ref(AI_MINUTES, 25, "BE-206P"),),
+            need_key="eg.floor-box",
+            need_name="6芯会议单元地插盒",
+            evidence=(
+                f"{AI_MINUTES} 第25行明确为6芯会议单元地插盒；"
+                "是否采用及数量必须由安装方案确认。"
+            ),
+            accessory_type="optional",
+            calculation_scope="device",
+            quantity_source="environment",
+            quantity_key="eg_floor_box_count",
+            mode="per_unit",
+            output_kind="accessory",
+        ),
     )
 
 
@@ -536,6 +581,9 @@ def main() -> None:
             mutate = True
             plans = [
                 *source_plans,
+                *apply_variant_updates(
+                    session, imported.id, audio_variant_updates(), ACTOR
+                ),
                 repair_booking_rule(session, imported.id, mutate),
                 disable_legacy_splitter_rule(session, mutate),
                 *repair_seeded_network_rules(session, imported.id, specs, mutate),

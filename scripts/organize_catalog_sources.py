@@ -1,4 +1,4 @@
-"""Organize dedicated-sheet sources and link exact summary-table duplicates."""
+"""Organize dedicated sources and safely link summary-table duplicates."""
 
 import argparse
 import json
@@ -20,12 +20,28 @@ ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_FILENAME = "2026艾索软件产品及配套产品报价清单0604（V2.2）.xlsx"
 SUMMARY_SHEET = "报价总表（此表勿动）"
 ACTOR = "艾索产品库全量来源整理"
+CORE_FIELDS = (
+    "model",
+    "name",
+    "brand",
+    "category",
+    "specification",
+    "short_specification",
+    "tender_specification",
+    "unit",
+)
+EXACT_FIELDS = (*CORE_FIELDS, "note", "prices", "hidden")
 INDEPENDENT_EVIDENCE = (
     "该来源来自专用产品工作表，按原始行确认为独立配置；不依据相同型号自动合并。"
 )
 EXACT_LINK_EVIDENCE = (
     "报价总表来源与专用工作表来源在型号、名称、品牌、类别、完整参数、简略参数、"
     "招标参数、备注、单位、价格和隐藏状态字段全部一致，关联到该专用来源的已确认配置。"
+)
+SOURCE_VARIANCE_EVIDENCE = (
+    "报价总表来源与专用工作表来源在型号、名称、品牌、类别、完整参数、简略参数、"
+    "招标参数和单位字段全部一致；仅价格、备注或工作表隐藏状态不同。关联到同一已确认"
+    "配置，并将来源差异分别保留，未选择某个来源覆盖其他来源。"
 )
 
 
@@ -39,22 +55,19 @@ class Plan:
     target_variant_id: str = ""
 
 
-def signature(record: ProductRecord) -> tuple[str, ...]:
-    payload = record.payload
-    values = (
-        record.model,
-        record.name,
-        payload.get("brand", ""),
-        payload.get("category", ""),
-        payload.get("specification", ""),
-        payload.get("short_specification", ""),
-        payload.get("tender_specification", ""),
-        payload.get("note", ""),
-        payload.get("unit", ""),
-        payload.get("prices", {}),
-        payload.get("hidden", False),
+def field_value(record: ProductRecord, field: str):
+    if field == "model":
+        return record.model
+    if field == "name":
+        return record.name
+    return record.payload.get(field, {} if field == "prices" else "")
+
+
+def signature(record: ProductRecord, fields: tuple[str, ...]) -> tuple[str, ...]:
+    return tuple(
+        json.dumps(field_value(record, field), ensure_ascii=False, sort_keys=True)
+        for field in fields
     )
-    return tuple(json.dumps(value, ensure_ascii=False, sort_keys=True) for value in values)
 
 
 def record_plan(action: str, record: ProductRecord, target_variant_id: str = "") -> Plan:
@@ -102,33 +115,44 @@ def organize_dedicated_sources(
     return [record_plan("independent", item, created[item.id]) for item in pending]
 
 
-def exact_variant_index(
-    records: list[ProductRecord], links: dict[str, SourceLink]
+def variant_index(
+    records: list[ProductRecord], links: dict[str, SourceLink], fields: tuple[str, ...]
 ) -> dict[tuple[str, ...], set[str]]:
     index: dict[tuple[str, ...], set[str]] = defaultdict(set)
     for record in records:
         link = links.get(record.id)
-        if record.sheet == SUMMARY_SHEET or link is None:
-            continue
-        index[signature(record)].add(link.variant_id)
+        if record.sheet != SUMMARY_SHEET and link is not None:
+            index[signature(record, fields)].add(link.variant_id)
     return index
 
 
-def link_exact_summary_sources(
-    session: Session, records: list[ProductRecord], links: dict[str, SourceLink]
-) -> tuple[list[Plan], list[Plan]]:
-    index = exact_variant_index(records, links)
+def link_unique_summary_sources(
+    session: Session,
+    records: list[ProductRecord],
+    links: dict[str, SourceLink],
+    *,
+    fields: tuple[str, ...],
+    action: str,
+    evidence: str,
+) -> list[Plan]:
+    index = variant_index(records, links, fields)
     grouped: dict[str, list[ProductRecord]] = defaultdict(list)
-    unresolved = []
     for record in records:
         if record.sheet != SUMMARY_SHEET or record.id in links:
             continue
-        variants = index.get(signature(record), set())
+        variants = index.get(signature(record, fields), set())
         if len(variants) == 1:
             grouped[next(iter(variants))].append(record)
-            continue
-        action = "no_exact_match" if not variants else "ambiguous_exact_match"
-        unresolved.append(record_plan(action, record))
+    return persist_links(session, grouped, action=action, evidence=evidence)
+
+
+def persist_links(
+    session: Session,
+    grouped: dict[str, list[ProductRecord]],
+    *,
+    action: str,
+    evidence: str,
+) -> list[Plan]:
     linked = []
     service = CatalogService(session)
     for variant_id, sources in grouped.items():
@@ -136,12 +160,26 @@ def link_exact_summary_sources(
             LinkInput(
                 variant_id=variant_id,
                 actor=ACTOR,
-                evidence=EXACT_LINK_EVIDENCE,
+                evidence=evidence,
                 items=[LinkItem(source_id=item.id, expected_revision=0) for item in sources],
             )
         )
-        linked.extend(record_plan("exact_link", item, variant_id) for item in sources)
-    return linked, unresolved
+        linked.extend(record_plan(action, item, variant_id) for item in sources)
+    return linked
+
+
+def classify_unresolved(
+    records: list[ProductRecord], links: dict[str, SourceLink]
+) -> list[Plan]:
+    index = variant_index(records, links, CORE_FIELDS)
+    unresolved = []
+    for record in records:
+        if record.sheet != SUMMARY_SHEET or record.id in links:
+            continue
+        variants = index.get(signature(record, CORE_FIELDS), set())
+        action = "no_core_match" if not variants else "ambiguous_core_match"
+        unresolved.append(record_plan(action, record))
+    return unresolved
 
 
 def execute(session: Session, import_id: str) -> tuple[list[Plan], list[Plan]]:
@@ -156,8 +194,27 @@ def execute(session: Session, import_id: str) -> tuple[list[Plan], list[Plan]]:
     independent = organize_dedicated_sources(session, records, links)
     session.flush()
     links = confirmed_links(session)
-    exact, unresolved = link_exact_summary_sources(session, records, links)
-    return [*independent, *exact], unresolved
+    exact = link_unique_summary_sources(
+        session,
+        records,
+        links,
+        fields=EXACT_FIELDS,
+        action="exact_link",
+        evidence=EXACT_LINK_EVIDENCE,
+    )
+    session.flush()
+    links = confirmed_links(session)
+    variance = link_unique_summary_sources(
+        session,
+        records,
+        links,
+        fields=CORE_FIELDS,
+        action="source_variance_link",
+        evidence=SOURCE_VARIANCE_EVIDENCE,
+    )
+    session.flush()
+    links = confirmed_links(session)
+    return [*independent, *exact, *variance], classify_unresolved(records, links)
 
 
 def print_report(plans: list[Plan], unresolved: list[Plan], apply: bool) -> None:
@@ -171,8 +228,9 @@ def print_report(plans: list[Plan], unresolved: list[Plan], apply: bool) -> None
         print(f"{item.action:22} {item.sheet}!{item.row} {item.model}")
     print(
         f"独立配置 {counts['independent']} 条；严格关联 {counts['exact_link']} 条；"
-        f"无完全匹配 {unresolved_counts['no_exact_match']} 条；"
-        f"多配置歧义 {unresolved_counts['ambiguous_exact_match']} 条。"
+        f"来源差异关联 {counts['source_variance_link']} 条；"
+        f"无核心匹配 {unresolved_counts['no_core_match']} 条；"
+        f"多配置歧义 {unresolved_counts['ambiguous_core_match']} 条。"
     )
     print(f"本次共整理 {len(plans)} 条来源；模式：{'已写入' if apply else '仅预览'}")
 
