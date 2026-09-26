@@ -10,6 +10,7 @@ from presales.storage import ProductRecord
 
 from ..common import Entities
 from ..models import Entity, SourceLink, SourceRevision
+from .matching import match_suggestions
 from .schemas import LinkInput, ProductInput, VariantInput
 
 
@@ -96,38 +97,54 @@ class CatalogService:
 
     def audit(self, import_id):
         products = CatalogRepository(self.session).products(import_id)
-        originals = {
-            r.id: r.payload
-            for r in self.session.scalars(
+        records = {
+            record.id: record
+            for record in self.session.scalars(
                 select(ProductRecord).where(ProductRecord.import_id == import_id)
             )
         }
-        counts = Counter(p["model"] for p in products)
-        links = {r.source_id: r for r in self.session.scalars(select(SourceLink))}
-        variants = {v["id"]: v for v in self.variants()}
-        rows = []
-        for product in products:
-            link = links.get(product["id"])
-            variant = variants.get(link.variant_id) if link else None
-            rows.append(
-                {
-                    **originals[product["id"]],
-                    **product,
-                    "link_revision": link.revision if link else 0,
-                    "variant_id": link.variant_id if link else None,
-                    "variant": variant,
-                    "organized": bool(variant and variant["status"] == "confirmed"),
-                    "duplicate_model": counts[product["model"]] > 1,
-                }
+        counts = Counter(product["model"] for product in products)
+        links = {row.source_id: row for row in self.session.scalars(select(SourceLink))}
+        variant_rows = self.variants()
+        variants = {variant["id"]: variant for variant in variant_rows}
+        rows = [
+            self._audit_row(
+                product,
+                records=records,
+                links=links,
+                variants=variants,
+                variant_rows=variant_rows,
+                counts=counts,
             )
-        organized = sum(r["organized"] for r in rows)
+            for product in products
+        ]
+        organized = sum(row["organized"] for row in rows)
         return dict(
             rows=rows,
             total=len(rows),
             organized=organized,
             pending=len(rows) - organized,
-            conflicts=sum(r["review_summary"]["total"] > 0 for r in rows),
+            conflicts=sum(row["review_summary"]["total"] > 0 for row in rows),
         )
+
+    def _audit_row(self, product, *, records, links, variants, variant_rows, counts):
+        record = records[product["id"]]
+        link = links.get(product["id"])
+        variant = variants.get(link.variant_id) if link else None
+        organized = bool(variant and variant["status"] == "confirmed")
+        row = {
+            **record.payload,
+            **product,
+            "link_revision": link.revision if link else 0,
+            "variant_id": link.variant_id if link else None,
+            "variant": variant,
+            "organized": organized,
+            "duplicate_model": counts[product["model"]] > 1,
+        }
+        row["match_suggestions"] = (
+            [] if organized else match_suggestions(row, variant_rows, records)
+        )
+        return row
 
     def validate_variant_ids(self, ids):
         found = set(

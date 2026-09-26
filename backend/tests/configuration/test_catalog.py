@@ -90,3 +90,40 @@ def test_bulk_independent_sources_and_conflicting_sources(client, workbook):
     tagged = next(v for v in client.get(BASE + "/variants").json() if v["series"])
     assert tagged["series"] == ["已有测试系列"] and "沿用来源属性 v1" in tagged["evidence"]
     assert len(variant["source_details"]) == 2
+
+
+def test_audit_suggests_same_model_variant_and_explains_differences(client, workbook):
+    imported = client.post("/api/imports", files={"file": ("matching.xlsx", workbook)}).json()
+    sources = client.get("/api/products", params={"import_id": imported["id"]}).json()
+    product = post(
+        client,
+        "/products",
+        dict(name="测试服务器", model="SERVER-X", category="服务器", **AUTHOR),
+    )
+    variant = post(
+        client,
+        "/variants",
+        dict(
+            product_id=product["id"],
+            name="64GB 配置",
+            status="confirmed",
+            **AUTHOR,
+        ),
+    )
+    post(
+        client,
+        "/source-links",
+        dict(
+            variant_id=variant["id"],
+            items=[dict(source_id=sources[0]["id"], expected_revision=0)],
+            **AUTHOR,
+        ),
+    )
+
+    audit = client.get(BASE + "/audit/" + imported["id"]).json()
+    pending = next(row for row in audit["rows"] if not row["organized"])
+    suggestion = pending["match_suggestions"][0]
+    assert suggestion["variant_id"] == variant["id"]
+    assert suggestion["match_type"] == "conflict"
+    assert "specification" in suggestion["differences"]
+    assert suggestion["best_source"]["row"] == 2

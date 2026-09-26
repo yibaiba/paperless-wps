@@ -32,12 +32,18 @@ import { ProductEditor, VariantEditor } from "./CatalogEditor";
 import "./configuration.css";
 import { IndependentSources } from "./IndependentSources";
 import { SearchIndexPanel } from "./SearchIndexPanel";
+import {
+  type MatchSuggestion,
+  SourceMatchSuggestions,
+  suggestedEvidence,
+} from "./SourceMatchSuggestions";
 interface Row extends Source {
   organized: boolean;
   duplicate_model: boolean;
   link_revision: number;
   variant_id: string | null;
   variant: Variant | null;
+  match_suggestions: MatchSuggestion[];
 }
 interface Audit {
   rows: Row[];
@@ -101,6 +107,7 @@ export default function CatalogOrganizePage() {
       client.invalidateQueries({ queryKey: ["configuration"] });
       setLinking(false);
       setSelected([]);
+      form.resetFields();
       message.success("来源归属已记录，原资料保持不变");
     },
     onError: (e) => message.error(e.message),
@@ -169,7 +176,10 @@ export default function CatalogOrganizePage() {
                   </Button>
                   <Button
                     disabled={!selected.length}
-                    onClick={() => setLinking(true)}
+                    onClick={() => {
+                      form.resetFields();
+                      setLinking(true);
+                    }}
                   >
                     关联所选 {selected.length} 条来源
                   </Button>
@@ -195,7 +205,7 @@ export default function CatalogOrganizePage() {
                   rowKey="id"
                   dataSource={rows}
                   loading={audit.isLoading}
-                  scroll={{ x: 1050 }}
+                  scroll={{ x: 1450 }}
                   rowSelection={{
                     selectedRowKeys: selected,
                     preserveSelectedRowKeys: true,
@@ -224,6 +234,27 @@ export default function CatalogOrganizePage() {
                         r.variant
                           ? `${r.variant.product.model} / ${r.variant.name}`
                           : "未整理",
+                    },
+                    {
+                      title: "匹配候选",
+                      width: 390,
+                      render: (_, r) =>
+                        r.organized ? (
+                          <Typography.Text type="secondary">已完成归属</Typography.Text>
+                        ) : (
+                          <SourceMatchSuggestions
+                            suggestions={r.match_suggestions}
+                            onLink={(suggestion) => {
+                              setSelected([r.id]);
+                              form.setFieldsValue({
+                                variant_id: suggestion.variant_id,
+                                actor: "",
+                                evidence: suggestedEvidence(suggestion),
+                              });
+                              setLinking(true);
+                            }}
+                          />
+                        ),
                     },
                     {
                       title: "状态",
@@ -334,7 +365,7 @@ export default function CatalogOrganizePage() {
         />
       ) : null}
       <Modal
-        title="确认所选来源属于同一具体配置"
+        title={`确认 ${selected.length} 条来源属于同一具体配置`}
         open={linking}
         onCancel={() => setLinking(false)}
         onOk={() => form.submit()}

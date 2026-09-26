@@ -74,3 +74,17 @@
 .config-workspace .ant-tree-title {
   white-space: nowrap;
 }
+.source-match-list {
+  width: 100%;
+}
+.source-match-item {
+  padding: 6px 8px;
+  border: 1px solid #e3e9e5;
+  border-radius: 8px;
+  background: #fafcfb;
+}
+.source-match-detail {
+  display: block;
+  margin-top: 2px;
+  line-height: 1.45;
+}
