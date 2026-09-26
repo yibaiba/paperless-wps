@@ -10,7 +10,14 @@ import {
   Tag,
 } from "antd";
 import { api } from "../../shared/api";
-import type { Attribute, Knowledge, Product, Variant } from "./types";
+import type {
+  Attribute,
+  AttributeDefinition,
+  Knowledge,
+  Product,
+  Variant,
+} from "./types";
+import { configurationKeys } from "./queryKeys";
 
 export const ROOT = "/configuration";
 export const units = [
@@ -35,6 +42,7 @@ export const statusLabels: Record<string, string> = {
   confirmed: "已确认",
   disabled: "停用",
   pending: "待审核",
+  blocked: "明确阻塞",
   accept: "已接受",
   reject: "已拒绝",
   queued: "等待处理",
@@ -60,20 +68,28 @@ export function Status({ value }: { value: string }) {
 }
 export function useVariants() {
   return useQuery({
-    queryKey: ["configuration", "variants"],
+    queryKey: configurationKeys.variants,
     queryFn: () => api<Variant[]>(ROOT + "/variants"),
   });
 }
 export function useProducts() {
   return useQuery({
-    queryKey: ["configuration", "products"],
+    queryKey: configurationKeys.products,
     queryFn: () => api<Product[]>(ROOT + "/products"),
   });
 }
 export function useKnowledge() {
   return useQuery({
-    queryKey: ["configuration", "knowledge"],
+    queryKey: configurationKeys.knowledge,
     queryFn: () => api<Knowledge[]>(ROOT + "/knowledge"),
+  });
+}
+export function useAttributeDefinitions() {
+  return useQuery({
+    queryKey: configurationKeys.attributeDefinitions,
+    queryFn: () =>
+      api<AttributeDefinition[]>(ROOT + "/attribute-definitions"),
+    staleTime: Infinity,
   });
 }
 export const variantOptions = (variants: Variant[] | undefined) =>
@@ -94,38 +110,9 @@ export function AuthorFields() {
     </Space>
   );
 }
-const attributeNames = [
-  "cpu_arch",
-  "os",
-  "os_version",
-  "software_version",
-  "memory",
-  "cores",
-  "capacity",
-  "width",
-  "height",
-  "depth",
-  "terminal_count",
-  "user_count",
-  "display_inches",
-];
-const attributeLabels = [
-  "CPU 架构",
-  "操作系统",
-  "系统版本",
-  "软件版本",
-  "内存",
-  "CPU 核数",
-  "容量",
-  "宽度",
-  "高度",
-  "深度",
-  "终端数量",
-  "用户人数",
-  "屏幕尺寸（英寸）",
-];
 export function AttributeEditor({ name = "attributes" }: { name?: string }) {
   const form = Form.useFormInstance();
+  const definitions = useAttributeDefinitions();
   const values = Form.useWatch(name, form) as Attribute[] | undefined;
   return (
     <Form.List name={name}>
@@ -137,12 +124,31 @@ export function AttributeEditor({ name = "attributes" }: { name?: string }) {
                 name={[field.name, "key"]}
                 label="参数"
                 rules={required}
+                help={
+                  values?.[field.name]?.key &&
+                  !definitions.data?.some(
+                    (item) => item.key === values[field.name].key,
+                  )
+                    ? "未注册字段：会保留原值，但规则只能按完全相同的键匹配"
+                    : undefined
+                }
+                validateStatus={
+                  values?.[field.name]?.key &&
+                  !definitions.data?.some(
+                    (item) => item.key === values[field.name].key,
+                  )
+                    ? "warning"
+                    : undefined
+                }
               >
                 <AutoComplete
-                  options={attributeNames.map((value, i) => ({
-                    value,
-                    label: attributeLabels[i],
-                  }))}
+                  options={definitions.data?.flatMap((item) => [
+                    { value: item.key, label: item.label },
+                    ...item.aliases.map((alias) => ({
+                      value: alias,
+                      label: `${item.label}（旧字段 ${alias}）`,
+                    })),
+                  ])}
                 />
               </Form.Item>
               <Form.Item name={[field.name, "kind"]} label="类型">

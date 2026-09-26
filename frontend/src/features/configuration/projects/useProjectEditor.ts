@@ -15,6 +15,7 @@ import type {
 import { ROOT } from "../shared";
 import { useConfigurationDraft } from "../useConfigurationDraft";
 import { buildProjectTree } from "./projectTree";
+import { configurationKeys } from "../queryKeys";
 export function businessKey(c: Configuration) {
   const { drawing_xml, ...data } = c;
   void drawing_xml;
@@ -113,7 +114,7 @@ export function useProjectEditor({
       }),
     onSuccess: (result) => {
       setSaved(result);
-      client.setQueryData(["configuration", "project", projectId], result);
+      client.setQueryData(configurationKeys.project(projectId), result);
       savedJson.current = JSON.stringify(result.configuration);
       draft.commit(result.configuration);
       setChecked(result);

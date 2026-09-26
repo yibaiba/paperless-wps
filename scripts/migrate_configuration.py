@@ -10,6 +10,7 @@ from presales.configuration.models import (
     Revision,
     SearchDocument,
     SearchIndexJob,
+    SourceBlock,
     SourceLink,
     SourceRevision,
 )
@@ -21,6 +22,7 @@ NEW_TABLES = (
     Entity.__table__,
     Revision.__table__,
     SourceLink.__table__,
+    SourceBlock.__table__,
     SourceRevision.__table__,
     ExtractionJob.__table__,
     SearchDocument.__table__,

@@ -13,6 +13,7 @@ import type {
   Variant,
 } from "./types";
 import { ROOT } from "./shared";
+import { configurationKeys } from "./queryKeys";
 
 interface Props {
   configuration: Configuration;
@@ -30,16 +31,14 @@ export function ProjectCandidates(props: Props) {
   const [page, setPage] = useState(1);
   const system = configuration.systems.find((item) => item.id === requirement?.system_id);
   const query = useQuery({
-    queryKey: [
-      "configuration",
-      "candidates",
+    queryKey: configurationKeys.candidates(
       system?.kind,
       requirement?.role,
       requirement?.environment,
       configuration.knowledge_snapshot_id,
       mode,
       semanticQuery,
-    ],
+    ),
     enabled: !!requirement && (mode !== "semantic" || !!semanticQuery),
     queryFn: () =>
       api<Candidate[]>(ROOT + "/candidates", {

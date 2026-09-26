@@ -6,7 +6,8 @@ from presales.rules.routes import execute
 
 from ..common import Change, Entities
 from ..transactions import commit
-from .schemas import LinkInput, ProductInput, SourceBatch, VariantInput
+from .attributes import attribute_definitions
+from .schemas import LinkInput, ProductInput, SourceBatch, SourceBlockInput, VariantInput
 from .service import CatalogService
 
 router = APIRouter(prefix="/api/configuration")
@@ -39,6 +40,11 @@ def edit_product(product_id: str, data: Change, session: Session = Depends(sessi
 @router.get("/variants")
 def variants(session: Session = Depends(session_dependency)):
     return CatalogService(session).variants()
+
+
+@router.get("/attribute-definitions")
+def attributes():
+    return attribute_definitions()
 
 
 @router.post("/variants")
@@ -75,6 +81,11 @@ def independent_sources(data: SourceBatch, session: Session = Depends(session_de
     return execute(
         lambda: commit(session, lambda: CatalogService(session).independent_sources(data))
     )
+
+
+@router.post("/source-blocks")
+def block_sources(data: SourceBlockInput, session: Session = Depends(session_dependency)):
+    return execute(lambda: commit(session, lambda: CatalogService(session).block_sources(data)))
 
 
 @router.get("/history/{entity_id}")

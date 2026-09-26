@@ -4,6 +4,13 @@ export interface Attribute {
   value: string | string[] | null;
   unit: string;
 }
+export interface AttributeDefinition {
+  key: string;
+  label: string;
+  kind: Attribute["kind"];
+  units: string[];
+  aliases: string[];
+}
 export interface Authored {
   actor: string;
   evidence: string;
@@ -96,6 +103,8 @@ export interface Resource {
   key: string;
   amount: string;
   unit: string;
+  applies_to?: "selected_device" | "accessory";
+  target_need_key?: string;
 }
 export interface Requirement {
   id: string;
@@ -157,6 +166,7 @@ export interface Suggestion {
   scope_id?: string;
   need_key?: string;
   need_name?: string;
+  consumer_requirement_ids: string[];
   required?: string | null;
   missing?: string | null;
   existing?: string;
@@ -168,6 +178,23 @@ export interface Suggestion {
     input: Record<string, string>;
   } | null;
 }
+export interface DeviceConsumer {
+  requirement_id: string;
+  system_id: string;
+  system_name: string;
+  system: string;
+  role: string;
+  via: "direct" | "accessory";
+  demand_id: string | null;
+  resources: Resource[];
+  capacity_expected: boolean;
+}
+export interface DeviceUsage {
+  device_id: string;
+  consumers: DeviceConsumer[];
+  allocation_demand_ids: string[];
+  missing_information: string[];
+}
 export interface Checked {
   version_changes?: {
     kind: string;
@@ -178,6 +205,7 @@ export interface Checked {
   configuration: Configuration;
   checks: Check[];
   suggestions: Suggestion[];
+  device_usages: DeviceUsage[];
   fingerprint: string;
   versions: { id: string; revision: number }[];
   calculation_version: number;

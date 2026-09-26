@@ -1,4 +1,3 @@
-from collections import defaultdict
 from copy import deepcopy
 from decimal import Decimal
 
@@ -53,6 +52,7 @@ class ProjectConfigurations:
         record = self.record(project_id)
         if record:
             result = view(record)
+            result.setdefault("device_usages", [])
             result["configuration"] = Configuration.model_validate(
                 result["configuration"]
             ).model_dump(mode="json")
@@ -72,6 +72,7 @@ class ProjectConfigurations:
             legacy_items=count,
             checks=[],
             suggestions=[],
+            device_usages=[],
         )
 
     def prepare(self, data, *, refresh=False):
@@ -159,18 +160,23 @@ class ProjectConfigurations:
         payload = dict(project_id=project_id, **checked)
         options = dict(entity_id=record.id, expected_revision=actual) if record else {}
         result = self.entities.save("project", payload, **options)
-        self._project_items(project_id, checked["configuration"])
+        self._project_items(
+            project_id,
+            checked["configuration"],
+            checked["device_usages"],
+        )
         return {**result, "name": project.name}
 
-    def _project_items(self, project_id, data):
+    def _project_items(self, project_id, data, device_usages):
         self.session.execute(delete(ProjectItem).where(ProjectItem.project_id == project_id))
-        systems = {system["id"]: system["name"] for system in data["systems"]}
-        groups_by_device = defaultdict(set)
-        for requirement in data["requirements"]:
-            if requirement["device_id"]:
-                groups_by_device[requirement["device_id"]].add(systems[requirement["system_id"]])
+        groups_by_device = {
+            item["device_id"]: {
+                consumer["system_name"] for consumer in item["consumers"]
+            }
+            for item in device_usages
+        }
         for device in data["devices"]:
-            groups = sorted(groups_by_device[device["id"]])
+            groups = sorted(groups_by_device.get(device["id"], set()))
             self.session.add(
                 ProjectItem(
                     id=device["id"],

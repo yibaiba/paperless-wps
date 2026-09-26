@@ -1,17 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router-dom";
-import {
-  Alert,
-  Button,
-  Card,
-  Space,
-  Table,
-  Tabs,
-  Tree,
-  Typography,
-} from "antd";
+import { Alert, Card, Tabs } from "antd";
 import { api } from "../../shared/api";
-import type { Deployment, ProjectConfiguration } from "./types";
+import type { ProjectConfiguration } from "./types";
 import { ROOT } from "./shared";
 import { businessKey, useProjectEditor } from "./projects/useProjectEditor";
 import {
@@ -24,12 +15,16 @@ import { ProjectCandidates } from "./ProjectCandidates";
 import { ConfigurationDrawing } from "./ConfigurationDrawing";
 import { ProjectChecks } from "./ProjectChecks";
 import "./configuration.css";
-import { ProjectHistory } from "./projects/ProjectHistory";
 import { ProjectImportDialog } from "./projects/ProjectImportDialog";
+import { ProjectDeviceTable } from "./projects/ProjectDeviceTable";
+import { ProjectOpenItems } from "./projects/ProjectOpenItems";
+import { configurationKeys } from "./queryKeys";
+import { ProjectToolbar } from "./projects/ProjectToolbar";
+import { ProjectSystemPanel } from "./projects/ProjectSystemPanel";
 export default function ProjectConfigurationPage() {
   const { projectId } = useParams();
   const query = useQuery({
-    queryKey: ["configuration", "project", projectId],
+    queryKey: configurationKeys.project(projectId),
     staleTime: Infinity,
     refetchOnWindowFocus: false,
     queryFn: () => api<ProjectConfiguration>(ROOT + "/projects/" + projectId),
@@ -86,30 +81,22 @@ function ConfigurationEditor({
   } = editor;
   return (
     <div className="configuration-page">
-      <Space wrap>
-        <Button onClick={close}>返回项目</Button>
-        <Typography.Title level={3} style={{ margin: 0 }}>
-          {initial.name} · 配置
-        </Typography.Title>
-        <span>{dirty ? "有未保存修改" : `已保存 v${saved.revision}`}</span>
-        <Button
-          type="primary"
-          onClick={saveProject}
-          loading={save.isPending}
-          disabled={busy}
-        >
-          保存项目版本
-        </Button>
-        <Button onClick={() => setAuthor(true)}>维护信息</Button>
-        <ProjectHistory entityId={saved.id} />
-        <Button disabled={!draft.canUndo || busy} onClick={draft.undo}>
-          撤销
-        </Button>
-        <Button disabled={!draft.canRedo || busy} onClick={draft.redo}>
-          重做
-        </Button>
-        <Button onClick={() => setImportOpen(true)}>导入旧清单 / 拓扑</Button>
-      </Space>
+      <ProjectToolbar
+        name={initial.name}
+        revision={saved.revision}
+        dirty={dirty}
+        busy={busy}
+        saving={save.isPending}
+        canUndo={draft.canUndo}
+        canRedo={draft.canRedo}
+        entityId={saved.id}
+        onClose={close}
+        onSave={saveProject}
+        onAuthor={() => setAuthor(true)}
+        onUndo={draft.undo}
+        onRedo={draft.redo}
+        onImport={() => setImportOpen(true)}
+      />
       {initial.legacy_items && !saved.revision ? (
         <Alert
           type="warning"
@@ -117,62 +104,37 @@ function ConfigurationEditor({
         />
       ) : null}
       <div className="config-workspace" inert={busy}>
-        <Card title="房间与系统">
-          <Space orientation="vertical">
-            <Button disabled={busy} onClick={() => setSystemModal(true)}>
-              添加房间 / 系统
-            </Button>
-            <Button
-              disabled={!selectedSystem || busy}
-              onClick={() => setRequirementModal({ systemId: selectedSystem! })}
-            >
-              添加角色需求
-            </Button>
-          </Space>
-          <Tree
-            treeData={tree}
-            defaultExpandAll
-            onSelect={(keys) => {
-              const [type, id] = String(keys[0] ?? "").split(":");
-              if (type === "system") {
-                setSelectedSystem(id);
-                setSelectedRequirement(undefined);
-              }
-              if (type === "requirement") {
-                setSelectedRequirement(id);
-                setSelectedSystem(
-                  config.requirements.find((r) => r.id === id)?.system_id,
-                );
-              }
-            }}
-          />
-          {requirement ? (
-            <Space wrap>
-              <Button
-                onClick={() =>
-                  setRequirementModal({
-                    systemId: requirement.system_id,
-                    initial: requirement,
-                  })
-                }
-              >
-                编辑需求
-              </Button>
-              <Button
-                onClick={() =>
-                  draft.commit({
-                    ...config,
-                    requirements: config.requirements.map((r) =>
-                      r.id === requirement.id ? { ...r, device_id: null } : r,
-                    ),
-                  })
-                }
-              >
-                解除设备关联
-              </Button>
-            </Space>
-          ) : null}
-        </Card>
+        <ProjectSystemPanel
+          tree={tree}
+          requirement={requirement}
+          selectedSystem={selectedSystem}
+          busy={busy}
+          onAddSystem={() => setSystemModal(true)}
+          onAddRequirement={(systemId) => setRequirementModal({ systemId })}
+          onSelectSystem={(id) => {
+            setSelectedSystem(id);
+            setSelectedRequirement(undefined);
+          }}
+          onSelectRequirement={(id) => {
+            setSelectedRequirement(id);
+            setSelectedSystem(
+              config.requirements.find((item) => item.id === id)?.system_id,
+            );
+          }}
+          onEditRequirement={(item) =>
+            setRequirementModal({ systemId: item.system_id, initial: item })
+          }
+          onUnlinkRequirement={(item) =>
+            draft.commit({
+              ...config,
+              requirements: config.requirements.map((requirementItem) =>
+                requirementItem.id === item.id
+                  ? { ...requirementItem, device_id: null }
+                  : requirementItem,
+              ),
+            })
+          }
+        />
         <Card>
           <Tabs
             activeKey={tab}
@@ -182,44 +144,18 @@ function ConfigurationEditor({
                 key: "list",
                 label: `实际配置 ${config.devices.length}`,
                 children: (
-                  <Table<Deployment>
-                    rowKey="id"
-                    dataSource={config.devices}
-                    pagination={false}
-                    scroll={{ x: 600 }}
-                    columns={[
-                      { title: "设备 / 配置", dataIndex: "name" },
-                      { title: "数量", dataIndex: "quantity" },
-                      {
-                        title: "服务系统",
-                        render: (_, d) =>
-                          config.requirements
-                            .filter((r) => r.device_id === d.id)
-                            .map(
-                              (r) =>
-                                config.systems.find((s) => s.id === r.system_id)
-                                  ?.name,
-                            )
-                            .join("、") || "未分配",
-                      },
-                      {
-                        title: "操作",
-                        render: (_, d) => (
-                          <Space>
-                            <Button onClick={() => setDeviceModal(d.id)}>
-                              编辑
-                            </Button>
-                            <Button
-                              onClick={() =>
-                                drawing.mutate({ next: config, addIds: [d.id] })
-                              }
-                            >
-                              放入图纸
-                            </Button>
-                          </Space>
-                        ),
-                      },
-                    ]}
+                  <ProjectDeviceTable
+                    configuration={config}
+                    usages={
+                      checked &&
+                      businessKey(checked.configuration) === businessKey(config)
+                        ? checked.device_usages
+                        : []
+                    }
+                    onEdit={setDeviceModal}
+                    onAddToDrawing={(id) =>
+                      drawing.mutate({ next: config, addIds: [id] })
+                    }
                   />
                 ),
               },
@@ -329,6 +265,7 @@ function ConfigurationEditor({
           apply.mutate({ suggestion, choice })
         }
       />
+      <ProjectOpenItems checked={checked} configuration={config} />
       {systemModal ? (
         <SystemForm
           configuration={config}

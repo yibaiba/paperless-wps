@@ -19,6 +19,7 @@ import "./configuration.css";
 import { KnowledgeBatch } from "./KnowledgeBatch";
 import { KnowledgeTrial } from "./KnowledgeTrial";
 import { KnowledgeMigration } from "./KnowledgeMigration";
+import { configurationKeys } from "./queryKeys";
 const kinds = {
   suitability: "系统适用",
   accessory: "配套关系",
@@ -32,7 +33,7 @@ export default function KnowledgePage() {
     [trial, setTrial] = useState<Knowledge>(),
     [help, setHelp] = useState(false);
   const revisions = useQuery({
-    queryKey: ["configuration", "history", history],
+    queryKey: configurationKeys.history(history),
     enabled: !!history,
     queryFn: () => api<Record<string, unknown>[]>(ROOT + "/history/" + history),
   });
@@ -53,7 +54,7 @@ export default function KnowledgePage() {
         ),
       }),
     onSuccess: () => {
-      client.invalidateQueries({ queryKey: ["configuration"] });
+      client.invalidateQueries({ queryKey: configurationKeys.knowledge });
       setEditing(undefined);
     },
     onError: (e) => message.error(e.message),
@@ -65,7 +66,7 @@ export default function KnowledgePage() {
         body: JSON.stringify({ items }),
       }),
     onSuccess: () => {
-      client.invalidateQueries({ queryKey: ["configuration"] });
+      client.invalidateQueries({ queryKey: configurationKeys.knowledge });
       setBatchOpen(false);
       setSelected([]);
     },

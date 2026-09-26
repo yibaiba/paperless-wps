@@ -4,6 +4,7 @@ from .conftest import AUTHOR, BASE, post
 def test_full_coverage_and_same_model_separate_configs(client, catalog):
     audit = client.get(BASE + "/audit/" + catalog["imported"]["id"]).json()
     assert audit["total"] == audit["organized"] == 2
+    assert audit["handled"] == 2 and audit["blocked"] == 0
     assert audit["pending"] == 0
     assert len({r["variant_id"] for r in audit["rows"]}) == 2
     assert all(r["duplicate_model"] for r in audit["rows"])
@@ -127,3 +128,47 @@ def test_audit_suggests_same_model_variant_and_explains_differences(client, work
     assert suggestion["match_type"] == "conflict"
     assert "specification" in suggestion["differences"]
     assert suggestion["best_source"]["row"] == 2
+
+
+def test_blocked_source_is_handled_and_can_be_relinked(client, workbook):
+    imported = client.post("/api/imports", files={"file": ("blocked.xlsx", workbook)}).json()
+    sources = client.get("/api/products", params={"import_id": imported["id"]}).json()
+    source = sources[0]
+    blocked = client.post(
+        BASE + "/source-blocks",
+        json={
+            "items": [{"source_id": source["id"], "expected_revision": 0}],
+            "reason": "原始列错位，无法确认型号",
+            **AUTHOR,
+        },
+    )
+    assert blocked.status_code == 200, blocked.text
+    audit = client.get(BASE + "/audit/" + imported["id"]).json()
+    row = next(item for item in audit["rows"] if item["id"] == source["id"])
+    assert audit["blocked"] == 1 and audit["handled"] == 1
+    assert row["blocked"] is True and row["block_reason"] == "原始列错位，无法确认型号"
+    assert row["match_suggestions"] == []
+
+    product = post(client, "/products", dict(name="修正产品", model="SERVER-X", **AUTHOR))
+    variant = post(
+        client,
+        "/variants",
+        dict(product_id=product["id"], name="修正配置", status="confirmed", **AUTHOR),
+    )
+    linked = client.post(
+        BASE + "/source-links",
+        json={
+            "variant_id": variant["id"],
+            "items": [{"source_id": source["id"], "expected_revision": 1}],
+            **AUTHOR,
+        },
+    )
+    assert linked.status_code == 200, linked.text
+    row = next(
+        item
+        for item in client.get(BASE + "/audit/" + imported["id"]).json()["rows"]
+        if item["id"] == source["id"]
+    )
+    assert row["organized"] is True and row["blocked"] is False
+    history = client.get(BASE + "/source-history/" + source["id"]).json()
+    assert [item["revision"] for item in history] == [2, 1]

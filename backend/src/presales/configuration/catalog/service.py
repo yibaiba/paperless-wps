@@ -5,13 +5,13 @@ from sqlalchemy import select
 
 from presales.catalog.attributes.repository import AttributeRepository
 from presales.catalog.repository import CatalogRepository
-from presales.rules.repository import RuleConflict
 from presales.storage import ProductRecord
 
 from ..common import Entities
-from ..models import Entity, SourceLink, SourceRevision
+from ..models import Entity, SourceBlock, SourceLink
 from .matching import match_index, match_suggestions
 from .schemas import LinkInput, ProductInput, VariantInput
+from .source_conclusions import SourceConclusions
 
 
 class CatalogService:
@@ -63,39 +63,7 @@ class CatalogService:
         variant = self.entities.get(data.variant_id, kind="variant")
         if variant.payload["status"] != "confirmed":
             raise ValueError("确认配置后再确定来源归属；草稿可在整理页继续编辑")
-        ids = sorted(i.source_id for i in data.items)
-        records = list(
-            self.session.scalars(
-                select(ProductRecord)
-                .where(ProductRecord.id.in_(ids))
-                .order_by(ProductRecord.id)
-                .with_for_update()
-            )
-        )
-        if {r.id for r in records} != set(ids):
-            raise ValueError("部分原始来源不存在")
-        for item in data.items:
-            self._link_one(item, data)
-        self.session.flush()
-        return dict(linked=len(ids))
-
-    def _link_one(self, item, data):
-        old = self.session.get(SourceLink, item.source_id)
-        revision = old.revision if old else 0
-        if revision != item.expected_revision:
-            raise RuleConflict("来源归属已被修改，本批未保存，请重新核对")
-        if old is None:
-            old = SourceLink(source_id=item.source_id)
-            self.session.add(old)
-        old.variant_id, old.revision = data.variant_id, revision + 1
-        old.actor, old.evidence = data.actor, data.evidence
-        self.session.add(
-            SourceRevision(
-                source_id=item.source_id,
-                revision=old.revision,
-                payload=dict(variant_id=data.variant_id, actor=data.actor, evidence=data.evidence),
-            )
-        )
+        return SourceConclusions(self.session).link(data)
 
     def audit(self, import_id):
         products = CatalogRepository(self.session).products(import_id)
@@ -107,6 +75,7 @@ class CatalogService:
         }
         counts = Counter(product["model"] for product in products)
         links = {row.source_id: row for row in self.session.scalars(select(SourceLink))}
+        blocks = {row.source_id: row for row in self.session.scalars(select(SourceBlock))}
         variant_rows = self.variants()
         variants = {variant["id"]: variant for variant in variant_rows}
         variants_by_model = match_index(variant_rows, records)
@@ -115,6 +84,7 @@ class CatalogService:
                 product,
                 records=records,
                 links=links,
+                blocks=blocks,
                 variants=variants,
                 variants_by_model=variants_by_model,
                 counts=counts,
@@ -122,31 +92,39 @@ class CatalogService:
             for product in products
         ]
         organized = sum(row["organized"] for row in rows)
+        blocked = sum(row["blocked"] for row in rows)
         return dict(
             rows=rows,
             total=len(rows),
             organized=organized,
-            pending=len(rows) - organized,
+            blocked=blocked,
+            handled=organized + blocked,
+            pending=len(rows) - organized - blocked,
             conflicts=sum(row["review_summary"]["total"] > 0 for row in rows),
         )
 
-    def _audit_row(self, product, *, records, links, variants, variants_by_model, counts):
+    def _audit_row(self, product, *, records, links, blocks, variants, variants_by_model, counts):
         record = records[product["id"]]
         link = links.get(product["id"])
+        block = blocks.get(product["id"])
         variant = variants.get(link.variant_id) if link else None
         organized = bool(variant and variant["status"] == "confirmed")
         row = {
             **record.payload,
             **product,
-            "link_revision": link.revision if link else 0,
+            "link_revision": link.revision if link else block.revision if block else 0,
             "variant_id": link.variant_id if link else None,
             "variant": variant,
             "organized": organized,
+            "blocked": bool(block),
+            "block_reason": block.reason if block else "",
+            "block_actor": block.actor if block else "",
+            "block_evidence": block.evidence if block else "",
             "duplicate_model": counts[product["model"]] > 1,
         }
         row["match_suggestions"] = (
             []
-            if organized
+            if organized or block
             else match_suggestions(row, variants_by_model.get(product["model"], []), records)
         )
         return row
@@ -161,14 +139,7 @@ class CatalogService:
             raise ValueError("引用的产品配置不存在，请先在产品整理中建立配置")
 
     def source_history(self, source_id):
-        if self.session.get(ProductRecord, source_id) is None:
-            raise ValueError("原始来源不存在")
-        rows = self.session.scalars(
-            select(SourceRevision)
-            .where(SourceRevision.source_id == source_id)
-            .order_by(SourceRevision.revision.desc())
-        )
-        return [dict(revision=r.revision, created_at=r.created_at, **r.payload) for r in rows]
+        return SourceConclusions(self.session).history(source_id)
 
     def independent_sources(self, data):
         results = []
@@ -209,6 +180,9 @@ class CatalogService:
                 dict(source_id=source.id, product_id=product["id"], variant_id=variant["id"])
             )
         return dict(items=results)
+
+    def block_sources(self, data):
+        return SourceConclusions(self.session).block(data)
 
 
 def variant_view(variant, *, products, links, records):

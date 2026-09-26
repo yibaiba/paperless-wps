@@ -291,3 +291,176 @@ def test_calculation_version_only_upgrades_explicitly(client, config):
     )
     assert upgraded["calculation_version"] == 2
     assert upgraded["configuration"]["calculation_version"] == 2
+
+
+def shared_server_config(config, *, memory_each="20"):
+    result = version_two(config)
+    result["requirements"][0]["resources"] = [
+        {
+            "key": "memory",
+            "amount": memory_each,
+            "unit": "GB",
+            "applies_to": "accessory",
+            "target_need_key": "server",
+        }
+    ]
+    result["devices"].append({**result["devices"][0], "id": "software-2"})
+    result["requirements"].append(
+        {
+            **result["requirements"][0],
+            "id": "r2",
+            "system_id": "booking",
+            "device_id": "software-2",
+        }
+    )
+    return result
+
+
+def server_rule(client, catalog):
+    return accessory_rule(
+        client,
+        catalog["variants"][0],
+        catalog["variants"][1],
+        name="服务端软件需要服务器",
+        need_key="server",
+        need_name="服务端服务器",
+        factor="1",
+        output_kind="hardware",
+        allocation_mode="shareable",
+    )
+
+
+def apply_new_server(client, checked, suggestion, catalog):
+    return post(
+        client,
+        "/apply",
+        {
+            "configuration": checked["configuration"],
+            "fingerprint": checked["fingerprint"],
+            "suggestion_id": suggestion["id"],
+            "variant_id": catalog["variants"][1]["id"],
+            "source_id": catalog["sources"][1]["id"],
+            "quantity": "1",
+        },
+    )
+
+
+def suggestion_for(checked, requirement_id):
+    return next(
+        item
+        for item in checked["suggestions"]
+        if requirement_id in item["consumer_requirement_ids"]
+    )
+
+
+def test_separate_servers_are_counted_independently(client, catalog, config):
+    data = shared_server_config(config)
+    server_rule(client, catalog)
+    checked = post(client, "/check", {"configuration": data})
+    checked = apply_new_server(client, checked, suggestion_for(checked, "r1"), catalog)
+    checked = apply_new_server(client, checked, suggestion_for(checked, "r2"), catalog)
+    servers = [
+        item
+        for item in checked["configuration"]["devices"]
+        if item["variant_id"] == catalog["variants"][1]["id"]
+    ]
+    assert len(servers) == 2
+    server_usages = [
+        item for item in checked["device_usages"] if item["device_id"] in {s["id"] for s in servers}
+    ]
+    assert sorted(len(item["consumers"]) for item in server_usages) == [1, 1]
+    assert not any(
+        item["kind"] == "sharing" and item["device_id"] in {s["id"] for s in servers}
+        for item in checked["checks"]
+    )
+
+
+def test_shared_server_without_confirmed_basis_stays_unknown(client, catalog, config):
+    data = shared_server_config(config)
+    server_rule(client, catalog)
+    checked = post(client, "/check", {"configuration": data})
+    checked = apply_new_server(client, checked, suggestion_for(checked, "r1"), catalog)
+    server = next(
+        item
+        for item in checked["configuration"]["devices"]
+        if item["variant_id"] == catalog["variants"][1]["id"]
+    )
+    checked = post(
+        client,
+        "/apply",
+        {
+            "configuration": checked["configuration"],
+            "fingerprint": checked["fingerprint"],
+            "suggestion_id": suggestion_for(checked, "r2")["id"],
+            "existing_device_id": server["id"],
+            "quantity": "1",
+        },
+    )
+    sharing = next(
+        item
+        for item in checked["checks"]
+        if item["kind"] == "sharing" and item["device_id"] == server["id"]
+    )
+    assert sharing["status"] == "unknown"
+    assert "共用依据" in sharing["message"]
+    capacity = next(
+        item
+        for item in checked["checks"]
+        if item["kind"] == "capacity"
+        and item["device_id"] == server["id"]
+        and item.get("resource") == "memory"
+    )
+    assert capacity["status"] == "pass" and capacity["required"] == "40"
+
+
+@pytest.mark.parametrize(("memory_each", "expected"), [("20", "pass"), ("80", "conflict")])
+def test_confirmed_shared_server_aggregates_capacity(
+    client, catalog, config, memory_each, expected
+):
+    data = shared_server_config(config, memory_each=memory_each)
+    server_rule(client, catalog)
+    post(
+        client,
+        "/knowledge",
+        {
+            "name": "隔离测试共用服务器依据",
+            "kind": "sharing",
+            "status": "confirmed",
+            "selector": {"variant_ids": [catalog["variants"][1]["id"]]},
+            "shared_roles": ["无纸化/服务端", "会议预约/服务端"],
+            **AUTHOR,
+        },
+    )
+    checked = post(client, "/check", {"configuration": data})
+    checked = apply_new_server(client, checked, suggestion_for(checked, "r1"), catalog)
+    server = next(
+        item
+        for item in checked["configuration"]["devices"]
+        if item["variant_id"] == catalog["variants"][1]["id"]
+    )
+    checked = post(
+        client,
+        "/apply",
+        {
+            "configuration": checked["configuration"],
+            "fingerprint": checked["fingerprint"],
+            "suggestion_id": suggestion_for(checked, "r2")["id"],
+            "existing_device_id": server["id"],
+            "quantity": "1",
+        },
+    )
+    sharing = next(
+        item
+        for item in checked["checks"]
+        if item["kind"] == "sharing" and item["device_id"] == server["id"]
+    )
+    capacity = next(
+        item
+        for item in checked["checks"]
+        if item["kind"] == "capacity"
+        and item["device_id"] == server["id"]
+        and item.get("resource") == "memory"
+    )
+    assert sharing["status"] == "pass"
+    assert capacity["status"] == expected
+    assert capacity["required"] == str(int(memory_each) * 2)

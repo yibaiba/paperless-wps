@@ -64,6 +64,20 @@ export function AccessorySuggestionCard(props: Props) {
         {suggestion.rule.evidence}
         {suggestion.calculation ? `；${suggestion.calculation.engine}` : ""}
       </Typography.Paragraph>
+      {suggestion.consumer_requirement_ids?.length ? (
+        <Typography.Paragraph type="secondary">
+          服务对象：
+          {suggestion.consumer_requirement_ids
+            .map((id) => {
+              const requirement = configuration.requirements.find((item) => item.id === id);
+              const system = configuration.systems.find(
+                (item) => item.id === requirement?.system_id,
+              );
+              return requirement ? `${system?.name ?? "未知系统"} / ${requirement.role}` : id;
+            })
+            .join("、")}
+        </Typography.Paragraph>
+      ) : null}
       {hasMissing ? (
         <Space wrap align="end">
           <Select

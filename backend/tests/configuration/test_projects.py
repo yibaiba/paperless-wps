@@ -1,6 +1,6 @@
 from copy import deepcopy
 
-from .conftest import BASE, knowledge, post
+from .conftest import AUTHOR, BASE, knowledge, post
 
 
 def save(client, project, config, revision=0):
@@ -145,3 +145,82 @@ def test_unified_project_rejects_legacy_rule_calculation(client, catalog, config
     assert updated["revision"] == original["revision"]
     assert len(updated["configuration"]["devices"]) == 1
     assert len(client.get(path).json()["items"]) == 1
+
+
+def test_configuration_api_contract(client, catalog, config, project):
+    knowledge(client, catalog["variants"][0])
+    post(
+        client,
+        "/knowledge",
+        {
+            "name": "契约测试配套",
+            "kind": "accessory",
+            "status": "confirmed",
+            "selector": {"variant_ids": [catalog["variants"][0]["id"]]},
+            "need_key": "contract-accessory",
+            "need_name": "契约测试配套",
+            "target_variant_ids": [catalog["variants"][1]["id"]],
+            "accessory_type": "required",
+            "calculation_scope": "device",
+            "quantity_source": "device_quantity",
+            "mode": "per_unit",
+            "factor": "1",
+            "output_kind": "hardware",
+            "allocation_mode": "consumable",
+            **AUTHOR,
+        },
+    )
+    candidates = client.post(
+        BASE + "/candidates",
+        json={"system": "无纸化", "role": "服务端", "environment": []},
+    )
+    assert candidates.status_code == 200, candidates.text
+    assert {
+        "variant",
+        "status",
+        "evidence",
+        "ranking",
+    } <= set(candidates.json()[0])
+
+    checked = post(client, "/check", {"configuration": config})
+    assert {
+        "configuration",
+        "checks",
+        "suggestions",
+        "device_usages",
+        "fingerprint",
+        "versions",
+        "calculation_version",
+    } <= set(checked)
+    assert {
+        "device_id",
+        "consumers",
+        "allocation_demand_ids",
+        "missing_information",
+    } <= set(checked["device_usages"][0])
+
+    suggestion = checked["suggestions"][0]
+    applied = post(
+        client,
+        "/apply",
+        {
+            "configuration": checked["configuration"],
+            "fingerprint": checked["fingerprint"],
+            "suggestion_id": suggestion["id"],
+            "variant_id": catalog["variants"][1]["id"],
+            "source_id": catalog["sources"][1]["id"],
+        },
+    )
+    assert {
+        "configuration",
+        "checks",
+        "suggestions",
+        "device_usages",
+        "fingerprint",
+    } <= set(applied)
+
+    saved = save(client, project, applied["configuration"])
+    assert {"project_id", "revision", "name", "configuration"} <= set(saved)
+    reopened = client.get(BASE + "/projects/" + project["id"])
+    assert reopened.status_code == 200, reopened.text
+    assert reopened.json()["device_usages"] == saved["device_usages"]

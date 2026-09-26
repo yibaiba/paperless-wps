@@ -35,6 +35,15 @@ class SourceLink(Base):
     evidence: Mapped[str] = mapped_column(String)
 
 
+class SourceBlock(Base):
+    __tablename__ = "configuration_source_blocks"
+    source_id: Mapped[str] = mapped_column(ForeignKey("product_records.id"), primary_key=True)
+    revision: Mapped[int] = mapped_column(Integer, default=1)
+    actor: Mapped[str] = mapped_column(String)
+    evidence: Mapped[str] = mapped_column(String)
+    reason: Mapped[str] = mapped_column(Text)
+
+
 class ExtractionJob(Base):
     __tablename__ = "configuration_extraction_jobs"
     id: Mapped[str] = mapped_column(String, primary_key=True, default=identifier)

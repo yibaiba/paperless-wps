@@ -21,7 +21,7 @@ def calculate_accessory_demands(data, *, variants, catalog_variants, engine):
             if scope_matches(variants[device["id"]], rule["selector"])
         ]
         if rule["status"] != "confirmed" or rule_missing(rule):
-            demands.extend(pending_demands(rule, sources))
+            demands.extend(pending_demands(data, rule, sources))
             continue
         grouped, pending = group_contributions(data, rule, sources, variants)
         demands.extend(pending)
@@ -47,11 +47,16 @@ def rule_missing(rule):
     return missing
 
 
-def pending_demands(rule, devices):
+def pending_demands(data, rule, devices):
     missing = ["知识尚未确认"] if rule["status"] != "confirmed" else []
     missing.extend(rule.get("missing_fields") or rule_missing(rule))
     return [
-        demand_base(rule, digest([rule["id"], "pending", device["id"]]), device["id"])
+        demand_base(
+            rule,
+            digest([rule["id"], "pending", device["id"]]),
+            device["id"],
+            consumer_requirement_ids(data, device["id"]),
+        )
         | {
             "status": "unknown",
             "required": None,
@@ -155,14 +160,24 @@ def calculated_demand(data, rule, scope_id, contributions, engine, cyclic):
     else:
         status = "pass"
     if status != "pass":
-        return incomplete_calculation(rule, demand_id, scope_id, status, errors, evidence)
+        return incomplete_calculation(
+            rule,
+            demand_id,
+            scope_id,
+            status,
+            errors,
+            evidence,
+            contribution_requirement_ids(contributions),
+        )
     quantity = sum((item["quantity"][0] for item in contributions), Decimal(0))
     calculated = engine.calculate(mode=rule["mode"], quantity=str(quantity), factor=rule["factor"])
     required = Decimal(calculated["quantity"])
     existing, allocation_errors = allocated_quantity(data, demand_id, rule)
     if allocation_errors:
         status = "conflict"
-    return demand_base(rule, demand_id, scope_id) | {
+    return demand_base(
+        rule, demand_id, scope_id, contribution_requirement_ids(contributions)
+    ) | {
         "status": status,
         "required": str(required),
         "existing": str(existing),
@@ -190,8 +205,10 @@ def allocated_quantity(data, demand_id, rule):
     return total, errors
 
 
-def incomplete_calculation(rule, demand_id, scope_id, status, errors, evidence):
-    return demand_base(rule, demand_id, scope_id) | {
+def incomplete_calculation(
+    rule, demand_id, scope_id, status, errors, evidence, consumer_ids=None
+):
+    return demand_base(rule, demand_id, scope_id, consumer_ids or []) | {
         "status": status,
         "required": None,
         "existing": "0",
@@ -215,7 +232,7 @@ def unknown_scope(rule, device):
     return result
 
 
-def demand_base(rule, demand_id, scope_id):
+def demand_base(rule, demand_id, scope_id, consumer_ids):
     return {
         "id": demand_id,
         "parent_id": scope_id,
@@ -223,8 +240,25 @@ def demand_base(rule, demand_id, scope_id):
         "scope_id": scope_id,
         "need_key": rule.get("need_key") or rule["id"],
         "need_name": rule.get("need_name") or rule["name"],
+        "consumer_requirement_ids": consumer_ids,
         "rule": rule,
     }
+
+
+def consumer_requirement_ids(data, device_id):
+    return [
+        item["id"] for item in data["requirements"] if item.get("device_id") == device_id
+    ]
+
+
+def contribution_requirement_ids(contributions):
+    return list(
+        dict.fromkeys(
+            item["requirement"]["id"]
+            for item in contributions
+            if item["requirement"].get("id")
+        )
+    )
 
 
 def denial_rules(data, rule, variant):

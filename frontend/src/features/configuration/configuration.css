@@ -20,6 +20,15 @@
 .config-field-row .ant-form-item {
   margin-bottom: 12px;
 }
+.project-resource-row {
+  display: grid;
+  grid-template-columns: 1fr 110px 100px 170px 150px auto;
+  gap: 10px;
+  align-items: center;
+}
+.project-resource-row .ant-form-item {
+  margin-bottom: 12px;
+}
 .config-workspace {
   display: grid;
   grid-template-columns: 180px minmax(0, 1fr) 300px;
@@ -57,6 +66,9 @@
 }
 @media (max-width: 650px) {
   .config-field-row {
+    grid-template-columns: 1fr 1fr;
+  }
+  .project-resource-row {
     grid-template-columns: 1fr 1fr;
   }
   .config-workspace {

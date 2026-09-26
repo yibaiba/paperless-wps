@@ -77,3 +77,7 @@ class SourceBatch(Authored):
 
 class LinkInput(SourceBatch):
     variant_id: Text
+
+
+class SourceBlockInput(SourceBatch):
+    reason: Text

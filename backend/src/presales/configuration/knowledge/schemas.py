@@ -52,11 +52,17 @@ class Resource(Input):
     key: Text
     amount: Decimal = Field(ge=0, allow_inf_nan=False)
     unit: Text
+    applies_to: Literal["selected_device", "accessory"] = "selected_device"
+    target_need_key: str = ""
 
     @model_validator(mode="after")
     def unit_known(self):
         if self.unit not in UNITS:
             raise ValueError("资源单位不受支持")
+        if self.applies_to == "accessory" and not self.target_need_key:
+            raise ValueError("配套资源必须指定需求标识，例如 server")
+        if self.applies_to == "selected_device" and self.target_need_key:
+            raise ValueError("当前配置资源不能指定配套需求标识")
         return self
 
 
