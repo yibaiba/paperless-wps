@@ -24,7 +24,7 @@ def update_settings(data: SearchSettings, request: Request):
 @router.post("/test")
 def test_connection(request: Request):
     provider = request.app.state.search_provider()
-    vectors = execute(lambda: provider.embeddings(["无纸化会议服务器"]))
+    vectors = execute(lambda: provider.embeddings(["无纸化会议服务器"], purpose="query"))
     scores = execute(
         lambda: provider.rerank(
             "无纸化会议服务器",

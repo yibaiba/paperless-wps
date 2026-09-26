@@ -172,4 +172,10 @@ npm --prefix frontend run build
 .venv/bin/python -m presales.configuration.search.worker
 ```
 
+本机语义检索模型是可选服务，首次启动会下载约 2.3GB 权重：
+
+```sh
+docker compose --profile search up -d search-embeddings search-models
+```
+
 产品整理页新增“智能索引”，项目候选新增“已知候选、智能查找、全部产品”。智能查找使用 PostgreSQL pgvector、Embedding 和 Reranker，只负责召回与排序；兼容性、配套和数量仍由结构化知识、Python 与 ZEN 决定。未配置检索模型时，现有产品、知识和项目流程不受影响。详细说明见 [产品智能召回与候选排序](docs/semantic-product-search.md)。

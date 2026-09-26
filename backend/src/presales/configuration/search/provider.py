@@ -1,4 +1,8 @@
+from typing import Literal
+
 import httpx
+
+QUERY_INSTRUCTION = "Given a product requirement, retrieve relevant product configurations"
 
 
 class SearchModelClient:
@@ -6,9 +10,12 @@ class SearchModelClient:
         self.client = client
         self.settings = settings
 
-    def embeddings(self, texts: list[str]) -> list[list[float]]:
+    def embeddings(
+        self, texts: list[str], *, purpose: Literal["document", "query"] = "document"
+    ) -> list[list[float]]:
         settings = self._settings()
-        payload = {"model": settings.embedding_model, "input": texts}
+        inputs = [_query_input(text) for text in texts] if purpose == "query" else texts
+        payload = {"model": settings.embedding_model, "input": inputs}
         body = self._request(url=settings.embedding_url, payload=payload, label="Embedding")
         try:
             rows = sorted(body["data"], key=lambda item: item["index"])
@@ -25,14 +32,19 @@ class SearchModelClient:
         payload = {
             "model": settings.reranker_model,
             "query": query,
+            "texts": documents,
             "documents": documents,
             "top_n": len(documents),
+            "raw_scores": False,
+            "return_text": False,
+            "truncate": True,
         }
         body = self._request(url=settings.reranker_url, payload=payload, label="Reranker")
         scores = [None] * len(documents)
         try:
-            for item in body["results"]:
-                scores[item["index"]] = float(item["relevance_score"])
+            for item in _rerank_results(body):
+                score = item.get("score", item.get("relevance_score"))
+                scores[item["index"]] = float(score)
         except (KeyError, IndexError, TypeError, ValueError) as error:
             raise ValueError("Reranker 服务返回格式错误") from error
         if any(score is None for score in scores):
@@ -72,3 +84,15 @@ class SearchModelClient:
             raise ValueError(f"Embedding 向量维度必须为 {dimensions}")
         if any(not isinstance(value, int | float) for vector in vectors for value in vector):
             raise ValueError("Embedding 向量包含非数字内容")
+
+
+def _query_input(text: str) -> str:
+    return f"Instruct: {QUERY_INSTRUCTION}\nQuery:{text}"
+
+
+def _rerank_results(body):
+    if isinstance(body, list):
+        return body
+    if isinstance(body, dict) and isinstance(body.get("results"), list):
+        return body["results"]
+    raise ValueError("Reranker 服务返回格式错误")

@@ -156,7 +156,7 @@ export function SearchIndexPanel() {
               <Input placeholder="http://127.0.0.1:模型端口/rerank" />
             </Form.Item>
             <Form.Item name="reranker_model" label="Reranker 模型" rules={required}>
-              <Input placeholder="Qwen3-Reranker-0.6B" />
+              <Input placeholder="BAAI/bge-reranker-base" />
             </Form.Item>
             <Form.Item
               name="api_key"

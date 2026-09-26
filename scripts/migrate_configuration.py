@@ -7,9 +7,9 @@ from dotenv import load_dotenv
 from presales.configuration.models import (
     Entity,
     ExtractionJob,
+    Revision,
     SearchDocument,
     SearchIndexJob,
-    Revision,
     SourceLink,
     SourceRevision,
 )

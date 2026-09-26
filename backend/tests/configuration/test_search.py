@@ -1,3 +1,4 @@
+import json
 import os
 from pathlib import Path
 from uuid import uuid4
@@ -9,7 +10,11 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.schema import CreateSchema, DropSchema
 
-from presales.configuration.search.documents import variant_document, variant_document_record
+from presales.configuration.search.documents import (
+    document_hash,
+    variant_document,
+    variant_document_record,
+)
 from presales.configuration.search.provider import SearchModelClient
 from presales.configuration.search.service import SearchIndexer, SearchIndexService
 from presales.configuration.search.settings import PrivateSearchSettings, SearchSettings
@@ -21,7 +26,7 @@ from .conftest import AUTHOR, BASE, post
 
 
 class DeterministicSearchProvider:
-    def embeddings(self, texts):
+    def embeddings(self, texts, *, purpose="document"):
         return [self._vector(text) for text in texts]
 
     def rerank(self, query, documents):
@@ -41,7 +46,7 @@ def configured_store(tmp_path: Path):
             embedding_url="http://127.0.0.1:9000/v1/embeddings",
             embedding_model="Qwen3-Embedding-0.6B",
             reranker_url="http://127.0.0.1:9001/rerank",
-            reranker_model="Qwen3-Reranker-0.6B",
+            reranker_model="BAAI/bge-reranker-base",
         )
     )
     return store
@@ -54,7 +59,7 @@ def test_search_settings_are_private_and_preserve_key(tmp_path):
             embedding_url="http://127.0.0.1:9000/v1/embeddings",
             embedding_model="Qwen3-Embedding-0.6B",
             reranker_url="http://127.0.0.1:9001/rerank",
-            reranker_model="Qwen3-Reranker-0.6B",
+            reranker_model="BAAI/bge-reranker-base",
             api_key="secret",
         )
     )
@@ -62,11 +67,7 @@ def test_search_settings_are_private_and_preserve_key(tmp_path):
     assert public["configured"] is True
     assert public["has_key"] is True
     assert "api_key" not in public
-    saved = {
-        key: value
-        for key, value in public.items()
-        if key not in {"configured", "has_key"}
-    }
+    saved = {key: value for key, value in public.items() if key not in {"configured", "has_key"}}
     store.write(SearchSettings(**saved, api_key=""))
     assert store.read().api_key == "secret"
 
@@ -76,15 +77,21 @@ def test_provider_validates_embedding_and_reranker_contract():
 
     def handler(request):
         if request.url.path.endswith("embeddings"):
+            payload = json.loads(request.content)
+            assert payload["input"] == [
+                "Instruct: Given a product requirement, retrieve relevant product configurations\n"
+                "Query:query"
+            ]
             return httpx.Response(200, json={"data": [{"index": 0, "embedding": vector}]})
+        payload = json.loads(request.content)
+        assert payload["texts"] == ["a", "b"]
+        assert payload["documents"] == ["a", "b"]
         return httpx.Response(
             200,
-            json={
-                "results": [
-                    {"index": 1, "relevance_score": 0.8},
-                    {"index": 0, "relevance_score": 0.2},
-                ]
-            },
+            json=[
+                {"index": 1, "score": 0.8},
+                {"index": 0, "score": 0.2},
+            ],
         )
 
     settings = SearchSettings(
@@ -95,7 +102,7 @@ def test_provider_validates_embedding_and_reranker_contract():
     )
     with httpx.Client(transport=httpx.MockTransport(handler)) as client:
         provider = SearchModelClient(client, settings)
-        assert provider.embeddings(["query"]) == [vector]
+        assert provider.embeddings(["query"], purpose="query") == [vector]
         assert provider.rerank("query", ["a", "b"]) == [0.2, 0.8]
 
 
@@ -107,9 +114,10 @@ def test_document_contains_structured_product_facts(client, catalog):
     document = variant_document(variant)
     assert "产品型号：SERVER-X" in document
     assert "属性 memory（数量）：64GB" in document
-    assert variant_document_record(variant)["content_hash"] == variant_document_record(variant)[
-        "content_hash"
-    ]
+    assert "资料来源：" not in document
+    record = variant_document_record(variant)
+    assert record["document"] == document
+    assert record["content_hash"] == document_hash(document)
 
 
 def test_index_job_tracks_current_and_stale_documents(client, catalog, tmp_path):
@@ -131,9 +139,8 @@ def test_index_job_tracks_current_and_stale_documents(client, catalog, tmp_path)
     assert stale["indexed"] == 1
 
 
-
 class FailingSearchProvider:
-    def embeddings(self, texts):
+    def embeddings(self, texts, *, purpose="document"):
         raise ValueError("模型暂时不可用")
 
 

@@ -7,6 +7,38 @@ services:
       DRAWIO_LANG: zh
       DRAWIO_SERVER_URL: http://127.0.0.1:5176/diagram-editor/
     restart: unless-stopped
+  search-embeddings:
+    profiles: ["search"]
+    image: ghcr.io/huggingface/text-embeddings-inference:cpu-1.9
+    command:
+      - --model-id
+      - Qwen/Qwen3-Embedding-0.6B
+      - --auto-truncate
+      - --max-batch-tokens
+      - "1024"
+      - --max-client-batch-size
+      - "8"
+    ports:
+      - "127.0.0.1:18081:80"
+    volumes:
+      - ./data/search-models/hub:/data
+    restart: unless-stopped
+  search-models:
+    profiles: ["search"]
+    image: ghcr.io/huggingface/text-embeddings-inference:cpu-1.9
+    command:
+      - --model-id
+      - BAAI/bge-reranker-base
+      - --auto-truncate
+      - --max-batch-tokens
+      - "4096"
+      - --max-client-batch-size
+      - "64"
+    ports:
+      - "127.0.0.1:18080:80"
+    volumes:
+      - ./data/search-models/hub:/data
+    restart: unless-stopped
   database:
     image: pgvector/pgvector:pg17
     ports:

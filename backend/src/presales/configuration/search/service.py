@@ -226,7 +226,7 @@ class SemanticCandidateSearch:
         settings = self.settings_store.read()
         if settings is None:
             raise ValueError("尚未配置智能检索模型")
-        query_vector = self.provider_factory().embeddings([query])[0]
+        query_vector = self.provider_factory().embeddings([query], purpose="query")[0]
         current = {item["variant_id"]: item for item in map(variant_document_record, variants)}
         rows = self._nearest(query_vector, settings, list(current))
         rows = [row for row in rows if current[row.variant_id]["content_hash"] == row.content_hash]

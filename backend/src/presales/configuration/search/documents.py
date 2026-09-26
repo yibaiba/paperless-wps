@@ -22,7 +22,6 @@ def variant_document(variant):
     lines.extend(_list_lines("接口", variant.get("interfaces")))
     lines.extend(_list_lines("适用系统", variant.get("systems")))
     lines.extend(_attribute_lines(variant.get("attributes", [])))
-    lines.extend(_source_lines(variant.get("source_details", [])))
     return "\n".join(line for line in lines if not line.endswith("："))
 
 
@@ -55,18 +54,4 @@ def _attribute_lines(attributes):
         unit = item.get("unit") or ""
         kind = ATTRIBUTE_LABELS.get(item.get("kind"), item.get("kind", ""))
         lines.append(f"属性 {item['key']}（{kind}）：{value}{unit}")
-    return lines
-
-
-def _source_lines(sources):
-    lines = []
-    for source in sorted(sources, key=lambda item: (item.get("sheet", ""), item.get("row", 0))):
-        location = f"{source.get('sheet', '')} 第 {source.get('row', '')} 行"
-        specification = source.get("specification") or ""
-        note = source.get("note") or ""
-        lines.append(f"资料来源：{location}")
-        if specification:
-            lines.append(f"来源参数：{specification}")
-        if note:
-            lines.append(f"来源备注：{note}")
     return lines
