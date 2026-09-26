@@ -180,6 +180,18 @@ def test_shareable_and_consumable_allocations_are_order_independent(
     assert not any(item["status"] == "conflict" for item in checked["checks"])
 
 
+def test_disabled_accessory_rule_is_excluded_from_project_check(client, catalog, config):
+    config = version_two(config)
+    disabled = accessory_rule(
+        client,
+        catalog["variants"][0],
+        catalog["variants"][1],
+        status="disabled",
+    )
+    suggestions = post(client, "/check", {"configuration": config})["suggestions"]
+    assert all(item["rule"]["id"] != disabled["id"] for item in suggestions)
+
+
 def test_draft_and_cycle_never_create_applicable_purchase(client, catalog, config):
     config = version_two(config)
     draft = accessory_rule(

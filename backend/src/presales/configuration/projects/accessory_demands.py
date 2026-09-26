@@ -7,7 +7,11 @@ from ..knowledge.evaluator import context_for, evaluate_rules, scope_matches
 
 
 def calculate_accessory_demands(data, *, variants, catalog_variants, engine):
-    rules = [item for item in data["knowledge_snapshot"] if item["kind"] == "accessory"]
+    rules = [
+        item
+        for item in data["knowledge_snapshot"]
+        if item["kind"] == "accessory" and item["status"] != "disabled"
+    ]
     cycles = cyclic_rule_ids(rules, catalog_variants.values())
     demands = []
     for rule in (item for item in rules if item["effect"] == "allow"):
