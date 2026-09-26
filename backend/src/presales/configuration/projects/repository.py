@@ -1,3 +1,4 @@
+from collections import defaultdict
 from copy import deepcopy
 from decimal import Decimal
 
@@ -76,16 +77,17 @@ class ProjectConfigurations:
     def prepare(self, data, *, refresh=False):
         result = data.model_dump(mode="json") if isinstance(data, Configuration) else deepcopy(data)
         current = {v["id"]: v for v in self.catalog.variants()}
+        snapshot_resolver = SnapshotResolver(self.session)
         variants = {}
         for device in result["devices"]:
             variant = current.get(device["variant_id"])
             if variant is None:
                 raise ValueError("设备引用的产品配置不存在")
-            device["source_snapshot"] = SnapshotResolver(self.session).source(device)
+            device["source_snapshot"] = snapshot_resolver.source(device)
             if refresh or device["variant_snapshot"] is None:
                 device["variant_snapshot"] = variant
             else:
-                SnapshotResolver(self.session).revision(device["variant_snapshot"], kind="variant")
+                snapshot_resolver.revision(device["variant_snapshot"], kind="variant")
             variants[device["id"]] = device["variant_snapshot"]
         result["knowledge_snapshot"], result["knowledge_snapshot_id"] = knowledge_snapshot(
             self.session, data=result, refresh=refresh
@@ -162,15 +164,13 @@ class ProjectConfigurations:
 
     def _project_items(self, project_id, data):
         self.session.execute(delete(ProjectItem).where(ProjectItem.project_id == project_id))
-        systems = {s["id"]: s["name"] for s in data["systems"]}
+        systems = {system["id"]: system["name"] for system in data["systems"]}
+        groups_by_device = defaultdict(set)
+        for requirement in data["requirements"]:
+            if requirement["device_id"]:
+                groups_by_device[requirement["device_id"]].add(systems[requirement["system_id"]])
         for device in data["devices"]:
-            groups = sorted(
-                {
-                    systems[r["system_id"]]
-                    for r in data["requirements"]
-                    if r["device_id"] == device["id"]
-                }
-            )
+            groups = sorted(groups_by_device[device["id"]])
             self.session.add(
                 ProjectItem(
                     id=device["id"],

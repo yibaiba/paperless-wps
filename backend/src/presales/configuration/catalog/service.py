@@ -10,7 +10,7 @@ from presales.storage import ProductRecord
 
 from ..common import Entities
 from ..models import Entity, SourceLink, SourceRevision
-from .matching import match_suggestions
+from .matching import match_index, match_suggestions
 from .schemas import LinkInput, ProductInput, VariantInput
 
 
@@ -23,31 +23,33 @@ class CatalogService:
         return self.entities.list("product")
 
     def variants(self):
-        products = {p["id"]: p for p in self.products()}
+        products = {product["id"]: product for product in self.products()}
         links = list(self.session.scalars(select(SourceLink)))
-        records = {r.id: r for r in self.session.scalars(select(ProductRecord))}
-        sources = defaultdict(list)
+        links_by_variant = defaultdict(list)
         for link in links:
-            sources[link.variant_id].append(records[link.source_id])
-        return [
+            links_by_variant[link.variant_id].append(link)
+        source_ids = {link.source_id for link in links}
+        records = (
             {
-                **v,
-                "product": products[v["product_id"]],
-                "source_ids": [s.source_id for s in links if s.variant_id == v["id"]],
-                "source_details": [
-                    dict(
-                        id=s.id,
-                        sheet=s.sheet,
-                        row=s.payload["row"],
-                        import_id=s.import_id,
-                        specification=s.payload.get("specification", ""),
-                        note=s.payload.get("note", ""),
-                    )
-                    for s in sources[v["id"]]
-                ],
-                "source_differences": source_differences(sources[v["id"]]),
+                record.id: record
+                for record in self.session.scalars(
+                    select(ProductRecord).where(ProductRecord.id.in_(source_ids))
+                )
             }
-            for v in self.entities.list("variant")
+            if source_ids
+            else {}
+        )
+        missing = source_ids - set(records)
+        if missing:
+            raise ValueError("产品配置引用的来源不存在，请检查来源归属数据")
+        return [
+            variant_view(
+                variant,
+                products=products,
+                links=links_by_variant[variant["id"]],
+                records=records,
+            )
+            for variant in self.entities.list("variant")
         ]
 
     def save_product(self, data: ProductInput, **options):
@@ -107,13 +109,14 @@ class CatalogService:
         links = {row.source_id: row for row in self.session.scalars(select(SourceLink))}
         variant_rows = self.variants()
         variants = {variant["id"]: variant for variant in variant_rows}
+        variants_by_model = match_index(variant_rows, records)
         rows = [
             self._audit_row(
                 product,
                 records=records,
                 links=links,
                 variants=variants,
-                variant_rows=variant_rows,
+                variants_by_model=variants_by_model,
                 counts=counts,
             )
             for product in products
@@ -127,7 +130,7 @@ class CatalogService:
             conflicts=sum(row["review_summary"]["total"] > 0 for row in rows),
         )
 
-    def _audit_row(self, product, *, records, links, variants, variant_rows, counts):
+    def _audit_row(self, product, *, records, links, variants, variants_by_model, counts):
         record = records[product["id"]]
         link = links.get(product["id"])
         variant = variants.get(link.variant_id) if link else None
@@ -142,7 +145,9 @@ class CatalogService:
             "duplicate_model": counts[product["model"]] > 1,
         }
         row["match_suggestions"] = (
-            [] if organized else match_suggestions(row, variant_rows, records)
+            []
+            if organized
+            else match_suggestions(row, variants_by_model.get(product["model"], []), records)
         )
         return row
 
@@ -204,6 +209,28 @@ class CatalogService:
                 dict(source_id=source.id, product_id=product["id"], variant_id=variant["id"])
             )
         return dict(items=results)
+
+
+def variant_view(variant, *, products, links, records):
+    sources = [records[link.source_id] for link in links]
+    return {
+        **variant,
+        "product": products[variant["product_id"]],
+        "source_ids": [link.source_id for link in links],
+        "source_details": [source_detail(source) for source in sources],
+        "source_differences": source_differences(sources),
+    }
+
+
+def source_detail(source):
+    return {
+        "id": source.id,
+        "sheet": source.sheet,
+        "row": source.payload["row"],
+        "import_id": source.import_id,
+        "specification": source.payload.get("specification", ""),
+        "note": source.payload.get("note", ""),
+    }
 
 
 def source_differences(sources):

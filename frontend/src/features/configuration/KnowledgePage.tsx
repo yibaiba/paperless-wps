@@ -13,7 +13,7 @@ import {
 } from "antd";
 import { api } from "../../shared/api";
 import type { Knowledge } from "./types";
-import { ROOT, Status } from "./shared";
+import { ROOT, Status, useKnowledge } from "./shared";
 import { KnowledgeEditor } from "./KnowledgeEditor";
 import "./configuration.css";
 import { KnowledgeBatch } from "./KnowledgeBatch";
@@ -41,10 +41,7 @@ export default function KnowledgePage() {
   const [editing, setEditing] = useState<Knowledge | null>(),
     [selected, setSelected] = useState<string[]>([]),
     [search, setSearch] = useState("");
-  const query = useQuery({
-    queryKey: ["configuration", "knowledge"],
-    queryFn: () => api<Knowledge[]>(ROOT + "/knowledge"),
-  });
+  const query = useKnowledge();
   const save = useMutation({
     mutationFn: (data: Knowledge) =>
       api(ROOT + "/knowledge" + (editing ? "/" + editing.id : ""), {

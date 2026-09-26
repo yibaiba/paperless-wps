@@ -95,10 +95,18 @@ def evaluate_configuration(data, *, variants, catalog_variants, engine):
                 evidence=result["evidence"],
             )
         )
+    requirements_by_device = defaultdict(list)
+    for requirement in requirements:
+        if requirement["device_id"]:
+            requirements_by_device[requirement["device_id"]].append(requirement)
     for device in devices.values():
-        served = [r for r in requirements if r["device_id"] == device["id"]]
         checks.extend(
-            sharing_checks(device, served, variant=variants[device["id"]], knowledge=knowledge)
+            sharing_checks(
+                device,
+                requirements_by_device[device["id"]],
+                variant=variants[device["id"]],
+                knowledge=knowledge,
+            )
         )
     suggestions = accessory_suggestions(
         data, variants=variants, catalog_variants=catalog_variants, engine=engine

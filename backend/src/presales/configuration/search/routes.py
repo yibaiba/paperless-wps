@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from presales.api import session_dependency
 from presales.rules.routes import execute
 
-from ..catalog.routes import commit
+from ..transactions import commit
 from .service import SearchIndexService
 from .settings import SearchSettings
 

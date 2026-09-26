@@ -1,8 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
 import { AutoComplete, Space, Typography } from "antd";
-import { api } from "../../shared/api";
-import { ROOT } from "./shared";
-import type { Knowledge } from "./types";
+import { useKnowledge } from "./shared";
 
 export function RoleInput({
   system,
@@ -15,22 +13,23 @@ export function RoleInput({
   value?: string;
   onChange?: (value: string) => void;
 }) {
-  const knowledge = useQuery({
-    queryKey: ["configuration", "knowledge"],
-    queryFn: () => api<Knowledge[]>(ROOT + "/knowledge"),
-  });
-  const roles = [
-    ...new Set(
-      knowledge.data
-        ?.filter(
-          (k) =>
-            k.system === system &&
-            k.kind === "suitability" &&
-            k.status !== "disabled",
-        )
-        .map((k) => k.role) ?? [],
-    ),
-  ];
+  const knowledge = useKnowledge();
+  const roles = useMemo(
+    () =>
+      [
+        ...new Set(
+          knowledge.data
+            ?.filter(
+              (item) =>
+                item.system === system &&
+                item.kind === "suitability" &&
+                item.status !== "disabled",
+            )
+            .map((item) => item.role) ?? [],
+        ),
+      ].sort(),
+    [knowledge.data, system],
+  );
   return (
     <Space orientation="vertical" style={{ width: "100%" }}>
       <AutoComplete
@@ -39,7 +38,7 @@ export function RoleInput({
         onChange={onChange}
         style={{ width: "100%" }}
         placeholder="选择本版本已有角色，也可输入新角色"
-        options={roles.sort().map((role) => ({ value: role }))}
+        options={roles.map((role) => ({ value: role }))}
         filterOption={(input, option) => (option?.value ?? "").includes(input)}
       />
       {knowledge.error ? (

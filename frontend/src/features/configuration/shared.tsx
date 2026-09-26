@@ -10,7 +10,7 @@ import {
   Tag,
 } from "antd";
 import { api } from "../../shared/api";
-import type { Attribute, Product, Variant } from "./types";
+import type { Attribute, Knowledge, Product, Variant } from "./types";
 
 export const ROOT = "/configuration";
 export const units = [
@@ -68,6 +68,12 @@ export function useProducts() {
   return useQuery({
     queryKey: ["configuration", "products"],
     queryFn: () => api<Product[]>(ROOT + "/products"),
+  });
+}
+export function useKnowledge() {
+  return useQuery({
+    queryKey: ["configuration", "knowledge"],
+    queryFn: () => api<Knowledge[]>(ROOT + "/knowledge"),
   });
 }
 export const variantOptions = (variants: Variant[] | undefined) =>

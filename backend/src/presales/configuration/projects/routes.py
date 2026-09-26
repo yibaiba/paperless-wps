@@ -5,11 +5,11 @@ from sqlalchemy.orm import Session
 from presales.api import session_dependency
 from presales.rules.routes import execute, quantity_engine
 
-from ..catalog.routes import commit
 from ..catalog.service import CatalogService
 from ..common import Input
 from ..knowledge.evaluator import candidate_check, scope_matches
 from ..search.service import SemanticCandidateSearch
+from ..transactions import commit
 from .drawing import project_drawing, remove_device_references
 from .importing import legacy_preview
 from .knowledge_snapshot import candidate_knowledge
@@ -62,9 +62,7 @@ def _candidate_results(data, *, request, session):
 
 
 def _semantic_query(data):
-    environment = "、".join(
-        f"{item.key}={item.value}{item.unit}" for item in data.environment
-    )
+    environment = "、".join(f"{item.key}={item.value}{item.unit}" for item in data.environment)
     parts = [f"系统：{data.system}", f"角色：{data.role}", f"需求：{data.query_text}"]
     if environment:
         parts.append("环境：" + environment)

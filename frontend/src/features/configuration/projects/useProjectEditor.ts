@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { App } from "antd";
@@ -14,6 +14,7 @@ import type {
 } from "../types";
 import { ROOT } from "../shared";
 import { useConfigurationDraft } from "../useConfigurationDraft";
+import { buildProjectTree } from "./projectTree";
 export function businessKey(c: Configuration) {
   const { drawing_xml, ...data } = c;
   void drawing_xml;
@@ -31,7 +32,8 @@ export function useProjectEditor({
     config = draft.present;
   const [saved, setSaved] = useState(initial);
   const savedJson = useRef(JSON.stringify(initial.configuration));
-  const dirty = JSON.stringify(config) !== savedJson.current;
+  const serialized = useMemo(() => JSON.stringify(config), [config]);
+  const dirty = serialized !== savedJson.current;
   const [checked, setChecked] = useState<Checked | undefined>(
     initial.fingerprint ? initial : undefined,
   );
@@ -219,35 +221,10 @@ export function useProjectEditor({
       });
     else navigate("/projects/" + projectId);
   };
-  const tree = config.rooms.map((room) => ({
-    key: "room:" + room.id,
-    title: room.name,
-    children: config.systems
-      .filter((s) => s.room_id === room.id)
-      .map((s) => ({
-        key: "system:" + s.id,
-        title: s.name,
-        children: config.requirements
-          .filter((r) => r.system_id === s.id)
-          .map((r) => ({
-            key: "requirement:" + r.id,
-            title: r.role + (r.device_id ? " · 已选" : " · 待选"),
-          })),
-      })),
-  }));
-  tree.push({
-    key: "room:unassigned",
-    title: "未分房间",
-    children: config.systems
-      .filter((s) => !s.room_id)
-      .map((s) => ({
-        key: "system:" + s.id,
-        title: s.name,
-        children: config.requirements
-          .filter((r) => r.system_id === s.id)
-          .map((r) => ({ key: "requirement:" + r.id, title: r.role })),
-      })),
-  });
+  const tree = useMemo(
+    () => buildProjectTree(config),
+    [config.requirements, config.rooms, config.systems],
+  );
   return {
     draft,
     config,

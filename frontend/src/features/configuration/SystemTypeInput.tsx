@@ -1,8 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
 import { AutoComplete, Space, Typography } from "antd";
-import { api } from "../../shared/api";
-import { ROOT, useVariants } from "./shared";
-import type { Knowledge } from "./types";
+import { useKnowledge, useVariants } from "./shared";
 
 export function SystemTypeInput({
   id,
@@ -16,17 +14,20 @@ export function SystemTypeInput({
   placeholder?: string;
 }) {
   const variants = useVariants();
-  const knowledge = useQuery({
-    queryKey: ["configuration", "knowledge"],
-    queryFn: () => api<Knowledge[]>(ROOT + "/knowledge"),
-  });
-  const names = new Set([
-    ...(variants.data?.flatMap((item) => item.systems) ?? []),
-    ...(knowledge.data
-      ?.filter((item) => item.status !== "disabled")
-      .map((item) => item.system) ?? []),
-    value ?? "",
-  ]);
+  const knowledge = useKnowledge();
+  const names = useMemo(
+    () =>
+      [
+        ...new Set([
+          ...(variants.data?.flatMap((item) => item.systems) ?? []),
+          ...(knowledge.data
+            ?.filter((item) => item.status !== "disabled")
+            .map((item) => item.system) ?? []),
+          value ?? "",
+        ]),
+      ].filter(Boolean).sort(),
+    [knowledge.data, value, variants.data],
+  );
   const error = variants.error ?? knowledge.error;
   return (
     <Space orientation="vertical" style={{ width: "100%" }}>
@@ -37,10 +38,7 @@ export function SystemTypeInput({
         allowClear
         style={{ width: "100%" }}
         placeholder={placeholder ?? "选择具体系统版本，也可输入新版本"}
-        options={[...names]
-          .filter(Boolean)
-          .sort()
-          .map((name) => ({ value: name }))}
+        options={names.map((name) => ({ value: name }))}
         filterOption={(input, option) => (option?.value ?? "").includes(input)}
         status={error ? "error" : undefined}
       />

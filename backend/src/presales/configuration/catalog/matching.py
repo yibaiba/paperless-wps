@@ -1,6 +1,7 @@
 """Candidate matching for unresolved catalog sources."""
 
 import json
+from collections import defaultdict
 
 from presales.storage import ProductRecord
 
@@ -21,16 +22,22 @@ SOURCE_VARIANCE_FIELDS = {"note", "prices", "hidden"}
 MATCH_RANK = {"exact": 0, "source_variance": 1, "conflict": 2}
 
 
+def match_index(variants: list[dict], records: dict[str, ProductRecord]) -> dict[str, list[dict]]:
+    """Group usable candidates once instead of scanning all variants per source."""
+    source_ids = set(records)
+    grouped: dict[str, list[dict]] = defaultdict(list)
+    for variant in variants:
+        if variant["status"] != "confirmed":
+            continue
+        if not source_ids.intersection(variant["source_ids"]):
+            continue
+        grouped[variant["product"]["model"]].append(variant)
+    return grouped
+
+
 def match_suggestions(
-    source: dict, variants: list[dict], records: dict[str, ProductRecord]
+    source: dict, candidates: list[dict], records: dict[str, ProductRecord]
 ) -> list[dict]:
-    candidates = [
-        variant
-        for variant in variants
-        if variant["status"] == "confirmed"
-        and variant["product"]["model"] == source["model"]
-        and any(source_id in records for source_id in variant["source_ids"])
-    ]
     suggestions = [candidate_match(source, variant, records) for variant in candidates]
     return sorted(
         suggestions,

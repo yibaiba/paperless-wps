@@ -5,16 +5,11 @@ from presales.api import session_dependency
 from presales.rules.routes import execute
 
 from ..common import Change, Entities
+from ..transactions import commit
 from .schemas import LinkInput, ProductInput, SourceBatch, VariantInput
 from .service import CatalogService
 
 router = APIRouter(prefix="/api/configuration")
-
-
-def commit(session, operation):
-    result = operation()
-    session.commit()
-    return result
 
 
 @router.get("/products")

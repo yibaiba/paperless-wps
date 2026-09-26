@@ -5,9 +5,9 @@ from sqlalchemy.orm import Session
 from presales.api import session_dependency
 from presales.rules.routes import execute
 
-from ..catalog.routes import commit
 from ..catalog.service import CatalogService
 from ..common import Change, Entities, Input
+from ..transactions import commit
 from .migration import LegacyKnowledgeMigration
 from .schemas import KnowledgeInput, with_completion
 
@@ -73,7 +73,7 @@ class Batch(Input):
 @router.post("/batch")
 def batch(data: Batch, session: Session = Depends(session_dependency)):
     def perform():
-        results = [
+        return [
             save(
                 session,
                 KnowledgeInput.model_validate(i.payload),
@@ -82,7 +82,5 @@ def batch(data: Batch, session: Session = Depends(session_dependency)):
             )
             for i in sorted(data.items, key=lambda i: i.id)
         ]
-        session.commit()
-        return results
 
-    return execute(perform)
+    return execute(lambda: commit(session, perform))

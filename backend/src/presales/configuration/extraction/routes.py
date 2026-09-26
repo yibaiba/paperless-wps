@@ -4,8 +4,8 @@ from sqlalchemy.orm import Session
 from presales.api import session_dependency
 from presales.rules.routes import execute
 
-from ..catalog.routes import commit
 from ..common import Entities
+from ..transactions import commit
 from .materials import pdf_material, text_material
 from .schemas import Decision, DraftEdit, JobInput, MaterialInput
 from .service import ExtractionService
