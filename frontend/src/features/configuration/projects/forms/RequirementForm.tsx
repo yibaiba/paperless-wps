@@ -1,4 +1,4 @@
-import { AutoComplete, Button, Form, Input, InputNumber, Modal, Select, Space } from "antd";
+import { AutoComplete, Button, Form, Input, InputNumber, Modal, Select, Space, Typography } from "antd";
 import type { FormInstance } from "antd";
 import type { Requirement } from "../../types";
 import { RoleInput } from "../../RoleInput";
@@ -55,6 +55,9 @@ export function RequirementForm({
         <Form.Item name="role" label="需要的角色" rules={required}>
           <RoleInput system={systemName} />
         </Form.Item>
+        <Typography.Paragraph type="secondary">
+          房间数、席位数等选择“项目输入”，用于数量或条件计算；操作系统等需要产品满足的条件选择“产品必须满足的参数”。
+        </Typography.Paragraph>
         <AttributeEditor name="environment" />
         <ResourceFields form={form} />
       </Form>

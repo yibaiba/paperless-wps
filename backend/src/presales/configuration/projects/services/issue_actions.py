@@ -11,6 +11,8 @@ def with_issue_actions(checked, *, annotate_only=False):
         "accessory_allocation": "edit_accessory",
         "accessory_choice": "edit_accessory",
         "coverage": "edit_definition",
+        "inspection": "edit_inspection",
+        "project_input": "edit_system_inputs",
     }
     checks = []
     usages = {u["device_id"]: u for u in checked["device_usages"]}
@@ -21,11 +23,16 @@ def with_issue_actions(checked, *, annotate_only=False):
             continue
         device = devices.get(check.get("device_id"), {})
         action = dict(
-            type=actions.get(check["kind"], "edit_knowledge"),
+            type=("edit_knowledge" if check.get("demand_ids") else "edit_definition")
+            if check["kind"] == "resource_policy"
+            else actions.get(check["kind"], "edit_knowledge"),
             device_id=check.get("device_id"),
             requirement_id=check.get("requirement_id"),
             system_id=check.get("system_id"),
             demand_id=check.get("demand_id"),
+            rule_id=check.get("rule_id"),
+            profile_id=check.get("profile_id"),
+            input_key=check.get("input_key"),
             variant_id=device.get("variant_id"),
             requirement_ids=list(
                 dict.fromkeys(
@@ -33,14 +40,33 @@ def with_issue_actions(checked, *, annotate_only=False):
                     for c in usages.get(check.get("device_id"), {}).get("consumers", [])
                 )
             ),
-            missing_fields=[check["resource"]]
+            missing_fields=[check["input_key"]]
+            if check.get("input_key")
+            else [check["resource"]]
             if check.get("resource")
             else ["resources"]
             if check["kind"] == "capacity"
+            else ["resource_policy"]
+            if check["kind"] == "resource_policy"
             else ["sharing_evidence"]
             if check["kind"] == "sharing"
             else [],
         )
+        if check["kind"] == "capacity" and any(
+            e.get("input_key") for e in check.get("evidence", [])
+        ):
+            role_ids = check.get("requirement_ids", [])
+            system_ids = list(
+                dict.fromkeys(r["system_id"] for r in data["requirements"] if r["id"] in role_ids)
+            )
+            action.update(
+                type="edit_system_inputs",
+                system_ids=system_ids,
+                system_id=system_ids[0] if len(system_ids) == 1 else None,
+                missing_fields=list(
+                    dict.fromkeys(e["input_key"] for e in check["evidence"] if e.get("input_key"))
+                ),
+            )
         checks.append(dict(check, action=action))
     if annotate_only:
         return dict(checked, checks=checks)

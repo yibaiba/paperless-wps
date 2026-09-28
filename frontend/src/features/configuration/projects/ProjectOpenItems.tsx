@@ -1,5 +1,6 @@
 import { Button, Card, Empty, Space, Table, Tag } from "antd";
 import type { Checked, Configuration, IssueAction } from "../types";
+import { checkLabels } from "./checkLabels";
 
 interface OpenItem {
   id: string;
@@ -40,7 +41,7 @@ export function ProjectOpenItems({
           pagination={false}
           dataSource={items}
           columns={[
-            { title: "类型", dataIndex: "category" },
+            { title: "类型", dataIndex: "category", filters: [...new Set(items.map((item) => item.category))].map((value) => ({ text: value, value })), onFilter: (value, item) => item.category === value },
             { title: "对象", dataIndex: "object" },
             { title: "问题", dataIndex: "message" },
             { title: "维护入口", render: (_, item) => <Button onClick={() => onAction(item.action ?? { type: "edit_knowledge" })}>{actionLabel(item.action?.type)}</Button> },
@@ -69,7 +70,7 @@ function openItems(checked: Checked | undefined, configuration: Configuration) {
     .filter((item) => item.status !== "pass")
     .map((item, index) => ({
       id: `check:${index}:${item.kind}:${item.device_id ?? item.requirement_id ?? "project"}`,
-      category: checkLabel(item.kind),
+      category: checkLabels[item.kind] ?? item.kind,
       action: item.action,
       object:
         deviceNames.get(item.device_id ?? "") ??
@@ -87,34 +88,20 @@ function openItems(checked: Checked | undefined, configuration: Configuration) {
       }),
     }));
   const suggestions: OpenItem[] = checked.suggestions
-    .filter((item) => item.selected !== false && item.status !== "pass")
+    .filter((item) => item.selected !== false && (item.status !== "pass" || Number(item.missing ?? 0) > 0))
     .map((item) => ({
       id: `suggestion:${item.id}`,
-      category: "配套需求",
-      action: { type: item.missing_information?.length ? "edit_knowledge" : "edit_accessory", demand_id: item.id, variant_id: configuration.devices.find((d) => d.id === item.scope_id)?.variant_id },
+      category: item.status === "pass" ? "配套缺量" : "配套依据",
+      action: { type: item.missing_information?.length ? "edit_knowledge" : "edit_accessory", demand_id: item.id, rule_id: item.rule.id, variant_id: configuration.devices.find((d) => d.id === item.scope_id)?.variant_id },
       object: item.need_name || item.rule.name,
       href: "/knowledge?" + new URLSearchParams({ rule: item.rule.id }),
-      message: item.missing_information?.join("；") || "配套条件尚未确认",
+      message: item.status === "pass" ? `需要 ${item.required}，已分配 ${item.existing}，还缺 ${item.missing}` : item.missing_information?.join("；") || "配套条件尚未确认",
       status: item.status === "conflict" ? "conflict" : "unknown",
     }));
   return [...checks, ...suggestions];
 }
 
-function checkLabel(kind: string) {
-  return {
-    assignment: "用途关联",
-    selection: "角色选型",
-    compatibility: "产品适配",
-    sharing: "共用部署",
-    capacity: "资源容量",
-    accessory_allocation: "配套分配",
-    coverage: "知识覆盖",
-    supply: "供货核算",
-    accessory_choice: "选配状态",
-  }[kind] ?? kind;
-}
-
 function actionLabel(type?: string) {
   return ({ select_candidate: '选择产品', edit_supply: '分配供货', edit_resources: '补充需求',
-    assign_device: '关联用途', edit_accessory: '处理配套', edit_definition: '维护系统角色' } as Record<string, string>)[type ?? ''] ?? '补充知识依据';
+    assign_device: '关联用途', edit_accessory: '处理配套', edit_definition: '维护系统知识', edit_system_inputs: '填写项目需求', edit_inspection: '维护用途检查' } as Record<string, string>)[type ?? ''] ?? '补充知识依据';
 }

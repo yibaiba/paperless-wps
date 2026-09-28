@@ -27,9 +27,12 @@ export function ProjectDeviceTable({
       pagination={false}
       scroll={{ x: 760, y: 560 }}
       columns={[
-        { title: "设备 / 配置", dataIndex: "name" },
-        { title: "类型", render: (_, device) => kindLabel(device.kind) },
-        { title: "数量", dataIndex: "quantity" },
+        { title: "产品 / 型号", width: 270, render: (_, device) => <div>
+          <Typography.Text strong>{device.name}</Typography.Text>
+          <Typography.Text type="secondary" className="project-device-model">{device.variant_snapshot?.product.model || "型号待确认"}</Typography.Text>
+        </div> },
+        { title: "类型", width: 70, render: (_, device) => kindLabel(device.kind) },
+        { title: "部署数量", width: 90, render: (_, device) => `${device.quantity} ${device.source_snapshot?.unit ?? ""}` },
         {
           title: "服务系统与角色",
           render: (_, device) => {
@@ -40,7 +43,7 @@ export function ProjectDeviceTable({
             return (
               <Space wrap size={[4, 4]}>
                 {consumers.map((consumer) => (
-                  <Tag
+                  <Tag className="project-consumer-tag"
                     key={`${consumer.requirement_id}:${consumer.via}:${consumer.demand_id ?? "direct"}`}
                     color={consumer.via === "accessory" ? "blue" : "default"}
                   >
@@ -53,11 +56,11 @@ export function ProjectDeviceTable({
           },
         },
         {
-          title: "操作",
+          title: "操作", width: 145,
           render: (_, device) => (
             <Space>
-              <Button onClick={() => onEdit(device.id)}>编辑</Button>
-              <Button onClick={() => onAddToDrawing(device.id)}>放入图纸</Button>
+              <Button type="link" size="small" onClick={() => onEdit(device.id)}>编辑</Button>
+              <Button type="text" size="small" onClick={() => onAddToDrawing(device.id)}>放入图纸</Button>
             </Space>
           ),
         },

@@ -4,7 +4,15 @@
   gap: 18px;
   min-width: 0;
 }
-.project-toolbar { position: sticky; top: 0; z-index: 20; background: #f3f7f5; padding: 10px 0; border-bottom: 1px solid #e3e9e5; }
+.project-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; background: #f3f7f5; padding: 0 0 14px; border-bottom: 1px solid #e3e9e5; }
+.project-toolbar-heading { display: flex; align-items: flex-start; gap: 10px; min-width: 0; flex: 1 1 340px; }
+.project-toolbar-heading > div { min-width: 0; }
+.project-secondary-actions { min-width: 210px; }
+.project-secondary-actions .ant-btn { width: 100%; text-align: left; }
+.project-device-model { display: block; overflow-wrap: anywhere; font-size: 12px; margin-top: 4px; }
+.project-consumer-tag { white-space: normal; line-height: 1.5; padding-block: 3px; }
+.project-inspector { min-width: 0; }
+.project-inspector-close { margin-bottom: 10px; width: 100%; }
 .project-checks-section { display: flex; flex-direction: column; gap: 18px; scroll-margin-top: 110px; }
 .knowledge-table .ant-table-cell {
   vertical-align: top;
@@ -22,6 +30,9 @@
 .config-field-row .ant-form-item {
   margin-bottom: 12px;
 }
+.config-field-row.project-parameter-row {
+  grid-template-columns: minmax(120px, 1fr) 100px minmax(110px, 1fr) 80px 180px auto;
+}
 .project-resource-row {
   display: grid;
   grid-template-columns: 1fr 110px 100px 170px 150px auto;
@@ -33,10 +44,11 @@
 }
 .config-workspace {
   display: grid;
-  grid-template-columns: 180px minmax(0, 1fr) 300px;
+  grid-template-columns: 220px minmax(0, 1fr);
   gap: 14px;
-  min-height: 650px;
+  align-items: start;
 }
+.config-workspace.has-inspector { grid-template-columns: 220px minmax(0, 1fr) 340px; }
 .config-workspace > * {
   min-width: 0;
 }
@@ -59,15 +71,15 @@
   overflow: auto;
 }
 @media (max-width: 1100px) {
-  .config-workspace {
+  .config-workspace, .config-workspace.has-inspector {
     grid-template-columns: 190px minmax(0, 1fr);
   }
-  .config-workspace > :last-child {
+  .config-workspace > .project-inspector {
     grid-column: 1 / -1;
   }
 }
 @media (max-width: 650px) {
-  .config-field-row {
+  .config-field-row, .config-field-row.project-parameter-row {
     grid-template-columns: 1fr 1fr;
   }
   .project-resource-row {
@@ -86,7 +98,8 @@
   padding: 16px;
 }
 .config-workspace .ant-tree-title {
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .config-workspace.quotation-workspace {

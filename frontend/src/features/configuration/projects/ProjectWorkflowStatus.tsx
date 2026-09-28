@@ -1,23 +1,33 @@
 import { Alert, Button, Collapse, Space, Steps, Tag } from "antd";
 import type { ProjectReadiness, ReadinessStage } from "../types";
+import { checkLabels } from "./checkLabels";
 
 export function ProjectWorkflowStatus({
   readiness,
   stale,
   onViewChecks,
+  onCheck,
+  busy,
+  checking,
 }: {
   readiness: ProjectReadiness;
   stale: boolean;
   onViewChecks: () => void;
+  onCheck: () => void;
+  busy: boolean;
+  checking: boolean;
 }) {
   const firstIncomplete = readiness.stages.findIndex((item) => item.status !== "pass");
   const current = firstIncomplete < 0 ? readiness.stages.length - 1 : firstIncomplete;
   const status = stale ? "unknown" : readiness.status;
   return (
     <Collapse items={[{ key: 'progress', label: <Space wrap>
-      <span>售前配置进度</span>
-      <Tag color={status === 'conflict' ? 'red' : status === 'pass' ? 'green' : 'gold'}>{statusTitle(status, stale)}</Tag>
-    </Space>, extra: <Button type="link" size="small" onClick={(event) => { event.stopPropagation(); onViewChecks(); }}>查看检查与待办</Button>, children: <>
+      <span>方案进度</span>
+      <Tag style={{ whiteSpace: "normal" }} color={status === 'conflict' ? 'red' : status === 'pass' ? 'green' : 'gold'}>{stale ? "修改后待检查" : status === "pass" ? "已通过已知检查" : pendingSummary(readiness)}</Tag>
+    </Space>, extra: <Space onKeyDown={(event) => event.stopPropagation()}>
+      <Button size="small" disabled={busy} loading={checking} onClick={(event) => { event.stopPropagation(); onCheck(); }}>检查清单</Button>
+      <Button type="link" size="small" onClick={(event) => { event.stopPropagation(); onViewChecks(); }}>处理问题与配套</Button>
+    </Space>, children: <>
         <Space wrap>
           {stale ? <Tag color="gold">以下为上次检查数据</Tag> : null}
           <Tag>{readiness.counts.requirements} 个角色需求</Tag>
@@ -67,5 +77,17 @@ function statusDescription(readiness: ProjectReadiness, stale: boolean) {
   if (!readiness.ready_for_draft) {
     return "先建立系统角色并选择产品，系统才会形成项目清单。";
   }
-  return `当前有 ${readiness.counts.conflicts} 项冲突、${readiness.counts.unknowns} 项资料不足。`;
+  return `${pendingSummary(readiness)}。检查口径由知识维护者确认；资源需求由项目人员填写。配套资料不足不等于已确定缺件。`;
+}
+
+function pendingSummary(readiness: ProjectReadiness) {
+  const counts = readiness.counts;
+  const parts = Object.entries(readiness.pending_by_kind ?? {})
+    .map(([kind, count]) => `${checkLabels[kind] ?? kind} ${count} 项待确认`);
+  if (!readiness.pending_by_kind && counts.unknowns) parts.push(`检查 ${counts.unknowns} 项待确认`);
+  if (counts.accessory_unknowns) parts.push(`配套依据 ${counts.accessory_unknowns} 项待确认`);
+  if (counts.open_accessories) parts.push(`配套缺量 ${counts.open_accessories} 项`);
+  const conflicts = counts.conflicts + (counts.accessory_conflicts ?? 0);
+  if (conflicts) parts.unshift(`明确冲突 ${conflicts} 项`);
+  return parts.join(" · ") || "请展开查看方案进度";
 }

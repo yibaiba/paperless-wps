@@ -35,11 +35,12 @@ export function ProjectCandidates(props: Props) {
   const [page, setPage] = useState(1);
   const [pendingDevice, setPendingDevice] = useState<Deployment>();
   const system = configuration.systems.find((item) => item.id === requirement?.system_id);
+  const environment = [...new Map([...(system?.inputs ?? []).map((a) => ({ ...a, purpose: "project_input" as const })), ...(requirement?.environment ?? [])].map((a) => [a.key, a])).values()];
   const query = useQuery({
     queryKey: configurationKeys.candidates(configuration.calculation_version, system?.definition_id, requirement?.role_id, configuration.definition_snapshot_id, system?.knowledge_package_id,
       system?.kind,
       requirement?.role,
-      requirement?.environment,
+      environment,
       configuration.knowledge_snapshot_id,
       mode,
       semanticQuery,
@@ -56,7 +57,7 @@ export function ProjectCandidates(props: Props) {
           definition_snapshot_id: configuration.definition_snapshot_id ?? null,
           knowledge_package_id: system?.knowledge_package_id ?? "",
           role: requirement?.role ?? "",
-          environment: requirement?.environment ?? [],
+          environment,
           knowledge_snapshot_id: configuration.knowledge_snapshot_id ?? null,
           mode,
           query_text: mode === "semantic" ? semanticQuery : "",

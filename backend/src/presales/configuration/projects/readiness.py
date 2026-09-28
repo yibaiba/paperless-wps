@@ -1,3 +1,4 @@
+from collections import Counter
 from decimal import Decimal
 
 
@@ -25,7 +26,12 @@ def project_readiness(data, checks, suggestions):
             "conflicts": sum(item.get("status") == "conflict" for item in checks),
             "unknowns": sum(item.get("status") == "unknown" for item in checks),
             "open_accessories": sum(accessory_is_open(item) for item in suggestions),
+            "accessory_unknowns": sum(item.get("status") == "unknown" for item in suggestions),
+            "accessory_conflicts": sum(item.get("status") == "conflict" for item in suggestions),
         },
+        "pending_by_kind": dict(
+            Counter(item["kind"] for item in checks if item.get("status") == "unknown")
+        ),
         "stages": stages,
     }
 

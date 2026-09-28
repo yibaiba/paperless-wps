@@ -28,7 +28,22 @@ class Definitions:
         for role in data.roles:
             for identity in role.capability_ids:
                 self.entities.get(identity, kind="capability")
-        return self.entities.save("system_definition", data, **options)
+        profiles = [
+            self.revision(
+                r.inspection_profile.id, r.inspection_profile.revision, kind="inspection_profile"
+            )
+            for r in data.roles
+            if r.inspection_profile
+        ]
+        input_units = {}
+        for profile in profiles:
+            for metric in profile["metrics"]:
+                key, unit = metric["input_key"], metric["input_unit"]
+                if key in input_units and input_units[key] != unit:
+                    raise ValueError(f"系统输入 {key} 在用途检查中使用了不同单位，请先统一")
+                input_units[key] = unit
+        payload = dict(data.model_dump(mode="json"), inspection_profiles=profiles)
+        return self.entities.save("system_definition", payload, **options)
 
     def save_package(self, data, **options):
         if options.get("entity_id"):
@@ -59,6 +74,7 @@ class Definitions:
                 p for p in self.entities.list("knowledge_package") if p["status"] == "published"
             ],
             capabilities=self.entities.list("capability"),
+            inspection_profiles=self.entities.list("inspection_profile"),
         )
 
     def validate_knowledge(self, data):

@@ -1,4 +1,5 @@
-import { Button, Space, Typography } from "antd";
+import { useState, type ReactNode } from "react";
+import { Button, Popover, Space, Typography } from "antd";
 import { ProjectHistory } from "./ProjectHistory";
 
 export function ProjectToolbar({
@@ -17,6 +18,8 @@ export function ProjectToolbar({
   onUndo,
   onRedo,
   onImport,
+  onView,
+  secondaryActions,
 }: {
   projectId: string;
   name: string;
@@ -33,26 +36,36 @@ export function ProjectToolbar({
   onUndo: () => void;
   onRedo: () => void;
   onImport: () => void;
+  onView: (tab: string) => void;
+  secondaryActions: ReactNode;
 }) {
+  const [moreOpen, setMoreOpen] = useState(false);
   return (
-    <Space wrap className="project-toolbar">
-      <Button onClick={onClose}>返回项目</Button>
-      <Typography.Title level={3} style={{ margin: 0 }}>
-        {name} · 配置
-      </Typography.Title>
-      <span>{dirty ? "有未保存修改" : `已保存 v${revision}`}</span>
+    <div className="project-toolbar">
+      <div className="project-toolbar-heading">
+        <Button type="text" onClick={onClose}>返回项目</Button>
+        <div>
+          <Typography.Title level={4} style={{ margin: 0 }}>{name}</Typography.Title>
+          <Typography.Text type="secondary">{dirty ? "有未保存到项目版本的修改" : `已保存 v${revision}`}</Typography.Text>
+        </div>
+      </div>
+      <Space wrap>
+      <Button disabled={!canUndo || busy} onClick={onUndo}>撤销</Button>
+      <Button disabled={!canRedo || busy} onClick={onRedo}>重做</Button>
+      <Popover open={moreOpen} onOpenChange={setMoreOpen} trigger="click" placement="bottomRight" title="项目管理" content={
+        <Space orientation="vertical" className="project-secondary-actions" onClick={() => setMoreOpen(false)}>
+          <Button onClick={onAuthor}>维护信息</Button>
+          <ProjectHistory entityId={entityId} projectId={projectId} />
+          <Button onClick={onImport}>导入旧清单 / 拓扑</Button>
+          <Button onClick={() => onView("definitions")}>系统版本与角色</Button>
+          <Button onClick={() => onView("output")}>设备与采购明细</Button>
+          {secondaryActions}
+        </Space>
+      }><Button>更多操作</Button></Popover>
       <Button type="primary" onClick={onSave} loading={saving} disabled={busy}>
-        保存项目版本
+        保存版本
       </Button>
-      <Button onClick={onAuthor}>维护信息</Button>
-      <ProjectHistory entityId={entityId} projectId={projectId} />
-      <Button disabled={!canUndo || busy} onClick={onUndo}>
-        撤销
-      </Button>
-      <Button disabled={!canRedo || busy} onClick={onRedo}>
-        重做
-      </Button>
-      <Button onClick={onImport}>导入旧清单 / 拓扑</Button>
-    </Space>
+      </Space>
+    </div>
   );
 }

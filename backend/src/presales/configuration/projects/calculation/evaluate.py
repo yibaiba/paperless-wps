@@ -15,10 +15,14 @@ from ..output import output_line
 from ..readiness import project_readiness
 from .coverage import coverage_checks
 from .demands import accessory_demands_v3
+from .inspections import prepare_inspections
+from .resource_review import resource_policy_checks
 from .supply import supply_projection
 
 
 def evaluate_v3(data, *, variants, catalog_variants, engine, definitions):
+    input_data = data
+    data, inspection_checks, inspection_policies = prepare_inspections(data, definitions)
     systems = {s["id"]: s for s in data["systems"]}
     checks = compatibility(data, systems=systems, variants=variants, definitions=definitions)
     suggestions = accessory_demands_v3(
@@ -29,7 +33,20 @@ def evaluate_v3(data, *, variants, catalog_variants, engine, definitions):
     checks.extend(selection_checks(suggestions))
     coverage, policies = coverage_checks(data, definitions, variants, demands=active)
     checks.extend(coverage)
-    usages = resource_usages(data, active, policies)
+    checks.extend(inspection_checks)
+    for identity, review in inspection_policies.items():
+        previous = policies.get(identity, "unknown")
+        if previous != "unknown" and previous != review["selected"]:
+            checks.append(
+                dict(
+                    kind="inspection",
+                    status="conflict",
+                    requirement_id=identity,
+                    message="知识包与用途检查的容量适用结论不一致，请核对修订",
+                )
+            )
+        policies[identity] = review["selected"]
+    usages = resource_usages(data, active, policies, inspection_policies=inspection_policies)
     checks.extend(usage_checks(data, usages, variants=variants))
     supply, supply_checks = supply_projection(data)
     checks.extend(supply_checks)
@@ -44,7 +61,7 @@ def evaluate_v3(data, *, variants, catalog_variants, engine, definitions):
         for line in lines
         if Decimal(line["supply"]["purchase"]) > 0
     ]
-    fingerprint = digest([business_input(data), suggestions, definitions])
+    fingerprint = digest([business_input(input_data), suggestions, definitions])
     return dict(
         checks=checks,
         suggestions=suggestions,
@@ -124,7 +141,7 @@ def selection_checks(suggestions):
     ]
 
 
-def resource_usages(data, suggestions, policies):
+def resource_usages(data, suggestions, policies, *, inspection_policies=None):
     usages = build_device_usages(data, suggestions)
     rules = {s["id"]: s["rule"] for s in suggestions}
     for usage in usages:
@@ -134,8 +151,21 @@ def resource_usages(data, suggestions, policies):
                 if consumer["via"] == "direct"
                 else rules[consumer["demand_id"]].get("resource_policy", "unknown")
             )
+            review = (inspection_policies or {}).get(consumer["requirement_id"], {})
+            if consumer["via"] == "accessory" and rules[consumer["demand_id"]][
+                "need_key"
+            ] in review.get("needs", set()):
+                consumer["inspection_policy_conflict"] = policy == "not_applicable"
+                policy = "required"
             consumer["capacity_expected"] = (
                 bool(consumer["resources"]) or policy != "not_applicable"
+            )
+            consumer["resource_policy"] = policy
+            consumer["resource_rule_revision"] = (
+                rules[consumer["demand_id"]]["revision"] if consumer["via"] == "accessory" else None
+            )
+            consumer["resource_rule_id"] = (
+                rules[consumer["demand_id"]]["id"] if consumer["via"] == "accessory" else None
             )
     return usages
 
@@ -145,7 +175,29 @@ def usage_checks(data, usages, *, variants):
     checks = []
     for usage in usages:
         device = devices[usage["device_id"]]
-        consumers = unique_consumers(usage["consumers"])
+        checks.extend(resource_policy_checks(usage))
+        checks.extend(
+            dict(
+                kind="inspection",
+                status="conflict",
+                device_id=device["id"],
+                requirement_id=c["requirement_id"],
+                rule_id=c["resource_rule_id"],
+                rule_revision=c["resource_rule_revision"],
+                message="配套关系标记无需容量检查，但用途检查指定了资源需求，请核对依据",
+            )
+            for c in usage["consumers"]
+            if c.get("inspection_policy_conflict")
+        )
+        # Unknown applicability is a knowledge task, not a missing project value.
+        consumers = unique_consumers(
+            [
+                dict(
+                    c, capacity_expected=bool(c["resources"]) or c["resource_policy"] == "required"
+                )
+                for c in usage["consumers"]
+            ]
+        )
         checks.extend(
             capacity_checks(device, consumers, variant=variants[device["id"]], usage=usage)
         )

@@ -64,6 +64,8 @@ def definition_version_changes(session, data):
         for kind, record in (("system_definition", definition), ("knowledge_package", package)):
             if record:
                 used[(kind, record["id"], record["revision"])] = record
+        for profile in (definition or {}).get("inspection_profiles", []):
+            used[("inspection_profile", profile["id"], profile["revision"])] = profile
     changes = []
     for (kind, identity, revision), record in used.items():
         current = entities.get(identity, kind=kind)

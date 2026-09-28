@@ -120,6 +120,10 @@ def environment_checks(variant, environment, *, rules):
     accounted = {c["field"] for r in rules for c in r["conditions"]}
     checks = []
     for required in environment:
+        # Project inputs remain in project.* for rules and quantities; they are
+        # not assertions that the selected product has an identical attribute.
+        if required.get("purpose") == "project_input":
+            continue
         field = "product." + required["key"]
         if field not in context and "project." + required["key"] in accounted:
             continue

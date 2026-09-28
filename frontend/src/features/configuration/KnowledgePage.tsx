@@ -31,6 +31,9 @@ const kinds = {
 import { KnowledgeWorkbench } from "./knowledge/KnowledgeWorkbench";
 import { SystemVersionWorkbench } from "./knowledge/SystemVersionWorkbench";
 
+import { InspectionProfiles } from "./knowledge/InspectionProfiles";
+import { MaintenanceTasks } from "./knowledge/MaintenanceTasks";
+
 export default function KnowledgePage() {
   const [params] = useSearchParams();
   return <div className="configuration-page">
@@ -38,6 +41,8 @@ export default function KnowledgePage() {
     <Tabs defaultActiveKey={params.get("view") ?? "products"} destroyOnHidden items={[
       { key: "products", label: "按产品维护", children: <KnowledgeWorkbench /> },
       { key: "systems", label: "按系统版本维护", children: <SystemVersionWorkbench /> },
+      { key: "inspections", label: "用途检查", children: <InspectionProfiles /> },
+      { key: "tasks", label: "知识待办", children: <MaintenanceTasks /> },
       { key: "records", label: "全部关系与历史", children: <KnowledgeRecords /> },
     ]} />
   </div>;

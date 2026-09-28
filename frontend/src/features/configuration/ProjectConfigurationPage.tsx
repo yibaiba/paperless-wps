@@ -3,10 +3,10 @@ import { DraftRecovery } from "./projects/drafts/DraftRecovery";
 import { DraftPreviewContext } from "./projects/drafts/context";
 import type { Workspace } from "./projects/drafts/transport";
 import { preloadQuotationSheet } from './quotation/loadSheet';
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router-dom";
-import { Alert, Button, Card, Modal, Space, Tabs } from "antd";
+import { Alert, Button, Card, Modal, Space, Tabs, Typography } from "antd";
 import { api } from "../../shared/api";
 import type { ProjectConfiguration } from "./types";
 import { ROOT } from "./shared";
@@ -19,11 +19,10 @@ import {
 } from "./ProjectForms";
 import { ProjectCandidates } from "./ProjectCandidates";
 import { ConfigurationDrawing } from "./ConfigurationDrawing";
-import { ProjectChecks } from "./ProjectChecks";
+import { ProjectReviewDrawer } from "./projects/ProjectReviewDrawer";
 import "./configuration.css";
 import { ProjectImportDialog } from "./projects/ProjectImportDialog";
 import { ProjectDeviceTable } from "./projects/ProjectDeviceTable";
-import { ProjectOpenItems } from "./projects/ProjectOpenItems";
 import { configurationKeys } from "./queryKeys";
 import { ProjectToolbar } from "./projects/ProjectToolbar";
 import { ProjectSystemPanel } from "./projects/ProjectSystemPanel";
@@ -34,6 +33,8 @@ import { ProjectDefinitionPanel } from "./projects/ProjectDefinitionPanel";
 import { ProjectChangePanel } from "./projects/ProjectChangePanel";
 import { ProjectConfirmation } from "./projects/ProjectConfirmation";
 import { QuotationPanel } from "./quotation/QuotationPanel";
+import { SystemInputsForm } from "./projects/forms/SystemInputsForm";
+
 export default function ProjectConfigurationPage() {
   const { projectId } = useParams();
   const query = useQuery({
@@ -60,11 +61,14 @@ function ConfigurationEditor({
   initial: ProjectConfiguration;
   workspace?: Workspace;
 }) {
+  const [inputSystemChoices, setInputSystemChoices] = useState<string[]>([]);
+  const [inputsSystemId, setInputsSystemId] = useState<string>();
   const [resourceRoles, setResourceRoles] = useState<string[]>([]);
   const [assignDevice, setAssignDevice] = useState<string>();
   const navigate = useNavigate();
   const [sheetPending, setSheetPending] = useState(false);
-  const checksPanel = useRef<HTMLDivElement>(null);
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [reviewTab, setReviewTab] = useState("todo");
   const editor = useProjectEditor({ projectId, initial, workspace });
   const [changeRequest, setChangeRequest] = useState<{ refresh: boolean; cleanup: boolean }>();
   const {
@@ -101,10 +105,15 @@ function ConfigurationEditor({
   const checkedStale =
     !checked || businessKey(checked.configuration) !== businessKey(config);
   const savedProjectionStale = checked ? checkedStale : dirty;
+  const selecting = tab === "list" || tab === "drawing";
+  const showInspector = selecting && (!!requirement || !!editingDevice);
   return (
     <DraftPreviewContext.Provider value={editor.persistence.preview}><div className="configuration-page">
-      <Alert type={editor.persistence.error ? "error" : "info"} title={editor.persistence.error || (editor.persistence.syncing || editor.persistence.unsynced ? "草稿同步中…" : editor.persistence.id ? "工作草稿已同步；正式项目版本需点击保存" : "修改后自动保存工作草稿")} action={editor.persistence.error ? <Button onClick={editor.persistence.retry}>重试同步</Button> : undefined} />
+      {editor.persistence.error ? <Alert type="error" title={editor.persistence.error} action={<Button onClick={editor.persistence.retry}>重试同步</Button>} /> : <Typography.Text type="secondary" role="status">
+        {editor.persistence.syncing || editor.persistence.unsynced ? "草稿同步中…" : editor.persistence.id ? "工作草稿已同步；保存版本后可导出" : "修改会自动保存为工作草稿"}
+      </Typography.Text>}
       {assignDevice && config.devices.some((d) => d.id === assignDevice) ? <AssignDeviceDialog deviceId={assignDevice} configuration={config} onApply={draft.commit} onClose={() => setAssignDevice(undefined)} /> : null}
+      <Modal open={inputSystemChoices.length > 0} title="选择需要核对规模的系统" footer={null} onCancel={() => setInputSystemChoices([])}><Space orientation="vertical">{config.systems.filter((s) => inputSystemChoices.includes(s.id)).map((s) => <Button key={s.id} onClick={() => { setInputsSystemId(s.id); setInputSystemChoices([]); }}>{s.name}</Button>)}</Space></Modal>
       <Modal open={resourceRoles.length > 0} title="选择需要补充资源需求的角色" footer={null} onCancel={() => setResourceRoles([])}>
         <Space orientation="vertical">{config.requirements.filter((r) => resourceRoles.includes(r.id)).map((r) => <Button key={r.id} onClick={() => { setRequirementModal({ systemId: r.system_id, initial: r }); setResourceRoles([]); }}>{config.systems.find((s) => s.id === r.system_id)?.name} / {r.role}</Button>)}</Space>
       </Modal>
@@ -124,6 +133,12 @@ function ConfigurationEditor({
         onUndo={draft.undo}
         onRedo={draft.redo}
         onImport={() => setImportOpen(true)}
+        onView={setTab}
+        secondaryActions={<>
+          <Button onClick={() => setChangeRequest({ refresh: false, cleanup: false })}>预览本次改单</Button>
+          <Button onClick={() => setChangeRequest({ refresh: false, cleanup: true })}>预览失效配套关联清理</Button>
+          <ProjectConfirmation projectId={projectId} saved={saved} dirty={dirty} onConfirmed={editor.reloadSaved} />
+        </>}
       />
       {initial.legacy_items && !saved.revision ? (
         <Alert
@@ -131,29 +146,30 @@ function ConfigurationEditor({
           title={`原项目有 ${initial.legacy_items} 条清单，请先预览导入。原清单未改动。`}
         />
       ) : null}
-      <Space wrap>
-        <Button onClick={() => setChangeRequest({ refresh: false, cleanup: false })}>预览本次改单</Button>
-        <Button onClick={() => setChangeRequest({ refresh: false, cleanup: true })}>预览失效配套关联清理</Button>
-        <ProjectConfirmation projectId={projectId} saved={saved} dirty={dirty} onConfirmed={editor.reloadSaved} />
-      </Space>
       <ProjectWorkflowStatus
         readiness={checked?.readiness ?? saved.readiness}
         stale={savedProjectionStale}
-        onViewChecks={() => { checksPanel.current?.scrollIntoView({ block: 'start' }); checksPanel.current?.focus({ preventScroll: true }); }}
+        onViewChecks={() => setReviewOpen(true)}
+        onCheck={() => check.mutate(false)}
+        busy={busy || sheetPending}
+        checking={check.isPending}
       />
-      <div className={`config-workspace${tab === "quotation" ? " quotation-workspace" : ""}`} inert={drawing.isPending || save.isPending || apply.isPending}>
-        {tab !== "quotation" ? <ProjectSystemPanel
+      <div className={`config-workspace${!selecting ? " quotation-workspace" : showInspector ? " has-inspector" : ""}`} inert={drawing.isPending || save.isPending || apply.isPending}>
+        {selecting ? <ProjectSystemPanel
           tree={tree}
           requirement={requirement}
           selectedSystem={selectedSystem}
+          onSystemInputs={(id) => setInputsSystemId(id)}
           busy={busy}
           onAddSystem={() => setSystemModal(true)}
           onAddRequirement={(systemId) => setRequirementModal({ systemId })}
           onSelectSystem={(id) => {
+            setDeviceModal(undefined);
             setSelectedSystem(id);
             setSelectedRequirement(undefined);
           }}
           onSelectRequirement={(id) => {
+            setDeviceModal(undefined);
             setSelectedRequirement(id);
             setSelectedSystem(
               config.requirements.find((item) => item.id === id)?.system_id,
@@ -184,14 +200,14 @@ function ConfigurationEditor({
             activeKey={tab}
             onChange={setTab}
             items={[
-              { key: "quotation", label: "报价与模板导出", children: <QuotationPanel configuration={config} output={checked?.quotation_output ?? saved.quotation_output} saved={saved} dirty={dirty} stale={checkedStale} busy={busy || sheetPending} checking={check.isPending} onApply={draft.commit} onCheck={() => check.mutate(false)} sheetControls={{ configuration: config, saved, draftVersion: draft.version,
+              { key: "quotation", label: "报价与导出", children: <QuotationPanel configuration={config} output={checked?.quotation_output ?? saved.quotation_output} saved={saved} dirty={dirty} stale={checkedStale} busy={busy || sheetPending} checking={check.isPending} onApply={draft.commit} onCheck={() => check.mutate(false)} sheetControls={{ configuration: config, saved, draftVersion: draft.version,
                 onChecked: editor.acceptChecked, onPending: setSheetPending, onUndo: draft.undo, onRedo: draft.redo, canUndo: draft.canUndo, canRedo: draft.canRedo,
               }} /> },
               { key: "definitions", label: "系统版本与角色", children: <ProjectDefinitionPanel configuration={config} onApply={draft.commit} /> },
-              { key: "supply", label: "已有与采购", children: <SupplyPanel configuration={config} onApply={draft.commit} /> },
+              { key: "supply", label: "供货分配", children: <SupplyPanel configuration={config} onApply={draft.commit} /> },
               {
                 key: "list",
-                label: `实际配置 ${config.devices.length}`,
+                label: `产品清单 ${config.devices.length}`,
                 children: (
                   <ProjectDeviceTable
                     configuration={config}
@@ -242,10 +258,13 @@ function ConfigurationEditor({
                   />
                 ),
               },
-            ]}
+            ].filter((item) => !["definitions", "output"].includes(item.key) || item.key === tab)
+              .sort((a, b) => ["list", "supply", "quotation", "drawing", "definitions", "output"].indexOf(a.key) - ["list", "supply", "quotation", "drawing", "definitions", "output"].indexOf(b.key))}
           />
         </Card>
-        {tab === "quotation" ? null : editingDevice ? (
+        {showInspector ? <aside className="project-inspector" aria-label="选型与产品属性">
+          <Button className="project-inspector-close" onClick={() => { setDeviceModal(undefined); setSelectedRequirement(undefined); }}>收起选型面板</Button>
+        {editingDevice ? (
           <DeploymentForm
             key={editingDevice.id + editingDevice.quantity + editingDevice.name}
             device={editingDevice}
@@ -317,10 +336,13 @@ function ConfigurationEditor({
             busy={busy}
             onSelect={selectDevice}
           />
-        )}
+        )}</aside> : null}
       </div>
-      <div ref={checksPanel} tabIndex={-1} className="project-checks-section" aria-label="项目检查与待办">
-      <ProjectChecks
+      <ProjectReviewDrawer
+        open={reviewOpen}
+        activeTab={reviewTab}
+        onClose={() => setReviewOpen(false)}
+        onTabChange={setReviewTab}
         checked={checked}
         configuration={config}
         stale={checkedStale}
@@ -332,21 +354,25 @@ function ConfigurationEditor({
         onApply={(suggestion, choice) =>
           apply.mutate({ suggestion, choice })
         }
-      />
-      <ProjectOpenItems checked={checked} configuration={config} onAction={(action) => {
+        onAction={(action) => {
+        if (action.type === 'edit_accessory') { setReviewTab('accessories'); return; }
+        setReviewOpen(false);
         if (action.type === 'edit_resources' && action.requirement_ids?.length) { setResourceRoles(action.requirement_ids); return; }
         if (action.type === 'assign_device' && action.device_id) { setAssignDevice(action.device_id); return; }
         if (action.type === 'edit_supply') { setTab('supply'); return; }
+        if (action.type === 'edit_system_inputs') { if (action.system_id) setInputsSystemId(action.system_id); else setInputSystemChoices(action.system_ids ?? []); return; }
+        if (action.type === 'edit_inspection') { navigate('/knowledge?' + new URLSearchParams({ view: 'inspections', ...(action.profile_id ? { profile: action.profile_id } : {}) })); return; }
         if (action.type === 'edit_definition') { navigate('/knowledge?view=systems'); return; }
-        if (action.type === 'edit_knowledge') { navigate('/knowledge?' + new URLSearchParams({ variant: action.variant_id ?? '' })); return; }
-        if (action.type === 'edit_accessory') { checksPanel.current?.scrollIntoView(); return; }
+        if (action.type === 'edit_knowledge') { navigate('/knowledge?' + new URLSearchParams(action.rule_id ? { rule: action.rule_id } : { variant: action.variant_id ?? '' })); return; }
         setTab('list');
         const role = config.requirements.find((r) => r.id === action.requirement_id);
         if (action.type === 'edit_resources' && role) setRequirementModal({ systemId: role.system_id, initial: role });
-        else if (role) { setSelectedRequirement(role.id); setSelectedSystem(role.system_id); }
+        else if (role) { setDeviceModal(undefined); setSelectedRequirement(role.id); setSelectedSystem(role.system_id); }
         else if (action.device_id) { const related = config.requirements.filter((r) => r.device_id === action.device_id); if (related.length === 1) setRequirementModal({ systemId: related[0].system_id, initial: related[0] }); else setAssignDevice(action.device_id); }
       }} />
-      </div>
+      {inputsSystemId && config.systems.find((s) => s.id === inputsSystemId) ? <SystemInputsForm
+        system={config.systems.find((s) => s.id === inputsSystemId)!} configuration={config}
+        onClose={() => setInputsSystemId(undefined)} onApply={(inputs) => draft.commit({ ...config, systems: config.systems.map((s) => s.id === inputsSystemId ? { ...s, inputs } : s) })} /> : null}
       {systemModal ? (
         <SystemForm
           configuration={config}

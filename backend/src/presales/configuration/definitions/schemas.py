@@ -6,7 +6,13 @@ from ..common import Authored, Input, Text
 from ..knowledge.schemas import Selector
 
 
+class InspectionReference(Input):
+    id: Text
+    revision: int = Field(ge=1)
+
+
 class RoleDefinition(Input):
+    inspection_profile: InspectionReference | None = None
     id: Text
     name: Text
     required: bool = True

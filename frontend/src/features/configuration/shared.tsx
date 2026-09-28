@@ -119,7 +119,7 @@ export function AttributeEditor({ name = "attributes" }: { name?: string }) {
       {(fields, { add, remove }) => (
         <Space orientation="vertical" style={{ width: "100%" }}>
           {fields.map((field) => (
-            <div className="config-field-row" key={field.key}>
+            <div className={`config-field-row${name === "environment" ? " project-parameter-row" : ""}`} key={field.key}>
               <Form.Item
                 name={[field.name, "key"]}
                 label="参数"
@@ -183,6 +183,16 @@ export function AttributeEditor({ name = "attributes" }: { name?: string }) {
                   options={units.map((value) => ({ value, label: value }))}
                 />
               </Form.Item>
+              {name === "environment" ? <Form.Item
+                name={[field.name, "purpose"]}
+                label="参数用途"
+                initialValue="product_requirement"
+              >
+                <Select style={{ minWidth: 170 }} options={[
+                  { value: "product_requirement", label: "产品必须满足的参数" },
+                  { value: "project_input", label: "项目输入（供规则计算）" },
+                ]} />
+              </Form.Item> : null}
               <Button danger onClick={() => remove(field.name)}>
                 移除
               </Button>

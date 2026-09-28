@@ -1,7 +1,5 @@
-from collections import defaultdict
-from decimal import Decimal
-
 from ..knowledge.evaluator import context_for, evaluate_rules, scope_matches
+from .calculation.resource_metrics import metric_checks
 
 
 def build_device_usages(data, suggestions):
@@ -126,9 +124,7 @@ def unique_consumers(consumers):
             consumer["requirement_id"],
             {**consumer, "resources": [], "capacity_expected": False},
         )
-        current["capacity_expected"] = current["capacity_expected"] or consumer[
-            "capacity_expected"
-        ]
+        current["capacity_expected"] = current["capacity_expected"] or consumer["capacity_expected"]
         for resource in consumer["resources"]:
             if resource not in current["resources"]:
                 current["resources"].append(resource)
@@ -180,42 +176,10 @@ def capacity_checks(device, consumers, *, variant, usage):
                 "requirement_ids": missing,
                 "message": "；".join(
                     [
-                        *( ["部分角色缺少该设备承担的资源需求"] if missing else [] ),
+                        *(["部分角色缺少该设备承担的资源需求"] if missing else []),
                         *usage["missing_information"],
                     ]
                 ),
             }
         )
-    attributes = {item["key"]: item for item in variant["attributes"]}
-    demands = aggregate_resources(expected)
-    for (key, unit), required in demands.items():
-        capacity = attributes.get(key)
-        known = (
-            capacity
-            and capacity["kind"] in {"number", "quantity"}
-            and capacity["value"] is not None
-            and capacity["unit"] == unit
-        )
-        status = "unknown"
-        if known:
-            status = "pass" if Decimal(str(capacity["value"])) >= required else "conflict"
-        checks.append(
-            {
-                "kind": "capacity",
-                "device_id": device["id"],
-                "status": status,
-                "resource": key,
-                "unit": unit,
-                "required": str(required),
-                "capacity": capacity["value"] if known else None,
-            }
-        )
-    return checks
-
-
-def aggregate_resources(consumers):
-    totals = defaultdict(Decimal)
-    for consumer in consumers:
-        for resource in consumer["resources"]:
-            totals[(resource["key"], resource["unit"])] += Decimal(resource["amount"])
-    return totals
+    return checks + metric_checks(device, expected, variant=variant)

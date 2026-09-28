@@ -1,8 +1,12 @@
+import type { InspectionProfile } from "./knowledge/inspectionTypes";
 export interface Attribute {
   key: string;
   kind: "text" | "enum" | "number" | "quantity";
   value: string | string[] | null;
   unit: string;
+}
+export interface EnvironmentParameter extends Attribute {
+  purpose?: "product_requirement" | "project_input";
 }
 export interface AttributeDefinition {
   key: string;
@@ -109,6 +113,7 @@ export interface Room {
   name: string;
 }
 export interface System {
+  inputs?: Attribute[];
   definition_id?: string;
   knowledge_package_id?: string;
   features?: string[];
@@ -129,7 +134,7 @@ export interface Requirement {
   id: string;
   system_id: string;
   role: string;
-  environment: Attribute[];
+  environment: EnvironmentParameter[];
   resources: Resource[];
   device_id: string | null;
 }
@@ -168,6 +173,9 @@ export interface Configuration extends Authored {
   knowledge_snapshot_id?: string | null;
 }
 export interface IssueAction {
+  system_ids?: string[];
+  profile_id?: string; input_key?: string;
+  rule_id?: string;
   type: string; device_id?: string; requirement_id?: string; requirement_ids?: string[]; system_id?: string; demand_id?: string; variant_id?: string; missing_fields?: string[];
 }
 export interface Check {
@@ -235,6 +243,7 @@ export interface ReadinessStage {
   message: string;
 }
 export interface ProjectReadiness {
+  pending_by_kind?: Record<string, number>;
   ready_for_confirmation?: boolean;
   known_checks?: Check["status"];
   coverage?: Check["status"];
@@ -250,6 +259,8 @@ export interface ProjectReadiness {
     conflicts: number;
     unknowns: number;
     open_accessories: number;
+    accessory_unknowns?: number;
+    accessory_conflicts?: number;
   };
   stages: ReadinessStage[];
 }
@@ -343,7 +354,8 @@ export interface SystemDefinition extends Authored {
   name: string;
   status: "draft" | "confirmed";
   legacy_names: string[];
-  roles: { id: string; name: string; required: boolean; feature: string; capability_ids: string[] }[];
+  inspection_profiles?: InspectionProfile[];
+  roles: { id: string; name: string; required: boolean; feature: string; capability_ids: string[]; inspection_profile?: { id: string; revision: number } | null }[];
 }
 export interface KnowledgePackage extends Authored {
   id: string;
@@ -365,6 +377,7 @@ export interface KnowledgePackage extends Authored {
   }[];
 }
 export interface Definitions {
+  inspection_profiles?: InspectionProfile[];
   definitions: SystemDefinition[];
   packages: KnowledgePackage[];
   capabilities: { id: string; name: string; description: string }[];

@@ -17,6 +17,7 @@ class Room(Input):
 
 
 class System(Input):
+    inputs: list[Attribute] = Field(default_factory=list)
     definition_id: str = ""
     knowledge_package_id: str = ""
     features: list[str] = Field(default_factory=list)
@@ -25,13 +26,23 @@ class System(Input):
     name: Text
     kind: Text
 
+    @model_validator(mode="after")
+    def unique_inputs(self):
+        if len({a.key for a in self.inputs}) != len(self.inputs):
+            raise ValueError("同一系统的项目输入名称不能重复")
+        return self
+
+
+class EnvironmentParameter(Attribute):
+    purpose: Literal["product_requirement", "project_input"] = "product_requirement"
+
 
 class Requirement(Input):
     role_id: str = ""
     id: Text
     system_id: Text
     role: Text
-    environment: list[Attribute] = Field(default_factory=list)
+    environment: list[EnvironmentParameter] = Field(default_factory=list)
     resources: list[Resource] = Field(default_factory=list)
     device_id: str | None = None
 
@@ -119,7 +130,7 @@ class CandidateRequest(Input):
     knowledge_package_id: str = ""
     system: str = ""
     role: str = ""
-    environment: list[Attribute] = Field(default_factory=list)
+    environment: list[EnvironmentParameter] = Field(default_factory=list)
     knowledge_snapshot_id: str | None = None
     include_all: bool = False
     mode: Literal["known", "semantic", "all"] = "known"

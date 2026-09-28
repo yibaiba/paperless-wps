@@ -5,6 +5,7 @@ from presales.configuration.common import Entities
 from presales.configuration.definitions.service import Definitions
 from presales.configuration.knowledge.evaluator import scope_matches
 from presales.configuration.models import Entity, Revision
+from presales.configuration.projects.calculation.inspections import effective_environment
 from presales.configuration.projects.candidates import candidate_results
 from presales.configuration.projects.schemas import CandidateRequest
 from presales.storage import ProductRecord, Project
@@ -88,7 +89,7 @@ def search_catalog(session, request):
             calculation_version=configuration["calculation_version"],
             system=system["kind"],
             role=role["role"],
-            environment=role["environment"],
+            environment=effective_environment(system, role)[0],
             system_definition_id=system.get("definition_id", ""),
             role_id=role.get("role_id", ""),
             knowledge_package_id=system.get("knowledge_package_id", ""),

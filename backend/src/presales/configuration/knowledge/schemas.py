@@ -49,6 +49,8 @@ class Selector(Input):
 
 
 class Resource(Input):
+    aggregation: Literal["sum", "max"] = "sum"
+    capacity_basis: Literal["deployment", "unit"] = "deployment"
     key: Text
     amount: Decimal = Field(ge=0, allow_inf_nan=False)
     unit: Text

@@ -24,6 +24,9 @@ export function SystemDefinitionEditor({ initial, busy, onSave, onClose }: {
             <Button onClick={() => remove(field.name)}>移除角色</Button>
           </Space>
           <Form.Item name={[field.name, "capability_ids"]} label="所需能力"><Select mode="multiple" options={definitions.data?.capabilities.map((c) => ({ value: c.id, label: c.name }))} /></Form.Item>
+          <Form.Item name={[field.name, "inspection_profile"]} label="复用用途检查（固定修订）" getValueProps={(value) => ({ value: value ? `${value.id}@${value.revision}` : undefined })} getValueFromEvent={(value) => { if (!value) return null; const [id, revision] = value.split('@'); return { id, revision: Number(revision) }; }}>
+            <Select allowClear options={[...(initial?.inspection_profiles ?? []), ...(definitions.data?.inspection_profiles ?? [])].filter((p, index, all) => all.findIndex((v) => v.id === p.id && v.revision === p.revision) === index).map((p) => ({ value: `${p.id}@${p.revision}`, label: `${p.name} · v${p.revision} · ${p.status === 'confirmed' ? '已确认' : '待核对/停用'}` }))} />
+          </Form.Item>
         </div>)}
         <Button onClick={() => add({ id: crypto.randomUUID(), name: "", required: true, feature: "", capability_ids: [] })}>增加角色</Button>
       </Space>}</Form.List>

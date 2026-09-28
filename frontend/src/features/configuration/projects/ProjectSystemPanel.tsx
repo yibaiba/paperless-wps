@@ -7,6 +7,7 @@ export function ProjectSystemPanel({
   requirement,
   selectedSystem,
   busy,
+  onSystemInputs,
   onAddSystem,
   onAddRequirement,
   onSelectSystem,
@@ -18,6 +19,7 @@ export function ProjectSystemPanel({
   requirement?: Requirement;
   selectedSystem?: string;
   busy: boolean;
+  onSystemInputs: (id: string) => void;
   onAddSystem: () => void;
   onAddRequirement: (systemId: string) => void;
   onSelectSystem: (id: string) => void;
@@ -37,6 +39,7 @@ export function ProjectSystemPanel({
         >
           添加角色需求
         </Button>
+        <Button disabled={!selectedSystem || busy} onClick={() => onSystemInputs(selectedSystem!)}>系统规模与输入</Button>
       </Space>
       <Tree
         treeData={tree}

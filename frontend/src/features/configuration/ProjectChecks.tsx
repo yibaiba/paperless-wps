@@ -1,6 +1,7 @@
 import { Alert, Button, Card, Collapse, Space, Table } from "antd";
 import type { ApplyChoice, Checked, Configuration, Suggestion } from "./types";
 import { Status, useVariants } from "./shared";
+import { checkLabels } from "./projects/checkLabels";
 import { EvidenceDetails } from "./EvidenceDetails";
 import { AccessorySuggestionCard } from "./AccessorySuggestionCard";
 interface Props {
@@ -11,6 +12,7 @@ interface Props {
   onApply: (suggestion: Suggestion, choice: ApplyChoice) => void;
   onCheck: (refresh: boolean) => void;
   onChoice?: (demandId: string, selected: boolean) => void;
+  section?: "all" | "accessories" | "checks";
 }
 export function ProjectChecks({
   checked,
@@ -20,12 +22,13 @@ export function ProjectChecks({
   onApply,
   onCheck,
   onChoice,
+  section = "all",
 }: Props) {
   const variants = useVariants();
   const names = new Map(configuration.devices.map((d) => [d.id, d.name]));
   return (
     <Card
-      title="配置检查与配套"
+      title={section === "accessories" ? "配套选择" : "配置检查"}
       extra={
         <Space>
           <Button disabled={busy} onClick={() => onCheck(false)}>
@@ -62,13 +65,13 @@ export function ProjectChecks({
                         ? "系统角色定义"
                         : v.kind === "knowledge_package"
                           ? "系统知识包"
-                      : "产品配置"
+                      : v.kind === "inspection_profile" ? "用途检查定义" : "产品配置"
                 }：${v.used ?? "未纳入"} → v${v.current}`,
             )
             .join("；") }]} />}
         />
       ) : null}
-      <Table
+      {section !== "accessories" ? <Table
         size="small"
         rowKey={(item) =>
           [
@@ -94,16 +97,7 @@ export function ProjectChecks({
           {
             title: "检查",
             render: (_, c) =>
-              ({
-                selection: "角色选型",
-                compatibility: "适配",
-                sharing: "共用部署",
-                capacity: "资源容量",
-                accessory_allocation: "配套分配",
-                coverage: "知识覆盖",
-                supply: "供货核算",
-                accessory_choice: "选配状态",
-              })[c.kind] ?? c.kind,
+              checkLabels[c.kind] ?? c.kind,
           },
           { title: "结果", render: (_, c) => <Status value={c.status} /> },
           {
@@ -112,8 +106,7 @@ export function ProjectChecks({
               c.message ??
               (c.resource
                 ? `${c.resource}：需要 ${c.required} ${c.unit}，容量 ${c.capacity ?? "未知"}`
-                : c.evidence?.map((e) => String(e.evidence)).join("；") ||
-                  "没有足够的已确认依据"),
+                : c.evidence?.length ? "展开查看条件与来源依据" : "没有足够的已确认依据"),
           },
         ]}
         expandable={{
@@ -130,8 +123,8 @@ export function ProjectChecks({
             </Space>
           ),
         }}
-      />
-      <Space orientation="vertical" style={{ width: "100%" }}>
+      /> : null}
+      {section !== "checks" ? <Space orientation="vertical" style={{ width: "100%" }}>
         {checked?.suggestions.map((suggestion) => (
           <AccessorySuggestionCard
             key={suggestion.id}
@@ -144,7 +137,7 @@ export function ProjectChecks({
             onChoice={onChoice}
           />
         ))}
-      </Space>
+      </Space> : null}
     </Card>
   );
 }
