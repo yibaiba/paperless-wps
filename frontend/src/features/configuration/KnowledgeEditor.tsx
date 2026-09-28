@@ -1,25 +1,38 @@
+import { ConditionsEditor } from "./knowledge/ConditionsEditor";
+export { ConditionsEditor } from "./knowledge/ConditionsEditor";
 import {
-  AutoComplete,
-  Button,
   Form,
   Input,
-  InputNumber,
   Modal,
   Select,
   Space,
 } from "antd";
 import type { Knowledge } from "./types";
 import { AccessoryKnowledgeFields } from "./AccessoryKnowledgeFields";
+import { EvidenceReferenceFields } from "./knowledge/EvidenceReferenceFields";
+import { KnowledgeIdentityFields } from "./knowledge/KnowledgeIdentityFields";
+import { SharedRoleSelect } from "./knowledge/SharedRoleSelect";
 import { SystemTypeInput } from "./SystemTypeInput";
 import {
   AuthorFields,
   required,
-  units,
   useVariants,
   variantOptions,
 } from "./shared";
 
 export const emptyKnowledge = {
+  schema_version: 2,
+  system_definition_id: "",
+  role_id: "",
+  activation_conditions: [],
+  alternative_group: "",
+  quantity_review: "unreviewed",
+  quantity_evidence: "",
+  resource_policy: "unknown",
+  evidence_refs: [],
+  shared_role_refs: [],
+  scope_basis: "listed_configurations",
+  reviewed_variant_ids: [],
   name: "",
   kind: "suitability",
   status: "draft",
@@ -37,116 +50,16 @@ export const emptyKnowledge = {
   need_name: "",
   target_variant_ids: [],
   accessory_type: "required",
-  calculation_scope: "device",
+  calculation_scope: null,
   quantity_source: "device_quantity",
   quantity_key: "",
-  mode: "per_unit",
-  factor: "1",
+  quantity_unit: "",
+  mode: null,
+  factor: null,
   output_kind: "accessory",
   allocation_mode: "consumable",
   shared_roles: [],
 };
-export function ConditionsEditor() {
-  const form = Form.useFormInstance();
-  const conditions = Form.useWatch("conditions", form) as
-    Knowledge["conditions"] | undefined;
-  return (
-    <Form.List name="conditions">
-      {(fields, { add, remove }) => (
-        <Space orientation="vertical" style={{ width: "100%" }}>
-          {fields.map((field) => (
-            <div className="config-field-row" key={field.key}>
-              <Form.Item
-                name={[field.name, "field"]}
-                label="条件字段"
-                rules={required}
-              >
-                <AutoComplete
-                  placeholder="选择条件字段"
-                  options={[
-                    { value: "product.cpu_arch", label: "产品 CPU 架构" },
-                    { value: "project.cpu_arch", label: "需求 CPU 架构" },
-                    { value: "product.os", label: "产品操作系统" },
-                    { value: "project.os", label: "部署操作系统" },
-                    { value: "product.memory", label: "产品内存" },
-                    { value: "product.capacity", label: "产品容量" },
-                    {
-                      value: "product.software_version",
-                      label: "产品软件版本",
-                    },
-                    {
-                      value: "project.software_version",
-                      label: "所需软件版本",
-                    },
-                  ]}
-                />
-              </Form.Item>
-              <Form.Item name={[field.name, "operator"]} label="比较方式">
-                <Select
-                  options={[
-                    { value: "eq", label: "等于" },
-                    { value: "any", label: "任一匹配" },
-                    { value: "all", label: "全部匹配" },
-                    { value: "range", label: "范围" },
-                  ]}
-                  onChange={() =>
-                    form.setFieldValue(
-                      ["conditions", field.name, "value"],
-                      null,
-                    )
-                  }
-                />
-              </Form.Item>
-              {conditions?.[field.name]?.operator === "range" ? (
-                <Space>
-                  <Form.Item name={[field.name, "minimum"]} label="下限">
-                    <InputNumber stringMode />
-                  </Form.Item>
-                  <Form.Item name={[field.name, "maximum"]} label="上限">
-                    <InputNumber stringMode />
-                  </Form.Item>
-                </Space>
-              ) : (
-                <Form.Item name={[field.name, "value"]} label="条件值">
-                  {["any", "all"].includes(
-                    conditions?.[field.name]?.operator ?? "",
-                  ) ? (
-                    <Select mode="tags" />
-                  ) : (
-                    <Input />
-                  )}
-                </Form.Item>
-              )}
-              <Form.Item name={[field.name, "unit"]} label="单位">
-                <Select
-                  allowClear
-                  options={units.map((value) => ({ value, label: value }))}
-                />
-              </Form.Item>
-              <Button danger onClick={() => remove(field.name)}>
-                移除
-              </Button>
-            </div>
-          ))}
-          <Button
-            onClick={() =>
-              add({
-                field: "",
-                operator: "eq",
-                value: null,
-                minimum: null,
-                maximum: null,
-                unit: "",
-              })
-            }
-          >
-            添加条件
-          </Button>
-        </Space>
-      )}
-    </Form.List>
-  );
-}
 export function KnowledgeFields() {
   const variants = useVariants();
   const form = Form.useFormInstance();
@@ -226,9 +139,13 @@ export function KnowledgeFields() {
         </Space>
       ) : null}
       {kind === "sharing" ? (
+        <>
+        <Form.Item name="shared_role_refs" label="共用的系统与角色定义" extra="使用稳定标识关联，系统或角色改名后关系仍保留；填写后按此关联检查。">
+          <SharedRoleSelect />
+        </Form.Item>
         <Form.Item
           name="shared_roles"
-          label="允许共用的系统 / 角色"
+          label="历史文本关联（未关联定义时使用）"
           extra="填写具体系统版本和角色；各自可用不代表能够共用部署。"
         >
           <Select
@@ -238,18 +155,28 @@ export function KnowledgeFields() {
             ].map((system) => ({ value: system + "/服务端" }))}
           />
         </Form.Item>
+        </>
       ) : null}
       {kind === "accessory" ? (
         <AccessoryKnowledgeFields />
       ) : null}
-      <ConditionsEditor />
+      <KnowledgeIdentityFields />
+      {kind !== "accessory" ? <ConditionsEditor /> : null}
+      <EvidenceReferenceFields />
       <AuthorFields />
     </>
   );
 }
-export function normalizeKnowledge(values: Knowledge): Knowledge {
+export function normalizeKnowledge(values: Knowledge & { updated_at?: string }): Knowledge {
+  const payload = Object.fromEntries(Object.entries(values).filter(([key]) =>
+    !["id", "revision", "updated_at", "completion", "missing_fields"].includes(key))) as unknown as Knowledge;
   return {
-    ...values,
+    ...payload,
+    schema_version: 2,
+    activation_conditions: (values.activation_conditions ?? []).map((c) => ({
+      ...c, unit: c.unit ?? "", value: c.value ?? null,
+      minimum: c.minimum ?? null, maximum: c.maximum ?? null,
+    })),
     completion: undefined,
     missing_fields: undefined,
     conditions: (values.conditions ?? []).map((condition) => ({
@@ -287,7 +214,7 @@ export function KnowledgeEditor({
         form={form}
         layout="vertical"
         initialValues={initial ?? emptyKnowledge}
-        onFinish={(values) => onSave(normalizeKnowledge(values))}
+        onFinish={(values) => onSave(normalizeKnowledge({ ...initial, ...values }))}
       >
         <KnowledgeFields />
       </Form>

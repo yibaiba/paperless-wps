@@ -52,8 +52,8 @@ class LegacyKnowledgeMigration:
             payload = KnowledgeInput.model_validate(
                 self._preserve_unified_fields(item["knowledge"], current)
             )
-            migrated_revision = (current or {}).get("migration_source", {}).get(
-                "legacy_rule_revision"
+            migrated_revision = (
+                (current or {}).get("migration_source", {}).get("legacy_rule_revision")
             )
             if current and migrated_revision == item["legacy_rule"]["revision"]:
                 results.append({**item, "action": "unchanged"})
@@ -85,9 +85,7 @@ class LegacyKnowledgeMigration:
         else:
             options = dict(create_id=self._knowledge_id(rule["id"]))
         knowledge = self._preserve_unified_fields(item["knowledge"], current)
-        return self.entities.save(
-            "knowledge", KnowledgeInput.model_validate(knowledge), **options
-        )
+        return self.entities.save("knowledge", KnowledgeInput.model_validate(knowledge), **options)
 
     @staticmethod
     def _knowledge_id(rule_id: str) -> str:
@@ -97,7 +95,12 @@ class LegacyKnowledgeMigration:
     def _preserve_unified_fields(cls, generated: dict, current: dict | None):
         if not current:
             return generated
+        if current.get("schema_version") == 2:
+            raise ValueError("旧规则接口不能表达新版分支、数量依据及范围确认，请在搭配知识中修改")
         preserved = {key: current[key] for key in cls.PRESERVED_FIELDS}
+        for key in ("schema_version", "system_definition_id", "role_id", "identity_mapping"):
+            if key in current:
+                preserved[key] = current[key]
         current_selector = current["selector"]
         selector = {
             **generated["selector"],

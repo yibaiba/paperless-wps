@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Request, UploadFile
 from sqlalchemy.orm import Session
 
 from presales.api import session_dependency
-from presales.rules.routes import execute
+from presales.configuration.http import execute
 
 from ..common import Entities
 from ..transactions import commit

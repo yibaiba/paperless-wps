@@ -3,7 +3,8 @@ import ReactDOM from 'react-dom/client';
 import { App as AntApp, ConfigProvider } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { BrowserRouter } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+const router = createBrowserRouter([{ path: '*', element: <Workbench /> }]);
 import { Workbench } from './Workbench';
 import 'antd/dist/reset.css';
 import './styles.css';
@@ -17,7 +18,5 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     colorText: '#1d2b35', colorTextSecondary: '#65717d', borderRadius: 8,
     fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif',
     controlHeight: 38,
-  } }}><AntApp><QueryClientProvider client={client}><BrowserRouter>
-    <Workbench />
-  </BrowserRouter></QueryClientProvider></AntApp></ConfigProvider></React.StrictMode>,
+  } }}><AntApp><QueryClientProvider client={client}><RouterProvider router={router} /></QueryClientProvider></AntApp></ConfigProvider></React.StrictMode>,
 );

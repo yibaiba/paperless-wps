@@ -7,7 +7,7 @@ from presales.catalog.attributes.repository import AttributeRepository
 from presales.catalog.repository import CatalogRepository
 from presales.storage import ProductRecord
 
-from ..common import Entities
+from ..common import Entities, view
 from ..models import Entity, SourceBlock, SourceLink
 from .matching import match_index, match_suggestions
 from .schemas import LinkInput, ProductInput, VariantInput
@@ -22,9 +22,21 @@ class CatalogService:
     def products(self):
         return self.entities.list("product")
 
-    def variants(self):
-        products = {product["id"]: product for product in self.products()}
-        links = list(self.session.scalars(select(SourceLink)))
+    def variants(self, *, ids=None):
+        variant_query = select(Entity).where(Entity.kind == "variant").order_by(Entity.id)
+        link_query = select(SourceLink)
+        if ids is not None:
+            variant_query = variant_query.where(Entity.id.in_(ids))
+            link_query = link_query.where(SourceLink.variant_id.in_(ids))
+        variant_rows = [view(row) for row in self.session.scalars(variant_query)]
+        product_ids = {v["product_id"] for v in variant_rows}
+        products = {
+            row.id: view(row)
+            for row in self.session.scalars(
+                select(Entity).where(Entity.kind == "product", Entity.id.in_(product_ids))
+            )
+        }
+        links = list(self.session.scalars(link_query))
         links_by_variant = defaultdict(list)
         for link in links:
             links_by_variant[link.variant_id].append(link)
@@ -49,13 +61,15 @@ class CatalogService:
                 links=links_by_variant[variant["id"]],
                 records=records,
             )
-            for variant in self.entities.list("variant")
+            for variant in variant_rows
         ]
 
     def save_product(self, data: ProductInput, **options):
         return self.entities.save("product", data, **options)
 
     def save_variant(self, data: VariantInput, **options):
+        for identity in data.capability_ids:
+            self.entities.get(identity, kind="capability")
         self.entities.get(data.product_id, kind="product")
         return self.entities.save("variant", data, **options)
 
@@ -202,6 +216,7 @@ def source_detail(source):
         "sheet": source.sheet,
         "row": source.payload["row"],
         "import_id": source.import_id,
+        "unit": source.payload.get("unit", ""),
         "specification": source.payload.get("specification", ""),
         "note": source.payload.get("note", ""),
     }

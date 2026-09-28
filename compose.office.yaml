@@ -1,0 +1,31 @@
+name: presales-office
+
+# Local browser editing and document verification, independently of the business stack.
+services:
+  office:
+    image: onlyoffice/documentserver:9.4.0.1@sha256:3ab6ebc7c605e5a32b7ae3ff19daed4925090245acc8100ce2230bd766c88212
+    ports:
+      - "127.0.0.1:8087:80"
+    env_file:
+      - ./data/private/office.env
+    environment:
+      JWT_ENABLED: "true"
+      EXAMPLE_ENABLED: "true"
+    volumes:
+      - office_data:/var/www/onlyoffice/Data
+      - office_state:/var/lib/onlyoffice
+      - office_logs:/var/log/onlyoffice
+      - office_documents:/var/lib/onlyoffice/documentserver-example/files
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail --silent http://localhost/healthcheck | grep -qx true"]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+      start_period: 120s
+
+volumes:
+  office_data:
+  office_state:
+  office_logs:
+  office_documents:

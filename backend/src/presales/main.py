@@ -12,14 +12,22 @@ from fastapi.responses import JSONResponse
 from .api import router
 from .catalog.attributes.routes import router as attributes_router
 from .configuration.catalog.routes import router as configuration_catalog_router
+from .configuration.definitions.routes import router as definitions_router
 from .configuration.extraction.provider import ModelClient
 from .configuration.extraction.routes import router as extraction_router
 from .configuration.extraction.settings import PrivateSettings
 from .configuration.knowledge.routes import router as knowledge_router
+from .configuration.projects.evolution_routes import router as evolution_router
 from .configuration.projects.routes import router as configuration_projects_router
 from .configuration.search.provider import SearchModelClient
 from .configuration.search.routes import router as search_router
 from .configuration.search.settings import PrivateSearchSettings
+from .lists.routes import router as list_router
+from .lists.web.routes import router as web_drafts_router
+from .quotation.artifacts import FileArtifacts
+from .quotation.excel import ExcelRenderer
+from .quotation.routes import router as quotation_router
+from .quotation.template import TEMPLATE_PATH
 from .rules.engine import ZenQuantityEngine
 from .rules.routes import router as rules_router
 from .storage import database_factory
@@ -36,14 +44,21 @@ def create_app(
     model_provider=None,
     search_settings=None,
     search_provider=None,
+    artifact_files=None,
+    excel_renderer=None,
 ) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI):
+        load_dotenv(ROOT / ".env")
+        app.state.web_origin = os.environ.get("PRESALES_WEB_ORIGIN", "http://127.0.0.1:5176")
         app.state.quantity_engine = quantity_engine or ZenQuantityEngine(zen.ZenEngine())
+        app.state.artifact_files = artifact_files or FileArtifacts(
+            os.environ.get("PRESALES_ARTIFACT_DIR", str(ROOT / "data/exports"))
+        )
+        app.state.excel_renderer = excel_renderer or ExcelRenderer(TEMPLATE_PATH)
         if session_factory is not None:
             app.state.session_factory = session_factory
         else:
-            load_dotenv(ROOT / ".env")
             url = os.environ.get("DATABASE_URL")
             if not url:
                 raise RuntimeError("缺少 DATABASE_URL，请先运行 scripts/setup.py 并启动数据库")
@@ -83,9 +98,14 @@ def create_app(
     application.include_router(topology_router)
     application.include_router(configuration_catalog_router)
     application.include_router(knowledge_router)
+    application.include_router(definitions_router)
     application.include_router(extraction_router)
     application.include_router(configuration_projects_router)
+    application.include_router(evolution_router)
     application.include_router(search_router)
+    application.include_router(list_router)
+    application.include_router(web_drafts_router)
+    application.include_router(quotation_router)
     return application
 
 

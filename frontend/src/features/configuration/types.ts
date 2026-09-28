@@ -24,6 +24,7 @@ export interface Product extends Authored {
   category: string;
 }
 export interface Variant extends Authored {
+  capability_ids?: string[];
   id: string;
   revision: number;
   product_id: string;
@@ -41,6 +42,7 @@ export interface Variant extends Authored {
     row: number;
     import_id: string;
     specification?: string;
+    unit?: string;
     note?: string;
   }[];
   source_differences?: string[];
@@ -55,6 +57,18 @@ export interface Condition {
   unit: string;
 }
 export interface Knowledge extends Authored {
+  schema_version?: 1 | 2;
+  system_definition_id?: string;
+  role_id?: string;
+  activation_conditions?: Condition[];
+  alternative_group?: string;
+  quantity_review?: "unreviewed" | "confirmed";
+  quantity_evidence?: string;
+  resource_policy?: "unknown" | "required" | "not_applicable";
+  evidence_refs?: { source_id: string; locator: string; quote: string }[];
+  shared_role_refs?: { system_definition_id: string; role_id: string }[];
+  scope_basis?: "listed_configurations" | "entire_scope";
+  reviewed_variant_ids?: string[];
   id: string;
   revision: number;
   name: string;
@@ -77,6 +91,7 @@ export interface Knowledge extends Authored {
   calculation_scope: "device" | "system" | "room" | "project" | null;
   quantity_source: "device_quantity" | "environment";
   quantity_key: string;
+  quantity_unit?: string;
   mode: "per_unit" | "per_capacity" | "per_group" | null;
   factor: string | null;
   output_kind: "hardware" | "software" | "license" | "accessory";
@@ -94,6 +109,9 @@ export interface Room {
   name: string;
 }
 export interface System {
+  definition_id?: string;
+  knowledge_package_id?: string;
+  features?: string[];
   id: string;
   room_id: string | null;
   name: string;
@@ -107,6 +125,7 @@ export interface Resource {
   target_need_key?: string;
 }
 export interface Requirement {
+  role_id?: string;
   id: string;
   system_id: string;
   role: string;
@@ -134,7 +153,11 @@ export interface AccessoryAllocation {
   evidence: string;
 }
 export interface Configuration extends Authored {
-  calculation_version: 1 | 2;
+  quotation?: import("./quotation/types").Quotation | null;
+  calculation_version: 1 | 2 | 3;
+  definition_snapshot_id?: string | null;
+  accessory_choices?: { demand_id: string; selected: boolean; note?: string }[];
+  supply_allocations?: SupplyAllocation[];
   rooms: Room[];
   systems: System[];
   requirements: Requirement[];
@@ -144,7 +167,13 @@ export interface Configuration extends Authored {
   knowledge_snapshot: Knowledge[] | null;
   knowledge_snapshot_id?: string | null;
 }
+export interface IssueAction {
+  type: string; device_id?: string; requirement_id?: string; requirement_ids?: string[]; system_id?: string; demand_id?: string; variant_id?: string; missing_fields?: string[];
+}
 export interface Check {
+  action?: IssueAction;
+  system_id?: string;
+  role_id?: string;
   kind: string;
   status: "pass" | "conflict" | "unknown";
   device_id?: string;
@@ -158,6 +187,10 @@ export interface Check {
   evidence?: Record<string, unknown>[];
 }
 export interface Suggestion {
+  quantity_inputs?: { device_id: string; requirement_id?: string; source_id: string; variant_revision?: number; parameter: string; value: string | null; unit: string; error?: string | null }[];
+  selected?: boolean;
+  selection_conflict?: boolean;
+  explanation?: Record<string, unknown>;
   id: string;
   parent_id: string;
   rule: Knowledge;
@@ -202,6 +235,9 @@ export interface ReadinessStage {
   message: string;
 }
 export interface ProjectReadiness {
+  ready_for_confirmation?: boolean;
+  known_checks?: Check["status"];
+  coverage?: Check["status"];
   status: "pass" | "conflict" | "unknown";
   ready_for_draft: boolean;
   ready_for_confirmed_output: boolean;
@@ -224,6 +260,7 @@ export interface ProjectOutputConsumer {
   via: "direct" | "accessory";
 }
 export interface ProjectOutputLine {
+  supply?: { purchase: string; existing: string; unknown: string; unassigned: string };
   device_id: string;
   kind: Deployment["kind"];
   name: string;
@@ -242,6 +279,8 @@ export interface ProjectOutputLine {
   };
 }
 export interface ProjectOutput {
+  ready_for_confirmation?: boolean;
+  procurement_lines?: ProjectOutputLine[];
   status: "draft" | "confirmed";
   ready_for_confirmed_output: boolean;
   knowledge_snapshot_id: string | null;
@@ -249,6 +288,7 @@ export interface ProjectOutput {
   lines: ProjectOutputLine[];
 }
 export interface Checked {
+  quotation_output?: import("./quotation/types").QuotationOutput | null;
   version_changes?: {
     kind: string;
     id: string;
@@ -266,9 +306,10 @@ export interface Checked {
   calculation_version: number;
 }
 export type ApplyChoice =
-  | { variantId: string; sourceId: string; quantity?: string }
+  | { variantId: string; sourceId: string; quantity?: string; supplySource?: SupplyAllocation["source"]; supplyEvidence?: string }
   | { existingDeviceId: string; quantity?: string };
 export interface ProjectConfiguration extends Checked {
+  confirmation?: { id: string; actor: string; evidence: string; project_revision: number } | null;
   id?: string;
   name: string;
   revision: number;
@@ -287,4 +328,57 @@ export interface Candidate {
     reranker_model: string;
     document_revision: number;
   } | null;
+}
+
+export interface SupplyAllocation {
+  id: string;
+  device_id: string;
+  quantity: string;
+  source: "purchase" | "existing" | "unknown";
+  evidence: string;
+}
+export interface SystemDefinition extends Authored {
+  id: string;
+  revision: number;
+  name: string;
+  status: "draft" | "confirmed";
+  legacy_names: string[];
+  roles: { id: string; name: string; required: boolean; feature: string; capability_ids: string[] }[];
+}
+export interface KnowledgePackage extends Authored {
+  id: string;
+  revision: number;
+  name: string;
+  branch: string;
+  status: "draft" | "published";
+  system_definition_id: string;
+  definition_revision: number;
+  definition: SystemDefinition;
+  members: { id: string; revision: number }[];
+  rules: Knowledge[];
+  coverage: {
+    role_id: string;
+    selector: Knowledge["selector"];
+    accessories: "unreviewed" | "needs_review" | "complete" | "none";
+    resources: "unknown" | "required" | "not_applicable";
+    evidence: string;
+  }[];
+}
+export interface Definitions {
+  definitions: SystemDefinition[];
+  packages: KnowledgePackage[];
+  capabilities: { id: string; name: string; description: string }[];
+}
+export interface BusinessChange {
+  kind: string;
+  id: string;
+  before: unknown;
+  after: unknown;
+}
+export interface ChangePreview {
+  checked: Checked;
+  fingerprint: string;
+  changes: BusinessChange[];
+  proposed_changes: BusinessChange[];
+  procurement_changes: BusinessChange[];
 }

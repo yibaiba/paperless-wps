@@ -2,6 +2,7 @@ import { Button, Space, Typography } from "antd";
 import { ProjectHistory } from "./ProjectHistory";
 
 export function ProjectToolbar({
+  projectId,
   name,
   revision,
   dirty,
@@ -17,6 +18,7 @@ export function ProjectToolbar({
   onRedo,
   onImport,
 }: {
+  projectId: string;
   name: string;
   revision: number;
   dirty: boolean;
@@ -33,7 +35,7 @@ export function ProjectToolbar({
   onImport: () => void;
 }) {
   return (
-    <Space wrap>
+    <Space wrap className="project-toolbar">
       <Button onClick={onClose}>返回项目</Button>
       <Typography.Title level={3} style={{ margin: 0 }}>
         {name} · 配置
@@ -43,7 +45,7 @@ export function ProjectToolbar({
         保存项目版本
       </Button>
       <Button onClick={onAuthor}>维护信息</Button>
-      <ProjectHistory entityId={entityId} />
+      <ProjectHistory entityId={entityId} projectId={projectId} />
       <Button disabled={!canUndo || busy} onClick={onUndo}>
         撤销
       </Button>

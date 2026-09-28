@@ -8,11 +8,13 @@ import type {
 export function ProjectDeviceTable({
   configuration,
   usages,
+  stale,
   onEdit,
   onAddToDrawing,
 }: {
   configuration: Configuration;
   usages: DeviceUsage[];
+  stale?: boolean;
   onEdit: (id: string) => void;
   onAddToDrawing: (id: string) => void;
 }) {
@@ -21,8 +23,9 @@ export function ProjectDeviceTable({
     <Table<Deployment>
       rowKey="id"
       dataSource={configuration.devices}
+      virtual
       pagination={false}
-      scroll={{ x: 760 }}
+      scroll={{ x: 760, y: 560 }}
       columns={[
         { title: "设备 / 配置", dataIndex: "name" },
         { title: "类型", render: (_, device) => kindLabel(device.kind) },
@@ -32,7 +35,7 @@ export function ProjectDeviceTable({
           render: (_, device) => {
             const consumers = usageByDevice.get(device.id)?.consumers ?? [];
             if (!consumers.length) {
-              return <Typography.Text type="secondary">尚未关联</Typography.Text>;
+              return <Typography.Text type="secondary">{stale ? "使用关系待重新检查" : "尚未关联"}</Typography.Text>;
             }
             return (
               <Space wrap size={[4, 4]}>

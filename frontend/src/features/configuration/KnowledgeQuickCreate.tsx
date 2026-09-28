@@ -18,7 +18,9 @@ export function KnowledgeQuickCreate({
   onSave,
   onClose,
   busy,
+  initial,
 }: {
+  initial?: Partial<Knowledge>;
   onSave: (values: Knowledge) => void;
   onClose: () => void;
   busy: boolean;
@@ -61,14 +63,14 @@ export function KnowledgeQuickCreate({
       <Form
         form={form}
         layout="vertical"
-        initialValues={emptyKnowledge}
+        initialValues={{ ...emptyKnowledge, ...initial }}
         onFinishFailed={({ errorFields }) =>
           setStep(errorStep(errorFields.map((item) => item.name)))
         }
         onFinish={(submitted) =>
           onSave(
             normalizeKnowledge({
-              ...submitted,
+              ...emptyKnowledge, ...initial, ...submitted,
               name:
                 submitted.name?.trim() ||
                 knowledgeName(submitted, variants.data),
@@ -111,7 +113,7 @@ function ReviewStep({ kind, summary }: { kind?: Knowledge["kind"]; summary: stri
       </Form.Item>
       {kind === "accessory" ? (
         <Typography.Paragraph type="secondary">
-          配套知识设为已确认时，必须已经选择候选产品并具备数量计算方式。
+          可以确认配套关系，数量或候选尚未确认时将保留待办，不能应用补料。
         </Typography.Paragraph>
       ) : null}
       <AuthorFields />

@@ -11,6 +11,8 @@ import {
   useProducts,
 } from "./shared";
 
+import { useDefinitions } from "./knowledge/useDefinitions";
+
 export function ProductEditor({
   product,
   onClose,
@@ -77,6 +79,7 @@ export function VariantEditor({
 }) {
   const [form] = Form.useForm();
   const products = useProducts();
+  const definitions = useDefinitions();
   const client = useQueryClient();
   const { message } = App.useApp();
   const mutation = useMutation({
@@ -147,6 +150,7 @@ export function VariantEditor({
             />
           </Form.Item>
         </Space>
+        <Form.Item name="capability_ids" label="已核对的产品能力"><Select mode="multiple" options={definitions.data?.capabilities.map((c) => ({ value: c.id, label: c.name }))} /></Form.Item>
         <AttributeEditor />
         <Space wrap>
           {[

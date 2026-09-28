@@ -7,13 +7,16 @@ export function useConfigurationDraft(initial: Configuration) {
   const past = useRef<Configuration[]>([]),
     future = useRef<Configuration[]>([]);
   const [version, setVersion] = useState(0);
+  const replaceCurrent = (next: Configuration) => {
+    current.current = next;
+    setPresent(next);
+    setVersion((v) => v + 1);
+  };
   const commit = (next: Configuration) => {
     if (JSON.stringify(next) === JSON.stringify(current.current)) return;
     past.current.push(current.current);
     future.current = [];
-    current.current = next;
-    setPresent(next);
-    setVersion((v) => v + 1);
+    replaceCurrent(next);
   };
   const move = (back: boolean) => {
     const from = back ? past : future,
@@ -30,6 +33,7 @@ export function useConfigurationDraft(initial: Configuration) {
     current,
     version,
     commit,
+    replaceCurrent,
     undo: () => move(true),
     redo: () => move(false),
     canUndo: past.current.length > 0,

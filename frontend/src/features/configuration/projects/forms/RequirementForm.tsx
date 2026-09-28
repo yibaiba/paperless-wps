@@ -1,23 +1,31 @@
-import { Button, Form, Input, InputNumber, Modal, Select, Space } from "antd";
+import { AutoComplete, Button, Form, Input, InputNumber, Modal, Select, Space } from "antd";
 import type { FormInstance } from "antd";
 import type { Requirement } from "../../types";
 import { RoleInput } from "../../RoleInput";
-import { AttributeEditor, cleanAttributes, required, units } from "../../shared";
+import { AttributeEditor, cleanAttributes, required, units, useAttributeDefinitions } from "../../shared";
+
+import { useDefinitions } from "../../knowledge/useDefinitions";
 
 export function RequirementForm({
   initial,
   systemId,
   systemName,
+  definitionId,
+  definitionSnapshotId,
   onApply,
   onClose,
 }: {
   initial?: Requirement;
   systemId: string;
   systemName: string;
+  definitionId?: string;
+  definitionSnapshotId?: string | null;
   onApply: (requirement: Requirement) => void;
   onClose: () => void;
 }) {
   const [form] = Form.useForm();
+  const definitions = useDefinitions(definitionSnapshotId);
+  const definition = definitions.data?.definitions.find((d) => d.id === definitionId);
   return (
     <Modal
       open
@@ -42,6 +50,8 @@ export function RequirementForm({
           onClose();
         }}
       >
+        {definition ? <Form.Item name="role_id" label="系统定义中的角色"><Select options={definition.roles.map((r) => ({ value: r.id, label: r.name }))}
+          onChange={(id) => form.setFieldValue("role", definition.roles.find((r) => r.id === id)?.name)} /></Form.Item> : null}
         <Form.Item name="role" label="需要的角色" rules={required}>
           <RoleInput system={systemName} />
         </Form.Item>
@@ -53,14 +63,16 @@ export function RequirementForm({
 }
 
 function ResourceFields({ form }: { form: FormInstance }) {
+  const definitions = useAttributeDefinitions();
+  const resources = Form.useWatch("resources", form) as Requirement["resources"] | undefined;
   return (
     <Form.List name="resources">
       {(fields, { add, remove }) => (
         <Space orientation="vertical">
           {fields.map((field) => (
             <div className="project-resource-row" key={field.key}>
-              <Form.Item name={[field.name, "key"]} label="占用资源" rules={required}>
-                <Input placeholder="memory / cores / terminal_capacity" />
+              <Form.Item name={[field.name, "key"]} label="占用资源" help={resources?.[field.name]?.key && !definitions.data?.some((d) => d.key === resources[field.name].key) ? "未注册字段：按原键匹配，不会自动改写" : undefined} rules={required}>
+                <AutoComplete placeholder="选择资源字段；自定义键会保留" options={definitions.data?.filter((d) => ["number", "quantity"].includes(d.kind)).map((d) => ({ value: d.key, label: `${d.label} · ${d.key}` }))} onSelect={(key) => { const definition = definitions.data?.find((d) => d.key === key); if (definition?.units.length === 1) form.setFieldValue(["resources", field.name, "unit"], definition.units[0]); }} />
               </Form.Item>
               <Form.Item name={[field.name, "amount"]} label="需求量" rules={required}>
                 <InputNumber stringMode min="0" />

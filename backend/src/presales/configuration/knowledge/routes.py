@@ -3,21 +3,41 @@ from pydantic import Field
 from sqlalchemy.orm import Session
 
 from presales.api import session_dependency
-from presales.rules.routes import execute
+from presales.configuration.http import execute
 
 from ..catalog.service import CatalogService
 from ..common import Change, Entities, Input
 from ..transactions import commit
+from .batch_service import BatchApply, BatchPreview, KnowledgeChanges
 from .migration import LegacyKnowledgeMigration
 from .schemas import KnowledgeInput, with_completion
 
 router = APIRouter(prefix="/api/configuration/knowledge")
 
 
-def save(session, data, **options):
+def validate_knowledge(session, data):
+    from ..definitions.service import Definitions
+
+    Definitions(session).validate_knowledge(data)
     CatalogService(session).validate_variant_ids(
         data.selector.variant_ids + data.selector.exclude_variant_ids + data.target_variant_ids
     )
+    CatalogService(session).validate_variant_ids(data.reviewed_variant_ids)
+    from presales.storage import ProductRecord
+
+    for reference in data.evidence_refs:
+        source = session.get(ProductRecord, reference.source_id)
+        if not source:
+            raise ValueError("证据引用的来源不存在")
+        text = "\n".join(str(v) for v in source.payload.values())
+        if reference.quote not in text:
+            raise ValueError("证据摘录未在所选原始来源中找到，请核对原文")
+
+
+def save(session, data, **options):
+    validate_knowledge(session, data)
+    if options.get("entity_id"):
+        Entities(session).get(options["entity_id"], kind="knowledge")
     return Entities(session).save("knowledge", data, **options)
 
 
@@ -84,3 +104,20 @@ def batch(data: Batch, session: Session = Depends(session_dependency)):
         ]
 
     return execute(lambda: commit(session, perform))
+
+
+@router.post("/change-preview")
+def change_preview(data: BatchPreview, session: Session = Depends(session_dependency)):
+    return execute(
+        lambda: KnowledgeChanges(session, validate=validate_knowledge, save=save).preview(data)
+    )
+
+
+@router.post("/change-apply")
+def change_apply(data: BatchApply, session: Session = Depends(session_dependency)):
+    return execute(
+        lambda: commit(
+            session,
+            lambda: KnowledgeChanges(session, validate=validate_knowledge, save=save).apply(data),
+        )
+    )

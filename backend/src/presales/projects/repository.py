@@ -2,6 +2,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from presales.catalog.reviews import ReviewIndex, ReviewRepository, review_summary
+from presales.configuration.projects.projections.legacy_items import DEVICE_REFERENCE, find_item
 from presales.storage import ProductRecord, Project, ProjectItem
 
 from .schemas import ItemInput, ItemUpdate
@@ -20,7 +21,11 @@ def item_view(item: ProjectItem, reviews: ReviewIndex) -> dict:
         )
     }
     related = reviews.related(item.snapshot["import_id"], item.snapshot)
-    return {**view, "review_summary": review_summary(related)}
+    return {
+        **view,
+        "id": item.snapshot.get(DEVICE_REFERENCE, item.id),
+        "review_summary": review_summary(related),
+    }
 
 
 class ProjectRepository:
@@ -95,7 +100,7 @@ class ProjectRepository:
     def update_item(self, *, project_id: str, item_id: str, data: ItemUpdate) -> dict | None:
         from presales.configuration.projects.legacy import LegacyProjection
 
-        existing = self.session.get(ProjectItem, item_id)
+        existing = find_item(self.session, project_id=project_id, device_id=item_id)
         if existing is None or existing.project_id != project_id:
             return None
         handled, item = LegacyProjection(self.session, self.engine).change(
@@ -115,7 +120,7 @@ class ProjectRepository:
     def remove_item(self, project_id: str, item_id: str) -> bool:
         from presales.configuration.projects.legacy import LegacyProjection
 
-        existing = self.session.get(ProjectItem, item_id)
+        existing = find_item(self.session, project_id=project_id, device_id=item_id)
         if existing is None or existing.project_id != project_id:
             return False
         handled, _ = LegacyProjection(self.session, self.engine).change(

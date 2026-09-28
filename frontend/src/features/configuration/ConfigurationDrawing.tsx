@@ -5,6 +5,7 @@ import { emptyDrawing } from "../topology/drawio/useDrawing";
 import { drawingIdentity } from "./drawingIdentity";
 interface Props {
   xml: string;
+  saved: boolean;
   onXml: (xml: string) => void;
   onSelection: (id: string | undefined) => void;
   onUndo: () => void;
@@ -40,6 +41,9 @@ export function ConfigurationDrawing(props: Props) {
       applying.current = false;
     }
   }, [props.xml, editor.ready]);
+  useEffect(() => {
+    if (editor.ready && props.saved) editor.saved();
+  }, [props.saved, props.xml, editor.ready]);
   return (
     <div className="config-drawing">
       {editor.error ? <Alert type="error" title={editor.error} /> : null}

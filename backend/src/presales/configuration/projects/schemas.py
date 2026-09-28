@@ -3,9 +3,12 @@ from typing import Literal
 
 from pydantic import Field, model_validator
 
+from presales.quotation.schemas import Quotation
+
 from ..catalog.schemas import Attribute
 from ..common import Authored, Input, Text
 from ..knowledge.schemas import Resource
+from .evolution_schemas import AccessoryChoice, SupplyAllocation
 
 
 class Room(Input):
@@ -14,6 +17,9 @@ class Room(Input):
 
 
 class System(Input):
+    definition_id: str = ""
+    knowledge_package_id: str = ""
+    features: list[str] = Field(default_factory=list)
     id: Text
     room_id: str | None = None
     name: Text
@@ -21,6 +27,7 @@ class System(Input):
 
 
 class Requirement(Input):
+    role_id: str = ""
     id: Text
     system_id: Text
     role: Text
@@ -51,7 +58,11 @@ class AccessoryAllocation(Input):
 
 
 class Configuration(Authored):
-    calculation_version: Literal[1, 2] = 1
+    quotation: Quotation | None = None
+    calculation_version: Literal[1, 2, 3] = 1
+    definition_snapshot_id: str | None = None
+    accessory_choices: list[AccessoryChoice] = Field(default_factory=list)
+    supply_allocations: list[SupplyAllocation] = Field(default_factory=list)
     rooms: list[Room] = Field(default_factory=list)
     systems: list[System] = Field(default_factory=list)
     requirements: list[Requirement] = Field(default_factory=list)
@@ -69,6 +80,7 @@ class Configuration(Authored):
             self.requirements,
             self.devices,
             self.accessory_allocations,
+            self.supply_allocations,
         ):
             if len({i.id for i in items}) != len(items):
                 raise ValueError("同类对象标识不能重复")
@@ -87,6 +99,10 @@ class Configuration(Authored):
                 raise ValueError("共用设备请按单台实例维护，再关联多个角色")
         if any(item.device_id not in devices for item in self.accessory_allocations):
             raise ValueError("配套分配引用的设备不存在")
+        if len({c.demand_id for c in self.accessory_choices}) != len(self.accessory_choices):
+            raise ValueError("同一配套需求不能重复设置选用状态")
+        if any(item.device_id not in devices for item in self.supply_allocations):
+            raise ValueError("供货分配引用的设备不存在")
         return self
 
 
@@ -96,8 +112,13 @@ class ConfigurationSave(Input):
 
 
 class CandidateRequest(Input):
-    system: Text
-    role: Text
+    calculation_version: Literal[1, 2, 3] = 1
+    system_definition_id: str = ""
+    role_id: str = ""
+    definition_snapshot_id: str | None = None
+    knowledge_package_id: str = ""
+    system: str = ""
+    role: str = ""
     environment: list[Attribute] = Field(default_factory=list)
     knowledge_snapshot_id: str | None = None
     include_all: bool = False
@@ -107,6 +128,12 @@ class CandidateRequest(Input):
 
     @model_validator(mode="after")
     def semantic_query(self):
+        if (
+            self.mode != "all"
+            and not self.include_all
+            and (not self.system.strip() or not self.role.strip())
+        ):
+            raise ValueError("按角色筛选需要系统和角色；未关联设备请使用全部产品模式")
         if self.mode == "semantic" and not self.query_text:
             raise ValueError("智能查找需要填写需求描述")
         return self
@@ -125,6 +152,8 @@ class SuggestionApply(CheckRequest):
     source_id: str | None = None
     existing_device_id: str | None = None
     quantity: Decimal | None = Field(default=None, gt=0, allow_inf_nan=False)
+    supply_source: Literal["purchase", "existing", "unknown"] = "unknown"
+    supply_evidence: str = ""
 
     @model_validator(mode="after")
     def one_target(self):

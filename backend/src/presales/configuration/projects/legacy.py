@@ -2,10 +2,11 @@ from copy import deepcopy
 
 from sqlalchemy import select
 
-from presales.storage import Project, ProjectItem, identifier
+from presales.storage import Project, identifier
 
 from ..models import SourceLink
 from .drawing import project_drawing, remove_device_references
+from .projections.legacy_items import DEVICE_REFERENCE, find_item
 from .repository import ProjectConfigurations
 from .schemas import Configuration, ConfigurationSave
 
@@ -23,15 +24,23 @@ class LegacyProjection:
         if record is None:
             return False, None
         config = deepcopy(record.payload["configuration"])
+        existing = find_item(self.session, project_id=project_id, device_id=item_id)
+        if existing:
+            item_id = existing.snapshot.get(DEVICE_REFERENCE, existing.id)
         if action == "add":
             item_id = self._add(config, data)
         elif action == "update":
-            self._update(config, item_id, data)
+            self._update(config, item_id, data, existing=existing)
         elif action == "remove":
             config["devices"] = [d for d in config["devices"] if d["id"] != item_id]
             config["accessory_allocations"] = [
                 item
                 for item in config.get("accessory_allocations", [])
+                if item["device_id"] != item_id
+            ]
+            config["supply_allocations"] = [
+                item
+                for item in config.get("supply_allocations", [])
                 if item["device_id"] != item_id
             ]
             config["requirements"] = [
@@ -51,7 +60,7 @@ class LegacyProjection:
                 configuration=Configuration.model_validate(config),
             ),
         )
-        return True, self.session.get(ProjectItem, item_id)
+        return True, find_item(self.session, project_id=project_id, device_id=item_id)
 
     def _add(self, config, data):
         link = self.session.get(SourceLink, data.product_id)
@@ -75,13 +84,12 @@ class LegacyProjection:
         self._assign(config, device_id, data.group_name)
         return device_id
 
-    def _update(self, config, item_id, data):
+    def _update(self, config, item_id, data, *, existing):
         device = next((d for d in config["devices"] if d["id"] == item_id), None)
         if not device:
             raise ValueError("设备不存在")
-        old = self.session.get(ProjectItem, item_id)
         device.update(quantity=str(data.quantity), note=data.note)
-        if old.group_name != data.group_name:
+        if existing.group_name != data.group_name:
             self._assign(config, item_id, data.group_name)
 
     @staticmethod

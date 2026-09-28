@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from presales.api import session_dependency
-from presales.rules.routes import execute
+from presales.configuration.http import execute
 
 from ..common import Change, Entities
 from ..transactions import commit

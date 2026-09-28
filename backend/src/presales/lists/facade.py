@@ -1,0 +1,60 @@
+"""The same transaction boundary is called by both HTTP and MCP."""
+
+from presales.quotation.artifacts import ListExports
+
+from . import queries
+from .schemas import (
+    CatalogGet,
+    CatalogSearch,
+    CheckList,
+    CreateList,
+    ExportList,
+    GetList,
+    ListSearch,
+    Page,
+    SaveList,
+    UpdateList,
+)
+from .service import ListService
+
+
+class ListApplication:
+    def __init__(self, session, *, engine, renderer, files, web_origin="http://127.0.0.1:5176"):
+        self.session = session
+        self.lists = ListService(session, engine, web_origin=web_origin)
+        self.exports = ListExports(
+            session,
+            repository=self.lists.repository,
+            renderer=renderer,
+            files=files,
+            web_origin=web_origin,
+        )
+
+    def call(self, tool, arguments):
+        operations = {
+            "list_create": (CreateList, self.lists.create),
+            "list_get": (GetList, self.lists.get),
+            "list_update": (UpdateList, self.lists.update),
+            "list_check": (CheckList, self.lists.check),
+            "list_save": (SaveList, self.lists.save),
+            "list_export": (ExportList, self.exports.export),
+            "catalog_search": (CatalogSearch, lambda r: queries.search_catalog(self.session, r)),
+            "systems_list": (Page, lambda r: queries.systems(self.session, r)),
+            "catalog_get": (
+                CatalogGet,
+                lambda r: queries.catalog_detail(
+                    self.session, variant_id=r.variant_id, draft_id=r.draft_id
+                ),
+            ),
+            "list_search": (
+                ListSearch,
+                lambda r: queries.search_projects(self.session, r),
+            ),
+        }
+        if tool in operations:
+            model, action = operations[tool]
+            result = action(model.model_validate(arguments))
+        else:
+            raise ValueError("工具不存在")
+        self.session.commit()
+        return result

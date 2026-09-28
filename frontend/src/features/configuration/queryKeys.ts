@@ -1,5 +1,6 @@
 export const configurationKeys = {
   all: ["configuration"] as const,
+  quoteTemplate: ["configuration", "quote-template"] as const,
   products: ["configuration", "products"] as const,
   variants: ["configuration", "variants"] as const,
   attributeDefinitions: ["configuration", "attribute-definitions"] as const,

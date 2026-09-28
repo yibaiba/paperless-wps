@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Alert, Card, Empty, Input, Pagination, Select, Space } from "antd";
+import { Alert, Button, Card, Empty, Input, Pagination, Select, Space, Typography } from "antd";
 import { api } from "../../shared/api";
 import { CandidateCard } from "./CandidateCard";
 import { CandidateModeSelector } from "./CandidateModeSelector";
@@ -14,11 +14,15 @@ import type {
 } from "./types";
 import { ROOT } from "./shared";
 import { configurationKeys } from "./queryKeys";
+import { NewSupplyDialog, type SupplyChoice } from "./projects/NewSupplyDialog";
+
+const CANDIDATES_PER_PAGE = 10;
 
 interface Props {
   configuration: Configuration;
   requirement?: Requirement;
-  onSelect: (device: Deployment, existing: boolean) => void;
+  replacement?: Deployment;
+  onSelect: (device: Deployment, existing: boolean, supply?: SupplyChoice) => void;
   busy: boolean;
 }
 
@@ -27,11 +31,12 @@ export function ProjectCandidates(props: Props) {
   const [search, setSearch] = useState("");
   const [semanticInput, setSemanticInput] = useState("");
   const [semanticQuery, setSemanticQuery] = useState("");
-  const [mode, setMode] = useState<CandidateMode>("known");
+  const [mode, setMode] = useState<CandidateMode>(props.replacement && !requirement ? "all" : "known");
   const [page, setPage] = useState(1);
+  const [pendingDevice, setPendingDevice] = useState<Deployment>();
   const system = configuration.systems.find((item) => item.id === requirement?.system_id);
   const query = useQuery({
-    queryKey: configurationKeys.candidates(
+    queryKey: configurationKeys.candidates(configuration.calculation_version, system?.definition_id, requirement?.role_id, configuration.definition_snapshot_id, system?.knowledge_package_id,
       system?.kind,
       requirement?.role,
       requirement?.environment,
@@ -39,14 +44,19 @@ export function ProjectCandidates(props: Props) {
       mode,
       semanticQuery,
     ),
-    enabled: !!requirement && (mode !== "semantic" || !!semanticQuery),
+    enabled: (!!requirement || !!props.replacement) && (mode !== "semantic" || !!semanticQuery),
     queryFn: () =>
       api<Candidate[]>(ROOT + "/candidates", {
         method: "POST",
         body: JSON.stringify({
-          system: system!.kind,
-          role: requirement!.role,
-          environment: requirement!.environment,
+          system: system?.kind ?? "",
+          calculation_version: configuration.calculation_version,
+          system_definition_id: system?.definition_id ?? "",
+          role_id: requirement?.role_id ?? "",
+          definition_snapshot_id: configuration.definition_snapshot_id ?? null,
+          knowledge_package_id: system?.knowledge_package_id ?? "",
+          role: requirement?.role ?? "",
+          environment: requirement?.environment ?? [],
           knowledge_snapshot_id: configuration.knowledge_snapshot_id ?? null,
           mode,
           query_text: mode === "semantic" ? semanticQuery : "",
@@ -56,17 +66,22 @@ export function ProjectCandidates(props: Props) {
   const [sourceIds, setSourceIds] = useState<Record<string, string>>({});
   const [kinds, setKinds] = useState<Record<string, Deployment["kind"]>>({});
   const [expanded, setExpanded] = useState<string>();
-  if (!requirement) return <MissingRequirement />;
+  if (!requirement && !props.replacement) return <MissingRequirement />;
   const candidates = filterCandidates(query.data ?? [], search);
+  const activePage = Math.min(page, Math.max(1, Math.ceil(candidates.length / CANDIDATES_PER_PAGE)));
   const choose = (variant: Variant) => {
     const sourceId = sourceIds[variant.id] ?? singleSource(variant);
     const kind = kinds[variant.id];
     if (!sourceId || !kind) return;
-    onSelect(newDeployment(variant, sourceId, kind), false);
+    const device = newDeployment(variant, sourceId, kind);
+    if (configuration.calculation_version === 3) setPendingDevice(device);
+    else onSelect(device, false);
   };
   return (
-    <Card title={`${system?.name} · ${requirement.role}`} loading={query.isLoading}>
+    <Card title={props.replacement ? `替换 ${props.replacement.name}` : `${system?.name} · ${requirement?.role}`} loading={query.isLoading}>
+      {pendingDevice ? <NewSupplyDialog name={pendingDevice.name} onClose={() => setPendingDevice(undefined)} onConfirm={(supply) => { onSelect(pendingDevice, false, supply); setPendingDevice(undefined); }} /> : null}
       {query.error ? <Alert type="error" title={query.error.message} /> : null}
+      <Alert type="info" title="候选来自当前产品目录；已选设备仍保留其项目版本。" />
       <CandidateModeSelector
         mode={mode}
         semanticInput={semanticInput}
@@ -80,13 +95,14 @@ export function ProjectCandidates(props: Props) {
           setPage(1);
         }}
       />
-      <ExistingDeviceSelect
+      {requirement && !props.replacement ? <ExistingDeviceSelect
         configuration={configuration}
         requirement={requirement}
         onSelect={onSelect}
         busy={busy}
-      />
+      /> : null}
       <Input.Search
+        allowClear
         placeholder="在当前结果中筛选型号或配置"
         value={search}
         onChange={(event) => {
@@ -95,8 +111,9 @@ export function ProjectCandidates(props: Props) {
         }}
         style={{ marginBottom: 16 }}
       />
+      {query.data && !query.error ? <Typography.Paragraph type="secondary">当前显示 {candidates.length} / {query.data.length} 个候选配置</Typography.Paragraph> : null}
       <Space orientation="vertical" style={{ width: "100%" }}>
-        {candidates.slice((page - 1) * 10, page * 10).map((candidate) => (
+        {candidates.slice((activePage - 1) * CANDIDATES_PER_PAGE, activePage * CANDIDATES_PER_PAGE).map((candidate) => (
           <CandidateCard
             key={candidate.variant.id}
             candidate={candidate}
@@ -119,13 +136,16 @@ export function ProjectCandidates(props: Props) {
       </Space>
       <Pagination
         simple
-        current={page}
+        hideOnSinglePage
+        current={activePage}
         total={candidates.length}
-        pageSize={10}
+        pageSize={CANDIDATES_PER_PAGE}
         onChange={setPage}
         style={{ marginTop: 16 }}
       />
-      {!candidates.length && !query.isLoading ? <Empty description={emptyText(mode, semanticQuery)} /> : null}
+      {!candidates.length && !query.isLoading && !query.error ? <Empty description={search.trim() && query.data?.length ? '当前筛选没有匹配的型号或配置' : emptyText(mode, semanticQuery)}>
+        {search ? <Button onClick={() => { setSearch(''); setPage(1); }}>清除筛选</Button> : null}
+      </Empty> : null}
     </Card>
   );
 }
@@ -161,7 +181,7 @@ function newDeployment(variant: Variant, sourceId: string, kind: Deployment["kin
 }
 
 function filterCandidates(candidates: Candidate[], search: string) {
-  const text = search.toLowerCase();
+  const text = search.trim().toLowerCase();
   return candidates.filter((candidate) =>
     `${candidate.variant.product.model} ${candidate.variant.name}`.toLowerCase().includes(text),
   );

@@ -1,4 +1,4 @@
-import { Alert, Button, Card, Space, Table } from "antd";
+import { Alert, Button, Card, Collapse, Space, Table } from "antd";
 import type { ApplyChoice, Checked, Configuration, Suggestion } from "./types";
 import { Status, useVariants } from "./shared";
 import { EvidenceDetails } from "./EvidenceDetails";
@@ -10,6 +10,7 @@ interface Props {
   busy: boolean;
   onApply: (suggestion: Suggestion, choice: ApplyChoice) => void;
   onCheck: (refresh: boolean) => void;
+  onChoice?: (demandId: string, selected: boolean) => void;
 }
 export function ProjectChecks({
   checked,
@@ -18,6 +19,7 @@ export function ProjectChecks({
   busy,
   onApply,
   onCheck,
+  onChoice,
 }: Props) {
   const variants = useVariants();
   const names = new Map(configuration.devices.map((d) => [d.id, d.name]));
@@ -42,13 +44,13 @@ export function ProjectChecks({
             ? "配置已有变化，请重新检查"
             : "通过已知检查不代表整套方案已完成认证"
         }
-        description="项目保存保留所用知识版本；按最新资料重新检查会更新本次草稿，保存后才产生新版本。"
+        description="项目保存保留所用知识版本；按最新资料重新检查会先展示升级预览，应用并保存后才产生新版本。"
       />
       {checked?.version_changes?.length ? (
         <Alert
           type="warning"
           title={`有 ${checked.version_changes.length} 项资料出现新版本，当前结果仍按保存的版本计算`}
-          description={checked.version_changes
+          description={<Collapse items={[{ key: "versions", label: "展开查看资料版本差异", children: checked.version_changes
             .map(
               (v) =>
                 `${
@@ -56,10 +58,14 @@ export function ProjectChecks({
                     ? "搭配知识"
                     : v.kind === "calculation"
                       ? "计算方式"
+                      : v.kind === "system_definition"
+                        ? "系统角色定义"
+                        : v.kind === "knowledge_package"
+                          ? "系统知识包"
                       : "产品配置"
                 }：${v.used ?? "未纳入"} → v${v.current}`,
             )
-            .join("；")}
+            .join("；") }]} />}
         />
       ) : null}
       <Table
@@ -67,6 +73,8 @@ export function ProjectChecks({
         rowKey={(item) =>
           [
             item.kind,
+            item.system_id,
+            item.role_id,
             item.device_id,
             item.requirement_id,
             item.demand_id,
@@ -92,6 +100,9 @@ export function ProjectChecks({
                 sharing: "共用部署",
                 capacity: "资源容量",
                 accessory_allocation: "配套分配",
+                coverage: "知识覆盖",
+                supply: "供货核算",
+                accessory_choice: "选配状态",
               })[c.kind] ?? c.kind,
           },
           { title: "结果", render: (_, c) => <Status value={c.status} /> },
@@ -130,6 +141,7 @@ export function ProjectChecks({
             busy={busy}
             stale={stale}
             onApply={onApply}
+            onChoice={onChoice}
           />
         ))}
       </Space>

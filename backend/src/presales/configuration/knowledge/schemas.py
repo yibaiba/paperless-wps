@@ -66,7 +66,31 @@ class Resource(Input):
         return self
 
 
+class EvidenceReference(Input):
+    source_id: Text
+    locator: Text
+    quote: Text
+
+
+class SharedRole(Input):
+    system_definition_id: Text
+    role_id: Text
+
+
 class KnowledgeInput(Authored):
+    schema_version: Literal[1, 2] = 1
+    identity_mapping: dict | None = None
+    system_definition_id: str = ""
+    role_id: str = ""
+    activation_conditions: list[Condition] = Field(default_factory=list)
+    alternative_group: str = ""
+    quantity_review: Literal["unreviewed", "confirmed"] = "unreviewed"
+    quantity_evidence: str = ""
+    resource_policy: Literal["unknown", "required", "not_applicable"] = "unknown"
+    evidence_refs: list[EvidenceReference] = Field(default_factory=list)
+    shared_role_refs: list[SharedRole] = Field(default_factory=list)
+    scope_basis: Literal["listed_configurations", "entire_scope"] = "listed_configurations"
+    reviewed_variant_ids: list[str] = Field(default_factory=list)
     completion: Literal["complete", "incomplete"] | None = Field(default=None, exclude=True)
     missing_fields: list[str] = Field(default_factory=list, exclude=True)
     name: Text
@@ -84,6 +108,7 @@ class KnowledgeInput(Authored):
     calculation_scope: Literal["device", "system", "room", "project"] | None = "device"
     quantity_source: Literal["device_quantity", "environment"] = "device_quantity"
     quantity_key: str = ""
+    quantity_unit: str = ""
     mode: Literal["per_unit", "per_capacity", "per_group"] | None = "per_unit"
     factor: Decimal | None = Field(default=Decimal(1), gt=0, allow_inf_nan=False)
     output_kind: Literal["hardware", "software", "license", "accessory"] = "accessory"
@@ -93,13 +118,34 @@ class KnowledgeInput(Authored):
 
     @model_validator(mode="after")
     def complete_relation(self):
-        if self.kind == "suitability" and not (self.system and self.role):
+        if self.quantity_unit and self.quantity_unit not in UNITS:
+            raise ValueError("数量输入单位不受支持")
+        if self.schema_version == 2:
+            for key in ("calculation_scope", "mode", "factor"):
+                if key not in self.model_fields_set:
+                    setattr(self, key, None)
+            if self.quantity_review == "confirmed" and (
+                not self.quantity_evidence or accessory_missing_fields(self)
+            ):
+                raise ValueError("确认数量需要完整公式、候选及数量依据")
+            if self.alternative_group and self.kind != "suitability":
+                raise ValueError("替代分支仅用于系统适用关系")
+        if self.kind == "suitability" and not (
+            (self.system and self.role) or (self.system_definition_id and self.role_id)
+        ):
             raise ValueError("适用关系需要系统和角色")
-        if self.kind == "accessory" and self.status == "confirmed":
+        if self.kind == "accessory" and self.status == "confirmed" and self.schema_version == 1:
             missing = accessory_missing_fields(self)
             if missing:
                 raise ValueError("已确认配套缺少：" + "、".join(missing))
-        if self.kind == "sharing" and len(set(self.shared_roles)) < 2:
+        if (
+            self.kind == "sharing"
+            and max(
+                len(set(self.shared_roles)),
+                len({(r.system_definition_id, r.role_id) for r in self.shared_role_refs}),
+            )
+            < 2
+        ):
             raise ValueError("共享条件至少指定两个系统/角色（例如 无纸化/服务端）")
         return self
 
@@ -122,6 +168,9 @@ def accessory_missing_fields(data: KnowledgeInput | dict) -> list[str]:
 
 def with_completion(view: dict) -> dict:
     missing = accessory_missing_fields(view)
+    if view.get("kind") == "accessory" and view.get("schema_version") == 2:
+        if view.get("quantity_review") != "confirmed":
+            missing.append("数量依据待确认")
     return {
         **view,
         "completion": "incomplete" if missing else "complete",

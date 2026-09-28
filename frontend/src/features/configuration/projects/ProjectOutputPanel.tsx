@@ -1,4 +1,5 @@
-import { Alert, Empty, Space, Table, Tag, Typography } from "antd";
+import { useState } from "react";
+import { Alert, Empty, Segmented, Space, Table, Tag, Typography } from "antd";
 import type { ProjectOutput, ProjectOutputLine } from "../types";
 
 export function ProjectOutputPanel({
@@ -8,6 +9,8 @@ export function ProjectOutputPanel({
   output: ProjectOutput;
   stale: boolean;
 }) {
+  const [mode, setMode] = useState("devices");
+  const lines = mode === "purchase" ? output.procurement_lines ?? [] : output.lines;
   return (
     <Space orientation="vertical" size="middle" style={{ width: "100%" }}>
       <Alert
@@ -16,16 +19,17 @@ export function ProjectOutputPanel({
         title={outputTitle(output, stale)}
         description={outputDescription(output, stale)}
       />
-      {output.lines.length ? (
+      {output.calculation_version === 3 ? <Segmented value={mode} onChange={setMode} options={[{ value: "devices", label: "全部部署设备" }, { value: "purchase", label: "本次采购" }]} /> : <Alert type="warning" title="历史设备配置清单，尚未区分供货来源" />}
+      {lines.length ? (
         <Table<ProjectOutputLine>
           rowKey="device_id"
-          dataSource={output.lines}
+          dataSource={lines}
           pagination={false}
           scroll={{ x: 1180 }}
           columns={[
             { title: "名称", dataIndex: "name", width: 180 },
             { title: "型号", dataIndex: "model", width: 130 },
-            { title: "规格", dataIndex: "specification", width: 240 },
+            { title: "规格", width: 240, render: (_, line) => <Typography.Paragraph ellipsis={{ rows: 3, expandable: true, symbol: "查看完整参数" }}>{line.specification}</Typography.Paragraph> },
             { title: "类型", render: (_, line) => kindLabel(line.kind), width: 80 },
             { title: "数量", render: (_, line) => `${line.quantity} ${line.unit}`, width: 90 },
             {
@@ -60,7 +64,7 @@ export function ProjectOutputPanel({
           ]}
         />
       ) : (
-        <Empty description="选择产品并完成检查后生成业务清单" />
+        <Empty description={mode === "purchase" && output.lines.length ? "当前没有明确列为本次采购的数量；已有设备与供货待确认项仍在部署清单中。" : "选择产品并完成检查后生成业务清单"} />
       )}
     </Space>
   );
@@ -85,7 +89,8 @@ function sourceLabel(line: ProjectOutputLine) {
 
 function outputTitle(output: ProjectOutput, stale: boolean) {
   if (stale) return "业务清单需要重新检查";
-  return output.status === "confirmed" ? "确认版业务清单" : "草稿业务清单";
+  if (output.calculation_version < 3 && output.status === "confirmed") return "历史检查通过（非人工确认）";
+  return output.status === "confirmed" ? "已人工确认的项目清单" : "草稿设备与采购清单";
 }
 
 function outputDescription(output: ProjectOutput, stale: boolean) {
@@ -93,6 +98,7 @@ function outputDescription(output: ProjectOutput, stale: boolean) {
   if (output.status === "confirmed") {
     return "该清单已通过当前知识快照下的选型、配套、共享和容量检查。";
   }
+  if (output.ready_for_confirmation) return "检查与资料范围核对已满足确认条件，保存后可人工确认本项目版本。价格仍保留原始来源值。";
   return "清单保留原始产品资料和价格字段，但存在未确认事项，不能作为已审核报价。";
 }
 

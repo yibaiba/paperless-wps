@@ -1,19 +1,21 @@
 from copy import deepcopy
-from decimal import Decimal
 
 from sqlalchemy import delete, select
 
+from presales.quotation.calculation import adopt_prices, with_quotation
 from presales.rules.repository import RuleConflict
-from presales.storage import Project, ProjectItem, identifier
+from presales.storage import Project, ProjectItem
 
 from ..catalog.service import CatalogService
 from ..common import Entities, view
+from ..knowledge.evaluator import scope_matches
 from ..models import Entity
 from .checks import evaluate_configuration
 from .device_usages import build_device_usages
 from .drawing import project_drawing
 from .knowledge_snapshot import knowledge_snapshot
 from .output import project_output
+from .projections.legacy_items import DEVICE_REFERENCE, projection_id
 from .readiness import project_readiness
 from .schemas import Configuration
 from .snapshots import SnapshotResolver
@@ -21,7 +23,7 @@ from .snapshots import SnapshotResolver
 
 def empty_configuration():
     return dict(
-        calculation_version=2,
+        calculation_version=3,
         actor="",
         evidence="",
         rooms=[],
@@ -29,6 +31,9 @@ def empty_configuration():
         requirements=[],
         devices=[],
         accessory_allocations=[],
+        accessory_choices=[],
+        supply_allocations=[],
+        definition_snapshot_id=None,
         drawing_xml="",
         knowledge_snapshot=None,
         knowledge_snapshot_id=None,
@@ -36,10 +41,10 @@ def empty_configuration():
 
 
 class ProjectConfigurations:
-    def __init__(self, session, engine):
+    def __init__(self, session, engine, *, catalog=None):
         self.session, self.engine = session, engine
         self.entities = Entities(session)
-        self.catalog = CatalogService(session)
+        self.catalog = catalog if catalog is not None else CatalogService(session)
 
     def record(self, project_id):
         return self.session.scalar(
@@ -60,9 +65,7 @@ class ProjectConfigurations:
             ).model_dump(mode="json")
             result.setdefault(
                 "device_usages",
-                build_device_usages(
-                    result["configuration"], result.get("suggestions", [])
-                ),
+                build_device_usages(result["configuration"], result.get("suggestions", [])),
             )
             result.setdefault(
                 "readiness",
@@ -80,7 +83,18 @@ class ProjectConfigurations:
                     result["readiness"],
                 ),
             )
-            return {**result, "name": project.name}
+            from .services.lifecycle import ProjectLifecycle
+
+            result["confirmation"] = ProjectLifecycle(self.session, self).confirmation(
+                project_id, record.revision
+            )
+            if result["confirmation"]:
+                result["project_output"] = dict(
+                    result["project_output"], status="confirmed", ready_for_confirmed_output=True
+                )
+            from .services.issue_actions import with_issue_actions
+
+            return {**with_issue_actions(result, annotate_only=True), "name": project.name}
         count = len(
             list(
                 self.session.scalars(
@@ -105,8 +119,11 @@ class ProjectConfigurations:
 
     def prepare(self, data, *, refresh=False):
         result = data.model_dump(mode="json") if isinstance(data, Configuration) else deepcopy(data)
-        current = {v["id"]: v for v in self.catalog.variants()}
+        selected = {d["variant_id"] for d in result["devices"]}
+        ids = selected if result.get("calculation_version") == 3 else None
+        current = {v["id"]: v for v in self.catalog.variants(ids=ids)}
         snapshot_resolver = SnapshotResolver(self.session)
+        snapshot_resolver.preload(result["devices"])
         variants = {}
         for device in result["devices"]:
             variant = current.get(device["variant_id"])
@@ -122,12 +139,46 @@ class ProjectConfigurations:
             self.session, data=result, refresh=refresh
         )
         result["drawing_xml"] = project_drawing(result["drawing_xml"], devices=result["devices"])
-        return result, variants, current
+        return adopt_prices(result), variants, current
 
     def check(self, data, *, refresh=False, upgrade=False):
+        from .services.issue_actions import with_issue_actions
+
+        return with_issue_actions(
+            with_quotation(self._check(data, refresh=refresh, upgrade=upgrade))
+        )
+
+    def _check(self, data, *, refresh=False, upgrade=False):
         payload, variants, catalog_variants = self.prepare(data, refresh=refresh)
         if upgrade:
-            payload["calculation_version"] = 2
+            payload["calculation_version"] = 3
+        if payload.get("calculation_version") == 3:
+            from .calculation.evaluate import evaluate_v3
+            from .services.definition_snapshot import project_knowledge, resolve_definitions
+
+            definitions, snapshot_id = resolve_definitions(self.session, payload, refresh=refresh)
+            payload["definition_snapshot_id"] = snapshot_id
+            calculation_input = dict(
+                payload, knowledge_snapshot=project_knowledge(payload, definitions)
+            )
+            return dict(
+                configuration=payload,
+                version_changes=self._version_changes(payload),
+                **evaluate_v3(
+                    calculation_input,
+                    variants=variants,
+                    catalog_variants=catalog_variants,
+                    engine=self.engine,
+                    definitions=definitions,
+                ),
+            )
+        if any(
+            rule.get("schema_version", 1) > 1
+            and any(scope_matches(variant, rule["selector"]) for variant in variants.values())
+            for rule in payload["knowledge_snapshot"]
+            if rule["status"] != "disabled"
+        ):
+            raise ValueError("所选产品包含新版知识，请先预览并升级至计算语义版本 3")
         return dict(
             configuration=payload,
             version_changes=self._version_changes(payload),
@@ -140,6 +191,8 @@ class ProjectConfigurations:
         )
 
     def _version_changes(self, payload):
+        from .services.definition_snapshot import definition_version_changes
+
         used = {k["id"]: k["revision"] for k in payload["knowledge_snapshot"]}
         current = {k["id"]: k["revision"] for k in self.entities.list("knowledge")}
         changes = [
@@ -147,12 +200,29 @@ class ProjectConfigurations:
             for key, revision in current.items()
             if used.get(key) != revision
         ]
-        if payload.get("calculation_version", 1) < 2:
-            changes.append(dict(kind="calculation", id="project", used=1, current=2))
+        if payload.get("calculation_version", 1) < 3:
+            changes.append(
+                dict(
+                    kind="calculation",
+                    id="project",
+                    used=payload.get("calculation_version", 1),
+                    current=3,
+                )
+            )
+        ids = {
+            s["id"]
+            for d in payload["devices"]
+            for s in (d["variant_snapshot"], d["variant_snapshot"]["product"])
+        }
+        latest_records = {
+            r.id: r for r in self.session.scalars(select(Entity).where(Entity.id.in_(ids)))
+        }
         for device in payload["devices"]:
             snapshot = device["variant_snapshot"]
             for kind, old in (("variant", snapshot), ("product", snapshot["product"])):
-                latest = self.entities.get(old["id"], kind=kind)
+                latest = latest_records.get(old["id"])
+                if latest is None or latest.kind != kind:
+                    raise ValueError("所用产品或配置已不存在")
                 if latest.revision != old["revision"]:
                     changes.append(
                         dict(
@@ -163,7 +233,7 @@ class ProjectConfigurations:
                             current=latest.revision,
                         )
                     )
-        return changes
+        return changes + definition_version_changes(self.session, payload)
 
     def save(self, project_id, change):
         project = self.session.scalar(
@@ -198,104 +268,25 @@ class ProjectConfigurations:
     def _project_items(self, project_id, data, device_usages):
         self.session.execute(delete(ProjectItem).where(ProjectItem.project_id == project_id))
         groups_by_device = {
-            item["device_id"]: {
-                consumer["system_name"] for consumer in item["consumers"]
-            }
+            item["device_id"]: {consumer["system_name"] for consumer in item["consumers"]}
             for item in device_usages
         }
         for device in data["devices"]:
             groups = sorted(groups_by_device.get(device["id"], set()))
             self.session.add(
                 ProjectItem(
-                    id=device["id"],
+                    id=projection_id(project_id, device["id"], data.get("calculation_version", 1)),
                     project_id=project_id,
                     product_id=device["source_id"],
                     quantity=device["quantity"],
                     group_name=" / ".join(groups) or "未分配",
                     note=device["note"],
-                    snapshot=device["source_snapshot"],
+                    snapshot={**device["source_snapshot"], DEVICE_REFERENCE: device["id"]},
                 )
             )
         self.session.flush()
 
     def apply(self, request):
-        checked = self.check(
-            request.configuration,
-            refresh=request.refresh_knowledge,
-            upgrade=request.upgrade_calculation,
-        )
-        if checked["fingerprint"] != request.fingerprint:
-            raise RuleConflict("配置已变化，请重新检查后应用配套")
-        suggestion = next(
-            (s for s in checked["suggestions"] if s["id"] == request.suggestion_id), None
-        )
-        if not suggestion or suggestion["status"] != "pass":
-            raise ValueError("配套条件未通过或建议不存在")
-        if Decimal(suggestion["missing"]) <= 0:
-            return checked
-        data = checked["configuration"]
-        amount = request.quantity or Decimal(suggestion["missing"])
-        if amount > Decimal(suggestion["missing"]):
-            raise ValueError("分配数量不能超过当前缺量")
-        device_id = request.existing_device_id or identifier()
-        if request.existing_device_id:
-            if data.get("calculation_version", 1) < 2:
-                raise ValueError("请先按最新计算方式重新检查，再关联已有设备")
-            self._validate_existing_allocation(
-                checked, suggestion=suggestion, device_id=device_id, amount=amount
-            )
-        else:
-            self._append_suggested_device(data, suggestion, request, device_id, amount)
-        data["accessory_allocations"].append(
-            dict(
-                id=identifier(),
-                demand_id=suggestion["id"],
-                device_id=device_id,
-                quantity=str(amount),
-                evidence="根据配套检查由售前确认分配",
-            )
-        )
-        return self.check(Configuration.model_validate(data))
+        from .services.accessory_application import AccessoryApplication
 
-    @staticmethod
-    def _append_suggested_device(data, suggestion, request, device_id, amount):
-        if request.variant_id not in suggestion["rule"]["target_variant_ids"]:
-            raise ValueError("请选择建议范围内的配套配置")
-        data["devices"].append(
-            dict(
-                id=device_id,
-                name=suggestion["rule"].get("need_name") or suggestion["rule"]["name"],
-                variant_id=request.variant_id,
-                source_id=request.source_id,
-                quantity=str(amount),
-                kind=suggestion["rule"].get("output_kind", "accessory"),
-                note="",
-                variant_snapshot=None,
-                source_snapshot=None,
-                origin_suggestion=suggestion["id"],
-            )
-        )
-
-    @staticmethod
-    def _validate_existing_allocation(checked, *, suggestion, device_id, amount):
-        data = checked["configuration"]
-        device = next((item for item in data["devices"] if item["id"] == device_id), None)
-        if not device or device["variant_id"] not in suggestion["rule"]["target_variant_ids"]:
-            raise ValueError("已有设备不属于该配套需求的候选配置")
-        allocations = data.get("accessory_allocations", [])
-        demand_rules = {item["id"]: item["rule"] for item in checked["suggestions"]}
-        used = sum(
-            (
-                Decimal(item["quantity"])
-                for item in allocations
-                if item["device_id"] == device_id
-                and demand_rules[item["demand_id"]].get("allocation_mode", "consumable")
-                == "consumable"
-            ),
-            Decimal(0),
-        )
-        if suggestion["rule"].get("allocation_mode", "consumable") == "consumable":
-            if used + amount > Decimal(device["quantity"]):
-                raise ValueError("已有设备的可分配数量不足")
-        elif amount > Decimal(device["quantity"]):
-            raise ValueError("共享设备的单次分配数量超过设备数量")
+        return AccessoryApplication(self).apply(request)

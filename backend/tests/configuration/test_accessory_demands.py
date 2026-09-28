@@ -289,8 +289,8 @@ def test_calculation_version_only_upgrades_explicitly(client, config):
         "/check",
         {"configuration": config, "upgrade_calculation": True},
     )
-    assert upgraded["calculation_version"] == 2
-    assert upgraded["configuration"]["calculation_version"] == 2
+    assert upgraded["calculation_version"] == 3
+    assert upgraded["configuration"]["calculation_version"] == 3
 
 
 def shared_server_config(config, *, memory_each="20"):

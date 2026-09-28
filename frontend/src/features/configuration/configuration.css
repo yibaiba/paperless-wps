@@ -4,6 +4,8 @@
   gap: 18px;
   min-width: 0;
 }
+.project-toolbar { position: sticky; top: 0; z-index: 20; background: #f3f7f5; padding: 10px 0; border-bottom: 1px solid #e3e9e5; }
+.project-checks-section { display: flex; flex-direction: column; gap: 18px; scroll-margin-top: 110px; }
 .knowledge-table .ant-table-cell {
   vertical-align: top;
   overflow-wrap: break-word;
@@ -86,6 +88,10 @@
 .config-workspace .ant-tree-title {
   white-space: nowrap;
 }
+
+.config-workspace.quotation-workspace {
+  grid-template-columns: minmax(0, 1fr);
+}
 .source-match-list {
   width: 100%;
 }
@@ -100,3 +106,7 @@
   margin-top: 2px;
   line-height: 1.45;
 }
+
+.knowledge-workbench { display: grid; grid-template-columns: minmax(280px, 0.8fr) minmax(0, 1.7fr); gap: 16px; align-items: start; }
+.knowledge-workbench > * { min-width: 0; }
+@media (max-width: 1050px) { .knowledge-workbench { grid-template-columns: 1fr; } }

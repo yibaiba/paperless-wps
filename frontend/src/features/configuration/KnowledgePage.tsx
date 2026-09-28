@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Alert,
@@ -9,6 +10,7 @@ import {
   Select,
   Space,
   Table,
+  Tabs,
   Typography,
 } from "antd";
 import { api } from "../../shared/api";
@@ -26,7 +28,21 @@ const kinds = {
   accessory: "配套关系",
   sharing: "共用部署",
 };
+import { KnowledgeWorkbench } from "./knowledge/KnowledgeWorkbench";
+import { SystemVersionWorkbench } from "./knowledge/SystemVersionWorkbench";
+
 export default function KnowledgePage() {
+  const [params] = useSearchParams();
+  return <div className="configuration-page">
+    <Typography.Title level={2}>产品搭配知识</Typography.Title>
+    <Tabs defaultActiveKey={params.get("view") ?? "products"} destroyOnHidden items={[
+      { key: "products", label: "按产品维护", children: <KnowledgeWorkbench /> },
+      { key: "systems", label: "按系统版本维护", children: <SystemVersionWorkbench /> },
+      { key: "records", label: "全部关系与历史", children: <KnowledgeRecords /> },
+    ]} />
+  </div>;
+}
+function KnowledgeRecords() {
   const [batchOpen, setBatchOpen] = useState(false),
     [history, setHistory] = useState<string>(),
     [systemFilter, setSystemFilter] = useState<string>(),
@@ -63,17 +79,20 @@ export default function KnowledgePage() {
     },
     onError: (e) => message.error(e.message),
   });
+  const [batchPreview, setBatchPreview] = useState<{ items: unknown[]; fingerprint: string; changes: { before: unknown; after: unknown }[]; operation_id: string }>();
   const bulkSave = useMutation({
-    mutationFn: (items: unknown[]) =>
-      api(ROOT + "/knowledge/batch", {
-        method: "POST",
-        body: JSON.stringify({ items }),
-      }),
-    onSuccess: () => {
-      client.invalidateQueries({ queryKey: configurationKeys.knowledge });
-      setBatchOpen(false);
-      setSelected([]);
+    mutationFn: async (items: unknown[]) => {
+      const preview = await api<{ fingerprint: string; changes: { before: unknown; after: unknown }[] }>(ROOT + "/knowledge/change-preview", {
+        method: "POST", body: JSON.stringify({ items }),
+      });
+      return { ...preview, items, operation_id: crypto.randomUUID() };
     },
+    onSuccess: setBatchPreview,
+    onError: (e) => message.error(e.message),
+  });
+  const applyBatch = useMutation({
+    mutationFn: () => api(ROOT + "/knowledge/change-apply", { method: "POST", body: JSON.stringify({ items: batchPreview!.items, fingerprint: batchPreview!.fingerprint, operation_id: batchPreview!.operation_id }) }),
+    onSuccess: () => { client.invalidateQueries({ queryKey: configurationKeys.knowledge }); setBatchPreview(undefined); setBatchOpen(false); setSelected([]); },
     onError: (e) => message.error(e.message),
   });
   return (
@@ -245,6 +264,13 @@ export default function KnowledgePage() {
         footer={null}
       >
         <div className="config-source">{evidence}</div>
+      </Modal>
+      <Modal open={!!batchPreview} title="批量维护预览" width={1000} onCancel={() => setBatchPreview(undefined)} onOk={() => applyBatch.mutate()} confirmLoading={applyBatch.isPending} okText="应用这一批修改">
+        <Alert type="info" title="整批按预期修订保存，有冲突时不会部分写入" />
+        <Table rowKey={(_, i) => String(i)} dataSource={batchPreview?.changes} columns={[
+          { title: "修改前", render: (_, c) => <Typography.Paragraph ellipsis={{ rows: 3, expandable: true }}>{JSON.stringify(c.before)}</Typography.Paragraph> },
+          { title: "修改后", render: (_, c) => <Typography.Paragraph ellipsis={{ rows: 3, expandable: true }}>{JSON.stringify(c.after)}</Typography.Paragraph> },
+        ]} />
       </Modal>
       {batchOpen ? (
         <KnowledgeBatch

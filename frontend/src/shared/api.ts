@@ -1,3 +1,7 @@
+export class ApiError extends Error {
+  constructor(public readonly status: number, message: string) { super(message); }
+}
+
 export async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
   const response = await fetch(`/api${path}`, {
     ...options,
@@ -12,7 +16,7 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
       const parsed = JSON.parse(body);
       detail = typeof parsed.detail === 'string' ? parsed.detail : JSON.stringify(parsed.detail);
     } catch { /* Non-JSON server failures remain visible in the error message. */ }
-    throw new Error(`请求失败（${response.status}）：${detail}`);
+    throw new ApiError(response.status, `请求失败（${response.status}）：${detail}`);
   }
   return response.status === 204 ? undefined as T : response.json();
 }

@@ -1,7 +1,7 @@
-import { Alert, Collapse, Form, Input, InputNumber, Select, Space } from "antd";
+import { Alert, Button, Collapse, Form, Input, InputNumber, Select, Space } from "antd";
 import type { Knowledge } from "../types";
-import { ConditionsEditor } from "../KnowledgeEditor";
-import { required } from "../shared";
+import { ConditionsEditor } from "./ConditionsEditor";
+import { required, units } from "../shared";
 import { KnowledgeSentence } from "./KnowledgeSentence";
 
 export function KnowledgeRuleStep({
@@ -13,6 +13,7 @@ export function KnowledgeRuleStep({
   quantitySource?: Knowledge["quantity_source"];
   summary: string;
 }) {
+  const form = Form.useFormInstance();
   return (
     <>
       <KnowledgeSentence summary={summary} />
@@ -21,19 +22,26 @@ export function KnowledgeRuleStep({
           <Alert
             type="info"
             showIcon
-            title="默认按 1:1 配套"
-            description="每个所选产品增加 1 个配套。数量关系不同时再展开修改。"
+            title="数量依据与关系分别确认"
+            description="可以先记录需要什么配套；数量未确认时只显示待办，不生成补料量。"
             style={{ marginBottom: 16 }}
           />
+          <Space wrap style={{ marginBottom: 16 }}>
+            <Button onClick={() => form.setFieldsValue({ calculation_scope: "device", mode: "per_unit", factor: "1" })}>明确每台一个</Button>
+            <Button onClick={() => form.setFieldsValue({ calculation_scope: "system", mode: "per_group", factor: "1" })}>明确每系统一个</Button>
+            <Button onClick={() => form.setFieldsValue({ calculation_scope: null, mode: null, factor: null, quantity_review: "unreviewed" })}>数量待确认</Button>
+          </Space>
+          <AccessoryCalculationFields quantitySource={quantitySource} />
+          <Form.Item name="quantity_review" label="数量依据状态"><Select options={[
+            { value: "unreviewed", label: "待确认" }, { value: "confirmed", label: "已核对数量依据" },
+          ]} /></Form.Item>
+          <Form.Item name="quantity_evidence" label="数量依据"><Input.TextArea placeholder="说明数量口径来自哪项参数或维护者结论" /></Form.Item>
+          <Form.Item name="resource_policy" label="配套资源是否需要核算"><Select options={[
+            { value: "unknown", label: "待确认" }, { value: "required", label: "需要核算容量" },
+            { value: "not_applicable", label: "有依据确认不涉及资源容量" },
+          ]} /></Form.Item>
           <Collapse
             items={[
-              {
-                key: "quantity",
-                label: "数量不是 1:1，修改计算方式",
-                children: (
-                  <AccessoryCalculationFields quantitySource={quantitySource} />
-                ),
-              },
               {
                 key: "output",
                 label: "清单分类与已有设备抵扣方式",
@@ -98,6 +106,9 @@ function AccessoryCalculationFields({
           </Form.Item>
         ) : null}
       </Space>
+      {quantitySource === "environment" ? <Form.Item name="quantity_unit" label="数量输入单位" extra="必须与需求参数单位一致；无单位数值请选择不带单位。">
+        <Select options={[{ value: "", label: "不带单位" }, ...units.map((unit) => ({ value: unit, label: unit }))]} />
+      </Form.Item> : null}
       <Space wrap align="start">
         <Form.Item name="mode" label="计算方式">
           <Select
@@ -109,8 +120,8 @@ function AccessoryCalculationFields({
             ]}
           />
         </Form.Item>
-        <Form.Item name="factor" label="系数 / 容量 / 固定数量" rules={required}>
-          <InputNumber stringMode min="0.000001" />
+        <Form.Item name="factor" label="系数 / 容量 / 固定数量">
+          <InputNumber stringMode />
         </Form.Item>
         <Form.Item name="need_key" label="需求标识（可选）">
           <Input placeholder="例如：server" />
