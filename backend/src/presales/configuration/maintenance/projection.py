@@ -32,6 +32,8 @@ def project_findings(project):
                 definitions=project.get("definitions", {}),
                 snapshot=data.get("knowledge_snapshot", []),
             )
+            if check["kind"] == "sharing":
+                identity = sharing_identity(check, role_ids, project=project, device=device)
             yield dict(
                 identity=identity,
                 kind=check["kind"],
@@ -60,6 +62,29 @@ def project_findings(project):
             objects=[demand.get("need_name") or rule["name"]],
             evidence=demand.get("evidence", []),
         )
+
+
+def sharing_identity(check, role_ids, *, project, device):
+    data = project["configuration"]
+    roles = {r["id"]: r for r in data["requirements"]}
+    systems = {s["id"]: s for s in data["systems"]}
+    identities = [
+        check_identity(
+            check,
+            role=roles.get(identity, {}),
+            system=systems.get(roles.get(identity, {}).get("system_id"), {}),
+            device=device,
+            definitions=project.get("definitions", {}),
+            snapshot=data.get("knowledge_snapshot", []),
+        )
+        for identity in role_ids
+    ]
+    return [
+        "sharing",
+        device.get("variant_id"),
+        (device.get("variant_snapshot") or {}).get("revision"),
+        sorted(digest(identity) for identity in identities),
+    ]
 
 
 def check_identity(check, *, role, system, device, definitions, snapshot):

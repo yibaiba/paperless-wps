@@ -74,3 +74,18 @@ def test_task_endpoint_uses_saved_version_only(client, catalog, config, project)
     assert result["project_count"] == 1
     assert result["total"] >= 1
     assert all(i["project_id"] == project["id"] for t in result["items"] for i in t["impacts"])
+
+
+def test_sharing_gap_keeps_complete_role_combination():
+    a = saved_gap("a")
+    a["configuration"]["requirements"] = [
+        dict(id=r, system_id="s", role_id=r) for r in ("a", "b", "c")
+    ]
+    a["checks"] = [dict(kind="sharing", status="unknown", requirement_ids=["a", "b"])]
+    b = deepcopy(a)
+    b["project_id"] = "b"
+    assert len(maintenance_tasks([a, b], {})) == 1
+    b["checks"][0]["requirement_ids"] = ["a", "c"]
+    tasks = maintenance_tasks([a, b], {})
+    assert len(tasks) == 2
+    assert all(t["project_count"] == 1 for t in tasks)
