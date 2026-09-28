@@ -97,7 +97,7 @@ export function ProjectChecks({
           {
             title: "检查",
             render: (_, c) =>
-              checkLabels[c.kind] ?? c.kind,
+              c.responsibility === "project" ? checkLabels.project_configuration : checkLabels[c.kind] ?? c.kind,
           },
           { title: "结果", render: (_, c) => <Status value={c.status} /> },
           {

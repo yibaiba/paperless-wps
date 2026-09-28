@@ -179,6 +179,8 @@ export interface IssueAction {
   type: string; device_id?: string; requirement_id?: string; requirement_ids?: string[]; system_id?: string; demand_id?: string; variant_id?: string; missing_fields?: string[];
 }
 export interface Check {
+  responsibility?: "project" | "knowledge";
+  code?: string;
   action?: IssueAction;
   system_id?: string;
   role_id?: string;

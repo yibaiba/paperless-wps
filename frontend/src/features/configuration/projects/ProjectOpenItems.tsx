@@ -70,7 +70,7 @@ function openItems(checked: Checked | undefined, configuration: Configuration) {
     .filter((item) => item.status !== "pass")
     .map((item, index) => ({
       id: `check:${index}:${item.kind}:${item.device_id ?? item.requirement_id ?? "project"}`,
-      category: checkLabels[item.kind] ?? item.kind,
+      category: item.responsibility === "project" ? checkLabels.project_configuration : checkLabels[item.kind] ?? item.kind,
       action: item.action,
       object:
         deviceNames.get(item.device_id ?? "") ??
@@ -103,5 +103,5 @@ function openItems(checked: Checked | undefined, configuration: Configuration) {
 
 function actionLabel(type?: string) {
   return ({ select_candidate: '选择产品', edit_supply: '分配供货', edit_resources: '补充需求',
-    assign_device: '关联用途', edit_accessory: '处理配套', edit_definition: '维护系统知识', edit_system_inputs: '填写项目需求', edit_inspection: '维护用途检查' } as Record<string, string>)[type ?? ''] ?? '补充知识依据';
+    add_system: '建立系统', add_requirement: '添加角色需求', edit_requirement: '关联系统角色', assign_device: '关联用途', edit_accessory: '处理配套', edit_definition: '维护系统知识', edit_system_inputs: '填写项目需求', edit_inspection: '维护用途检查' } as Record<string, string>)[type ?? ''] ?? '补充知识依据';
 }

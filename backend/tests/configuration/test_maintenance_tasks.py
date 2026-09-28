@@ -43,7 +43,7 @@ def test_same_gap_groups_projects_but_revisions_remain_distinct():
 
 def test_definition_revision_and_variant_are_part_of_task_identity():
     a = saved_gap("a")
-    a["checks"] = [dict(kind="coverage", status="unknown", requirement_id="r")]
+    a["checks"] = [dict(kind="coverage", status="unknown", requirement_id="r", device_id="d")]
     b = deepcopy(a)
     b["project_id"] = "b"
     assert len(maintenance_tasks([a, b], {})) == 1
@@ -89,3 +89,51 @@ def test_sharing_gap_keeps_complete_role_combination():
     tasks = maintenance_tasks([a, b], {})
     assert len(tasks) == 2
     assert all(t["project_count"] == 1 for t in tasks)
+
+
+def test_project_configuration_gaps_do_not_create_global_knowledge_tasks(client, catalog, config):
+    from .conftest import AUTHOR
+    from .test_evolution import ready_project
+
+    data = ready_project(client, catalog, config)
+    empty = dict(calculation_version=3, **AUTHOR)
+    missing_roles = deepcopy(data)
+    missing_roles["requirements"] = []
+    unbound = deepcopy(data)
+    unbound["requirements"][0]["role_id"] = ""
+    for index, value in enumerate([empty, missing_roles, unbound]):
+        checked = post(client, "/check", dict(configuration=value))
+        project_issues = [c for c in checked["checks"] if c.get("responsibility") == "project"]
+        assert project_issues
+        assert all(
+            c["action"]["type"] in {"add_system", "add_requirement", "edit_requirement"}
+            for c in project_issues
+        )
+        project = client.post("/api/projects", json=dict(name=f"隔离项目缺项{index}")).json()
+        saved = client.put(
+            BASE + "/projects/" + project["id"],
+            json=dict(expected_revision=0, configuration=checked["configuration"]),
+        )
+        assert saved.status_code == 200, saved.text
+        tasks = client.get(
+            BASE + "/maintenance-tasks", params=dict(project_id=project["id"])
+        ).json()
+        assert not any(t["title"] == c["message"] for c in project_issues for t in tasks["items"])
+    # Genuine missing knowledge remains visible.
+    data["systems"][0]["knowledge_package_id"] = ""
+    checked = post(client, "/check", dict(configuration=data))
+    assert any(c.get("responsibility") == "knowledge" for c in checked["checks"])
+
+
+def test_legacy_saved_project_gaps_are_classified_by_references_not_wording():
+    from presales.configuration.maintenance.responsibility import is_knowledge_gap
+
+    project = saved_gap("legacy")
+    project["definitions"]["definitions"][0]["status"] = "confirmed"
+    assert not is_knowledge_gap(dict(kind="coverage", message="arbitrary"), project)
+    assert not is_knowledge_gap(dict(kind="coverage", role_id="server", system_id="s"), project)
+    assert not is_knowledge_gap(dict(kind="coverage", requirement_id="r"), project)
+    assert not is_knowledge_gap(dict(kind="coverage", system_id="s"), project)
+    assert is_knowledge_gap(dict(kind="coverage", device_id="d", requirement_id="r"), project)
+    project["definitions"]["definitions"][0]["status"] = "draft"
+    assert is_knowledge_gap(dict(kind="coverage", system_id="s"), project)

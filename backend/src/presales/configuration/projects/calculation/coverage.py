@@ -1,8 +1,15 @@
 from ...knowledge.evaluator import scope_matches
 
 
-def coverage_check(message, *, status="unknown", **refs):
-    return dict(kind="coverage", status=status, message=message, **refs)
+def coverage_check(message, *, code, responsibility, status="unknown", **refs):
+    return dict(
+        kind="coverage",
+        code=code,
+        responsibility=responsibility,
+        status=status,
+        message=message,
+        **refs,
+    )
 
 
 def coverage_checks(data, definitions, variants, *, demands=()):
@@ -14,10 +21,20 @@ def coverage_checks(data, definitions, variants, *, demands=()):
         definition = package["definition"] if package else catalog.get(system.get("definition_id"))
         requirements = [r for r in data["requirements"] if r["system_id"] == system["id"]]
         if not definition or definition["status"] != "confirmed":
-            checks.append(coverage_check("系统版本的角色定义尚未确认", system_id=system["id"]))
+            checks.append(
+                coverage_check(
+                    "系统版本的角色定义尚未确认",
+                    code="system_definition_unconfirmed",
+                    responsibility="knowledge",
+                    system_id=system["id"],
+                )
+            )
             continue
         checks.extend(required_roles(system, requirements, definition))
+        known_roles = {r["id"] for r in definition["roles"]}
         for requirement in requirements:
+            if requirement.get("role_id") not in known_roles:
+                continue
             variant = variants.get(requirement.get("device_id"))
             if not variant:
                 continue
@@ -34,7 +51,9 @@ def coverage_checks(data, definitions, variants, *, demands=()):
             checks.append(review["check"])
             resource_policies[requirement["id"]] = review["resources"]
     if not data["systems"]:
-        checks.append(coverage_check("尚未建立系统需求"))
+        checks.append(
+            coverage_check("尚未建立系统需求", code="missing_systems", responsibility="project")
+        )
     return checks, resource_policies
 
 
@@ -46,18 +65,37 @@ def required_roles(system, requirements, definition):
         if r["required"] and (not r["feature"] or r["feature"] in system.get("features", []))
     ]
     checks = [
-        coverage_check("缺少必要角色：" + r["name"], system_id=system["id"], role_id=r["id"])
+        coverage_check(
+            "缺少必要角色：" + r["name"],
+            code="missing_required_role",
+            responsibility="project",
+            system_id=system["id"],
+            role_id=r["id"],
+        )
         for r in roles
         if r["id"] not in selected
     ]
     known = {r["id"] for r in definition["roles"]}
     checks.extend(
-        coverage_check("角色尚未关联系统定义", requirement_id=r["id"])
+        coverage_check(
+            "角色尚未关联系统定义",
+            code="unbound_role",
+            responsibility="project",
+            requirement_id=r["id"],
+            system_id=system["id"],
+        )
         for r in requirements
         if r.get("role_id") not in known
     )
     if not requirements:
-        checks.append(coverage_check("本系统尚未表达角色需求", system_id=system["id"]))
+        checks.append(
+            coverage_check(
+                "本系统尚未表达角色需求",
+                code="missing_role_requirements",
+                responsibility="project",
+                system_id=system["id"],
+            )
+        )
     return checks
 
 
@@ -82,6 +120,8 @@ def role_coverage(requirement, variant, package):
     return dict(
         check=coverage_check(
             message,
+            code="accessory_coverage",
+            responsibility="knowledge",
             status=status,
             requirement_id=requirement["id"],
             device_id=requirement["device_id"],

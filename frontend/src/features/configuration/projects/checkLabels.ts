@@ -1,5 +1,6 @@
 export const checkLabels: Record<string, string> = {
   assignment: "用途关联",
+  project_configuration: "项目配置",
   project_input: "项目需求",
   inspection: "用途检查依据",
   selection: "角色选型",

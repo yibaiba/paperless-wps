@@ -3,6 +3,7 @@
 from presales.rules.calculation import digest
 
 from ..projects.calculation.demands import quantity_missing
+from .responsibility import is_knowledge_gap
 
 KNOWLEDGE_KINDS = {"compatibility", "coverage", "resource_policy", "inspection", "sharing"}
 
@@ -14,6 +15,8 @@ def project_findings(project):
     systems = {s["id"]: s for s in data["systems"]}
     for check in project.get("checks", []):
         if check["status"] == "pass" or check["kind"] not in KNOWLEDGE_KINDS:
+            continue
+        if not is_knowledge_gap(check, project):
             continue
         role_ids = (
             check.get("requirement_ids")

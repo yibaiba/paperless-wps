@@ -52,6 +52,15 @@ def with_issue_actions(checked, *, annotate_only=False):
             if check["kind"] == "sharing"
             else [],
         )
+        if check.get("responsibility") == "project":
+            action.update(
+                type={
+                    "missing_systems": "add_system",
+                    "missing_required_role": "add_requirement",
+                    "missing_role_requirements": "add_requirement",
+                    "unbound_role": "edit_requirement",
+                }[check["code"]]
+            )
         if check["kind"] == "capacity" and any(
             e.get("input_key") for e in check.get("evidence", [])
         ):

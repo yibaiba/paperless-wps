@@ -30,7 +30,11 @@ def project_readiness(data, checks, suggestions):
             "accessory_conflicts": sum(item.get("status") == "conflict" for item in suggestions),
         },
         "pending_by_kind": dict(
-            Counter(item["kind"] for item in checks if item.get("status") == "unknown")
+            Counter(
+                "project_configuration" if item.get("responsibility") == "project" else item["kind"]
+                for item in checks
+                if item.get("status") == "unknown"
+            )
         ),
         "stages": stages,
     }

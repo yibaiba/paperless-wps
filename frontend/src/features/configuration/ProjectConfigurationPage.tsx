@@ -359,6 +359,8 @@ function ConfigurationEditor({
         setReviewOpen(false);
         if (action.type === 'edit_resources' && action.requirement_ids?.length) { setResourceRoles(action.requirement_ids); return; }
         if (action.type === 'assign_device' && action.device_id) { setAssignDevice(action.device_id); return; }
+        if (action.type === 'add_system') { setSystemModal(true); return; }
+        if (action.type === 'add_requirement' && action.system_id) { setRequirementModal({ systemId: action.system_id }); return; }
         if (action.type === 'edit_supply') { setTab('supply'); return; }
         if (action.type === 'edit_system_inputs') { if (action.system_id) setInputsSystemId(action.system_id); else setInputSystemChoices(action.system_ids ?? []); return; }
         if (action.type === 'edit_inspection') { navigate('/knowledge?' + new URLSearchParams({ view: 'inspections', ...(action.profile_id ? { profile: action.profile_id } : {}) })); return; }
@@ -366,7 +368,7 @@ function ConfigurationEditor({
         if (action.type === 'edit_knowledge') { navigate('/knowledge?' + new URLSearchParams(action.rule_id ? { rule: action.rule_id } : { variant: action.variant_id ?? '' })); return; }
         setTab('list');
         const role = config.requirements.find((r) => r.id === action.requirement_id);
-        if (action.type === 'edit_resources' && role) setRequirementModal({ systemId: role.system_id, initial: role });
+        if (['edit_resources', 'edit_requirement'].includes(action.type) && role) setRequirementModal({ systemId: role.system_id, initial: role });
         else if (role) { setDeviceModal(undefined); setSelectedRequirement(role.id); setSelectedSystem(role.system_id); }
         else if (action.device_id) { const related = config.requirements.filter((r) => r.device_id === action.device_id); if (related.length === 1) setRequirementModal({ systemId: related[0].system_id, initial: related[0] }); else setAssignDevice(action.device_id); }
       }} />
