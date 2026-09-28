@@ -6,17 +6,32 @@ def is_knowledge_gap(check, project):
         return True
     if check.get("responsibility"):
         return check["responsibility"] == "knowledge"
-    # Legacy role-coverage checks always identify the selected device. Role binding
-    # failures identify a requirement/role but have no selected-device reference.
+    # Older calculations emitted accessory coverage even for unbound roles.
+    # Resolve their saved role before treating the device check as knowledge work.
     if check.get("device_id"):
-        return True
+        return has_defined_role(check, project)
     if check.get("requirement_id") or check.get("role_id"):
         return False
     system_id = check.get("system_id")
     if not system_id:
         return False
-    data = project["configuration"]
-    system = next(s for s in data["systems"] if s["id"] == system_id)
+    definition = system_definition(system_id, project)
+    # A confirmed definition's system-only check means missing project roles.
+    return not definition or definition["status"] != "confirmed"
+
+
+def has_defined_role(check, project):
+    requirement = next(
+        r for r in project["configuration"]["requirements"] if r["id"] == check["requirement_id"]
+    )
+    definition = system_definition(requirement["system_id"], project)
+    return bool(definition) and any(
+        role["id"] == requirement.get("role_id") for role in definition["roles"]
+    )
+
+
+def system_definition(system_id, project):
+    system = next(s for s in project["configuration"]["systems"] if s["id"] == system_id)
     definitions = project.get("definitions", {})
     package = next(
         (
@@ -26,7 +41,7 @@ def is_knowledge_gap(check, project):
         ),
         None,
     )
-    definition = (
+    return (
         package["definition"]
         if package
         else next(
@@ -38,6 +53,3 @@ def is_knowledge_gap(check, project):
             None,
         )
     )
-    # For a confirmed definition, a legacy system-only check means that this
-    # project did not instantiate its roles. Unconfirmed definitions need knowledge work.
-    return not definition or definition["status"] != "confirmed"

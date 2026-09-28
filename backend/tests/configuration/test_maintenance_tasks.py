@@ -1,5 +1,7 @@
 from copy import deepcopy
 
+import pytest
+
 from presales.configuration.maintenance.projection import maintenance_tasks
 
 from .conftest import BASE, post
@@ -16,7 +18,9 @@ def saved_gap(identity, *, revision=1):
             requirements=[dict(id="r", system_id="s", role_id="server", role="服务端")],
             devices=[],
         ),
-        definitions=dict(definitions=[dict(id="d", revision=1)], packages=[]),
+        definitions=dict(
+            definitions=[dict(id="d", revision=1, roles=[dict(id="server")])], packages=[]
+        ),
         checks=[
             dict(
                 kind="inspection",
@@ -137,3 +141,27 @@ def test_legacy_saved_project_gaps_are_classified_by_references_not_wording():
     assert is_knowledge_gap(dict(kind="coverage", device_id="d", requirement_id="r"), project)
     project["definitions"]["definitions"][0]["status"] = "draft"
     assert is_knowledge_gap(dict(kind="coverage", system_id="s"), project)
+
+
+@pytest.mark.parametrize("use_package", [False, True])
+@pytest.mark.parametrize("role_id", ["", "removed", "server"])
+def test_legacy_double_checks_only_create_tasks_for_bound_roles(use_package, role_id):
+    project = saved_gap("legacy-double")
+    definition = project["definitions"]["definitions"][0]
+    definition["status"] = "confirmed"
+    if use_package:
+        project["configuration"]["systems"][0]["knowledge_package_id"] = "p"
+        project["definitions"]["packages"] = [
+            dict(id="p", revision=1, definition=deepcopy(definition))
+        ]
+        # The pinned package, not a separately loaded definition, owns the roles.
+        definition["roles"] = []
+    project["configuration"]["requirements"][0]["role_id"] = role_id
+    project["checks"] = [
+        dict(kind="coverage", status="unknown", requirement_id="r", system_id="s"),
+        dict(kind="coverage", status="unknown", requirement_id="r", device_id="dev"),
+    ]
+    original = deepcopy(project)
+    tasks = maintenance_tasks([project], {})
+    assert len(tasks) == (1 if role_id == "server" else 0)
+    assert project == original
