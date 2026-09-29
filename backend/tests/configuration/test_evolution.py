@@ -21,7 +21,15 @@ def ready_project(client, catalog, config):
         dict(
             name="无纸化",
             status="confirmed",
-            roles=[dict(id="server", name="服务端")],
+            roles=[
+                dict(
+                    id="server",
+                    name="服务端",
+                    quantity_basis=dict(
+                        status="confirmed", scope="system", mode="per_group", factor="1", **AUTHOR
+                    ),
+                )
+            ],
             **AUTHOR,
         ),
     )

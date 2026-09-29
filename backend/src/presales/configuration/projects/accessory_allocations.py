@@ -26,7 +26,7 @@ def prune_stale_allocations(data, demands):
 def accessory_allocation_checks(data, demands):
     by_id = {item["id"]: item for item in demands}
     devices = {item["id"]: item for item in data["devices"]}
-    consumptive = defaultdict(Decimal)
+    consumptive, shared = defaultdict(Decimal), defaultdict(Decimal)
     checks = []
     for allocation in data.get("accessory_allocations", []):
         demand = by_id.get(allocation["demand_id"])
@@ -39,8 +39,27 @@ def accessory_allocation_checks(data, demands):
             continue
         if demand["rule"].get("allocation_mode", "consumable") == "consumable":
             consumptive[device["id"]] += Decimal(allocation["quantity"])
+        else:
+            shared[(device["id"], demand["id"])] += Decimal(allocation["quantity"])
     checks.extend(over_allocated_checks(consumptive, devices))
+    for (device_id, demand_id), used in shared.items():
+        if used > Decimal(devices[device_id]["quantity"]):
+            checks.append(
+                allocation_check(
+                    dict(device_id=device_id, demand_id=demand_id),
+                    "conflict",
+                    "同一配套需求的共享分配合计超过设备数量，请调整关联",
+                )
+            )
     return checks
+
+
+def demand_quantities(allocations, *, demand_id):
+    quantities = defaultdict(Decimal)
+    for allocation in allocations:
+        if allocation["demand_id"] == demand_id:
+            quantities[allocation["device_id"]] += Decimal(allocation["quantity"])
+    return quantities
 
 
 def over_allocated_checks(consumptive, devices):

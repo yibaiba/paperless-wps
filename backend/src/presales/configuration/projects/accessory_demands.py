@@ -4,6 +4,7 @@ from decimal import Decimal, InvalidOperation
 from presales.rules.calculation import digest
 
 from ..knowledge.evaluator import context_for, evaluate_rules, scope_matches
+from .accessory_allocations import demand_quantities
 
 
 def calculate_accessory_demands(data, *, variants, catalog_variants, engine):
@@ -191,17 +192,18 @@ def calculated_demand(data, rule, scope_id, contributions, engine, cyclic, *, de
 
 def allocated_quantity(data, demand_id, rule):
     devices = {item["id"]: item for item in data["devices"]}
-    allocations = [
-        item for item in data.get("accessory_allocations", []) if item["demand_id"] == demand_id
-    ]
+    quantities = demand_quantities(data.get("accessory_allocations", []), demand_id=demand_id)
     total = Decimal(0)
     errors = []
-    for allocation in allocations:
-        device = devices.get(allocation["device_id"])
+    for device_id, amount in quantities.items():
+        device = devices.get(device_id)
         if not device or device["variant_id"] not in rule["target_variant_ids"]:
             errors.append("已有配套分配引用了不匹配的设备")
             continue
-        total += Decimal(allocation["quantity"])
+        if amount > Decimal(device["quantity"]):
+            errors.append("同一配套需求的分配合计超过设备数量，请调整关联")
+            continue
+        total += amount
     return total, errors
 
 

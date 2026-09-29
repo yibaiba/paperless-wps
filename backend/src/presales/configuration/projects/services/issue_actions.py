@@ -81,6 +81,12 @@ def with_issue_actions(checked, *, annotate_only=False):
                     dict.fromkeys(e["input_key"] for e in check["evidence"] if e.get("input_key"))
                 ),
             )
+        gap = check.get("quantity_gap")
+        if gap:
+            action.update(
+                type="edit_system_inputs" if gap["recipient"] == "customer" else "edit_definition",
+                missing_fields=gap["missing_fields"],
+            )
         checks.append(dict(check, action=action))
     if annotate_only:
         from .issue_metadata import annotate_issues

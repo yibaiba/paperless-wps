@@ -1,0 +1,19 @@
+..............FF.....s.F..                                               [100%]
+=================================== FAILURES ===================================
+___________ test_optional_unselected_unknown_quantity_is_only_advice ___________
+backend/tests/configuration/test_evolution.py:142: in test_optional_unselected_unknown_quantity_is_only_advice
+    assert result["readiness"]["ready_for_confirmation"]
+E   assert False
+__________ test_explicit_confirmation_and_saved_revision_stays_frozen __________
+backend/tests/configuration/test_evolution.py:153: in test_explicit_confirmation_and_saved_revision_stays_frozen
+    assert checked["readiness"]["ready_for_confirmation"]
+E   assert False
+______________ test_shared_separate_existing_over_capacity_delete ______________
+backend/tests/configuration/test_evolution_sharing.py:167: in test_shared_separate_existing_over_capacity_delete
+    assert independent_check["readiness"]["ready_for_confirmation"]
+E   assert False
+=========================== short test summary info ============================
+FAILED backend/tests/configuration/test_evolution.py::test_optional_unselected_unknown_quantity_is_only_advice
+FAILED backend/tests/configuration/test_evolution.py::test_explicit_confirmation_and_saved_revision_stays_frozen
+FAILED backend/tests/configuration/test_evolution_sharing.py::test_shared_separate_existing_over_capacity_delete
+3 failed, 22 passed, 1 skipped in 4.79s

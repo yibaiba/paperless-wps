@@ -32,7 +32,19 @@ def cross_system(client, catalog):
             dict(
                 name=name,
                 status="confirmed",
-                roles=[dict(id=role_id, name="服务端软件")],
+                roles=[
+                    dict(
+                        id=role_id,
+                        name="服务端软件",
+                        quantity_basis=dict(
+                            status="confirmed",
+                            scope="system",
+                            mode="per_group",
+                            factor="1",
+                            **AUTHOR,
+                        ),
+                    )
+                ],
                 **AUTHOR,
             ),
         )

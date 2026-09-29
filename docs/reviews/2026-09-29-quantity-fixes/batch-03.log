@@ -1,0 +1,10 @@
+.F...................................                                    [100%]
+=================================== FAILURES ===================================
+____ test_package_member_and_definition_revisions_stay_fixed_until_refresh _____
+backend/tests/configuration/test_evolution_versions.py:60: in test_package_member_and_definition_revisions_stay_fixed_until_refresh
+    assert latest["readiness"]["ready_for_confirmation"], "已发布包仍固定成员 v1"
+E   AssertionError: 已发布包仍固定成员 v1
+E   assert False
+=========================== short test summary info ============================
+FAILED backend/tests/configuration/test_evolution_versions.py::test_package_member_and_definition_revisions_stay_fixed_until_refresh
+1 failed, 36 passed in 6.77s

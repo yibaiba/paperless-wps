@@ -3,6 +3,7 @@ from decimal import Decimal
 from presales.rules.repository import RuleConflict
 from presales.storage import identifier
 
+from ..accessory_allocations import demand_quantities
 from ..schemas import Configuration
 
 
@@ -102,5 +103,7 @@ class AccessoryApplication:
         if suggestion["rule"].get("allocation_mode", "consumable") == "consumable":
             if used + amount > Decimal(device["quantity"]):
                 raise ValueError("已有设备的可分配数量不足")
-        elif amount > Decimal(device["quantity"]):
-            raise ValueError("共享设备的单次分配数量超过设备数量")
+        else:
+            assigned = demand_quantities(allocations, demand_id=suggestion["id"])[device_id]
+            if assigned + amount > Decimal(device["quantity"]):
+                raise ValueError("同一配套需求的共享分配合计超过设备数量")

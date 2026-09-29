@@ -26,7 +26,6 @@ def evaluate_v3(data, *, variants, catalog_variants, engine, definitions):
     from .role_allocations import allocation_checks
 
     input_data = data
-    allocated_checks = allocation_checks(data, definitions=definitions, engine=engine)
     data, aliases = project_allocations(data)
     data, inspection_checks, inspection_policies = prepare_inspections(data, definitions)
     systems = {s["id"]: s for s in data["systems"]}
@@ -37,6 +36,15 @@ def evaluate_v3(data, *, variants, catalog_variants, engine, definitions):
     suggestions, included_checks = included_fulfillment(data, suggestions)
     checks.extend(included_checks)
     active = [s for s in suggestions if s["selected"]]
+    from .fulfillment import alias_consumers, fulfilled_requirement_ids, fulfillment_aliases
+
+    fulfilled = fulfillment_aliases(data, definitions=definitions, demands=active)
+    allocated_checks = allocation_checks(
+        input_data,
+        definitions=definitions,
+        engine=engine,
+        fulfilled_ids=fulfilled_requirement_ids(data, aliases=aliases, fulfilled=fulfilled),
+    )
     checks.extend(accessory_allocation_checks(data, active))
     checks.extend(selection_checks(suggestions))
     coverage, policies = coverage_checks(data, definitions, variants, demands=active)
@@ -56,11 +64,7 @@ def evaluate_v3(data, *, variants, catalog_variants, engine, definitions):
             )
         policies[identity] = review["selected"]
     usages = resource_usages(data, active, policies, inspection_policies=inspection_policies)
-    from .fulfillment import alias_consumers, fulfillment_aliases
-
-    usages = alias_consumers(
-        usages, fulfillment_aliases(data, definitions=definitions, demands=active)
-    )
+    usages = alias_consumers(usages, fulfilled)
     checks.extend(usage_checks(data, usages, variants=variants))
     supply, supply_checks = supply_projection(data)
     checks.extend(supply_checks)

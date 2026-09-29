@@ -1,0 +1,14 @@
+........F..............                                                  [100%]
+=================================== FAILURES ===================================
+___ test_role_quantity_uses_pinned_definition_until_explicit_refresh[False] ____
+backend/tests/configuration/test_quantity_review_fixes.py:192: in test_role_quantity_uses_pinned_definition_until_explicit_refresh
+    baseline = post(client, "/check", dict(configuration=data))
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/tests/configuration/conftest.py:9: in post
+    assert response.status_code == 200, response.text
+E   AssertionError: {"detail":[{"loc":["body","configuration","systems",0,"knowledge_package_id"],"msg":"Input should be a valid string","type":"string_type"}]}
+E   assert 422 == 200
+E    +  where 422 = <Response [422 Unprocessable Content]>.status_code
+=========================== short test summary info ============================
+FAILED backend/tests/configuration/test_quantity_review_fixes.py::test_role_quantity_uses_pinned_definition_until_explicit_refresh[False]
+1 failed, 22 passed in 5.49s
