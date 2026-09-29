@@ -70,6 +70,15 @@ def role_matches(rule, requirement):
     return True
 
 
+def shared_roles_match(rule, uses):
+    if rule.get("shared_role_refs"):
+        roles = {(u.get("system_definition_id"), u.get("role_id")) for u in uses}
+        return roles <= {
+            (r["system_definition_id"], r["role_id"]) for r in rule["shared_role_refs"]
+        }
+    return {u["system"] + "/" + u["role"] for u in uses} <= set(rule.get("shared_roles", []))
+
+
 def candidate_check_v3(variant, *, requirement, knowledge):
     rules = [
         item

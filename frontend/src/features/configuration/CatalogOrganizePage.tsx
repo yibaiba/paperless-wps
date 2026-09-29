@@ -1,3 +1,4 @@
+import { UpdateWorkbench } from "./catalog/updates/UpdateWorkbench";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Alert, App, Button, Form, Select, Space, Tabs, Typography } from "antd";
@@ -29,6 +30,7 @@ import type {
 } from "./catalog/types";
 
 export default function CatalogOrganizePage() {
+  const [updating, setUpdating] = useState(false);
   const [independent, setIndependent] = useState(false);
   const [sourceHistory, setSourceHistory] = useState<string>();
   const imports = useQuery({
@@ -106,6 +108,7 @@ export default function CatalogOrganizePage() {
             setSelected([]);
           }}
         />
+        <Button type="primary" onClick={() => setUpdating(true)}>更新产品与价格</Button>
         <Button onClick={() => setProduct(null)}>建立产品</Button>
         <Button onClick={() => setVariant(null)}>建立配置</Button>
       </Space>
@@ -216,6 +219,7 @@ export default function CatalogOrganizePage() {
           }}
         />
       ) : null}
+      {updating ? <UpdateWorkbench onClose={() => setUpdating(false)} /> : null}
       <ProductDrawer id={detail} onClose={() => setDetail(undefined)} />
     </div>
   );

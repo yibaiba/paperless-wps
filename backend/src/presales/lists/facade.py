@@ -11,8 +11,9 @@ from .schemas import (
     ExportList,
     GetList,
     ListSearch,
-    Page,
+    PlanList,
     SaveList,
+    SystemsList,
     UpdateList,
 )
 from .service import ListService
@@ -31,7 +32,10 @@ class ListApplication:
         )
 
     def call(self, tool, arguments):
+        from presales.configuration.projects.planning.service import ProposalService
+
         operations = {
+            "list_plan": (PlanList, ProposalService(self.lists).plan),
             "list_create": (CreateList, self.lists.create),
             "list_get": (GetList, self.lists.get),
             "list_update": (UpdateList, self.lists.update),
@@ -39,11 +43,11 @@ class ListApplication:
             "list_save": (SaveList, self.lists.save),
             "list_export": (ExportList, self.exports.export),
             "catalog_search": (CatalogSearch, lambda r: queries.search_catalog(self.session, r)),
-            "systems_list": (Page, lambda r: queries.systems(self.session, r)),
+            "systems_list": (SystemsList, lambda r: queries.systems(self.session, r)),
             "catalog_get": (
                 CatalogGet,
                 lambda r: queries.catalog_detail(
-                    self.session, variant_id=r.variant_id, draft_id=r.draft_id
+                    self.session, variant_id=r.variant_id, draft_id=r.draft_id, on_date=r.on_date
                 ),
             ),
             "list_search": (

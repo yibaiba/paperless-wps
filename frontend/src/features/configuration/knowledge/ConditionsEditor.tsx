@@ -2,10 +2,11 @@ import { AutoComplete, Button, Form, Input, InputNumber, Select, Space } from "a
 import type { Knowledge } from "../types";
 import { required, units, useAttributeDefinitions } from "../shared";
 
-export function ConditionsEditor({ name = "conditions" }: { name?: "conditions" | "activation_conditions" }) {
+export function ConditionsEditor({ name = "conditions", path }: { name?: string | (string | number)[]; path?: (string | number)[] }) {
+  const fullPath = path ?? (Array.isArray(name) ? name : [name]);
   const form = Form.useFormInstance();
   const definitions = useAttributeDefinitions();
-  const conditions = Form.useWatch(name, form) as
+  const conditions = Form.useWatch(fullPath, form) as
     Knowledge["conditions"] | undefined;
   return (
     <Form.List name={name}>
@@ -37,7 +38,7 @@ export function ConditionsEditor({ name = "conditions" }: { name?: "conditions" 
                   ]}
                   onChange={() =>
                     form.setFieldValue(
-                      [name, field.name, "value"],
+                      [...fullPath, field.name, "value"],
                       null,
                     )
                   }

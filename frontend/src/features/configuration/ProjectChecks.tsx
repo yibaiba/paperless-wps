@@ -11,6 +11,7 @@ interface Props {
   busy: boolean;
   onApply: (suggestion: Suggestion, choice: ApplyChoice) => void;
   onCheck: (refresh: boolean) => void;
+  onIncludedChange?: (configuration: Configuration) => void;
   onChoice?: (demandId: string, selected: boolean) => void;
   section?: "all" | "accessories" | "checks";
 }
@@ -22,6 +23,7 @@ export function ProjectChecks({
   onApply,
   onCheck,
   onChoice,
+  onIncludedChange,
   section = "all",
 }: Props) {
   const variants = useVariants();
@@ -76,6 +78,7 @@ export function ProjectChecks({
         rowKey={(item) =>
           [
             item.kind,
+            item.allocation_id,
             item.system_id,
             item.role_id,
             item.device_id,
@@ -125,6 +128,11 @@ export function ProjectChecks({
         }}
       /> : null}
       {section !== "checks" ? <Space orientation="vertical" style={{ width: "100%" }}>
+        {(configuration.included_allocations ?? []).filter((a) => !checked?.suggestions.some((s) => s.id === a.demand_id)).map((a) => <Alert key={a.id} type="warning"
+          title={`原配套需求已不存在：${names.get(a.device_id) ?? a.device_id} 的已含抵扣 ${a.quantity}`}
+          description={a.evidence}
+          action={<Button disabled={busy || stale || !onIncludedChange} onClick={() => onIncludedChange?.({ ...configuration, included_allocations: configuration.included_allocations?.filter((item) => item.id !== a.id) })}>移除失效抵扣</Button>}
+        />)}
         {checked?.suggestions.map((suggestion) => (
           <AccessorySuggestionCard
             key={suggestion.id}
@@ -135,6 +143,7 @@ export function ProjectChecks({
             stale={stale}
             onApply={onApply}
             onChoice={onChoice}
+            onIncludedChange={onIncludedChange}
           />
         ))}
       </Space> : null}

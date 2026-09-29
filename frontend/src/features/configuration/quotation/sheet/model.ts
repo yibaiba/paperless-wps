@@ -15,6 +15,7 @@ export const rowDeviceId = (row: SheetRow) => row.deviceId ?? row.id;
 export const isDeviceRow = (row: SheetRow) => !row.kind || row.kind === 'device';
 export interface CellEdit { row: number; column: number; value: string; deviceId: string }
 export type EditOperation =
+  | { action: "price_versions_adopt"; adoption_date: string; items: { device_id: string; price: { id: string; revision: number } }[]; fingerprint: string }
   | { action: "room_put"; value: Room }
   | { action: "system_put"; value: System }
   | { action: "requirement_put"; value: Requirement }

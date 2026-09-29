@@ -4,6 +4,7 @@ from typing import Literal
 from pydantic import Field, model_validator
 
 from ..common import Authored, Input, Text
+from .inclusions import IncludedItem
 
 UNITS = {"GB", "MB", "TB", "mm", "cm", "m", "W", "台", "个", "路", "席", "核"}
 
@@ -44,6 +45,11 @@ class ProductInput(Authored):
 
 
 class VariantInput(Authored):
+    description: str = ""
+    supply_status: Literal["available", "discontinued", "not_for_sale"] = "available"
+    replacements: list[str] = Field(default_factory=list)
+    review_requirements: list[dict] = Field(default_factory=list)
+    included_items: list[IncludedItem] = Field(default_factory=list)
     capability_ids: list[str] = Field(default_factory=list)
     product_id: Text
     name: Text
@@ -58,6 +64,13 @@ class VariantInput(Authored):
     def unique_keys(self):
         if len({a.key for a in self.attributes}) != len(self.attributes):
             raise ValueError("属性名称不能重复")
+        if len({i.id for i in self.included_items}) != len(self.included_items):
+            raise ValueError("已含内容标识不能重复")
+        targets = [
+            i.variant_id for i in self.included_items if i.variant_id and i.status != "disabled"
+        ]
+        if len(set(targets)) != len(targets):
+            raise ValueError("同一已含配置请合并为一项，避免重复计算包含数量")
         return self
 
 

@@ -1,9 +1,9 @@
 import { Button, Card, Empty, Space, Table, Tag } from "antd";
 import type { Checked, Configuration, IssueAction } from "../types";
-import { checkLabels } from "./checkLabels";
 
 interface OpenItem {
   id: string;
+  groupId?: string;
   category: string;
   object: string;
   message: string;
@@ -22,9 +22,12 @@ export function ProjectOpenItems({
   onAction: (action: IssueAction) => void;
 }) {
   const items = openItems(checked, configuration);
+  const groups = new Map<string, OpenItem[]>();
+  for (const item of items) { const key = item.groupId ?? item.id; groups.set(key, [...(groups.get(key) ?? []), item]); }
+  const rows = [...groups.values()].map(members => ({ ...members[0], members, object: [...new Set(members.map(m => m.object))].join('、') }));
   return (
     <Card
-      title={`待确认事项 ${items.length}`}
+      title={`待处理 ${items.length} 项 · ${rows.length} 组原因`}
       extra={
         <Space>
           <Button href="/organize">产品整理</Button>
@@ -35,11 +38,12 @@ export function ProjectOpenItems({
       {!items.length ? (
         <Empty description="当前检查没有资料不足或冲突事项" />
       ) : (
-        <Table<OpenItem>
+        <Table<OpenItem & { members: OpenItem[] }>
           size="small"
           rowKey="id"
           pagination={false}
-          dataSource={items}
+          dataSource={rows}
+          expandable={{ expandedRowRender: row => <Space orientation="vertical">{row.members.map(item => <div key={item.id}>{item.object}：{item.message} <Button size="small" onClick={() => onAction(item.action ?? { type: 'edit_knowledge' })}>{actionLabel(item.action?.type)}</Button></div>)}</Space>, rowExpandable: row => row.members.length > 1 }}
           columns={[
             { title: "类型", dataIndex: "category", filters: [...new Set(items.map((item) => item.category))].map((value) => ({ text: value, value })), onFilter: (value, item) => item.category === value },
             { title: "对象", dataIndex: "object" },
@@ -69,8 +73,9 @@ function openItems(checked: Checked | undefined, configuration: Configuration) {
   const checks: OpenItem[] = checked.checks
     .filter((item) => item.status !== "pass")
     .map((item, index) => ({
-      id: `check:${index}:${item.kind}:${item.device_id ?? item.requirement_id ?? "project"}`,
-      category: item.responsibility === "project" ? checkLabels.project_configuration : checkLabels[item.kind] ?? item.kind,
+      id: item.check_id ?? `check:${index}:${item.kind}:${item.device_id ?? item.requirement_id ?? "project"}`,
+      groupId: item.group_id,
+      category: ({ requirements: "需求", selection: "选型配套", commercial: "供货价格", knowledge: "公共知识" } as Record<string, string>)[item.category ?? ""] ?? (item.responsibility === "project" ? "需求" : "公共知识"),
       action: item.action,
       object:
         deviceNames.get(item.device_id ?? "") ??
@@ -91,17 +96,21 @@ function openItems(checked: Checked | undefined, configuration: Configuration) {
     .filter((item) => item.selected !== false && (item.status !== "pass" || Number(item.missing ?? 0) > 0))
     .map((item) => ({
       id: `suggestion:${item.id}`,
-      category: item.status === "pass" ? "配套缺量" : "配套依据",
+      category: item.missing_information?.length ? "公共知识" : "选型配套",
       action: { type: item.missing_information?.length ? "edit_knowledge" : "edit_accessory", demand_id: item.id, rule_id: item.rule.id, variant_id: configuration.devices.find((d) => d.id === item.scope_id)?.variant_id },
       object: item.need_name || item.rule.name,
       href: "/knowledge?" + new URLSearchParams({ rule: item.rule.id }),
       message: item.status === "pass" ? `需要 ${item.required}，已分配 ${item.existing}，还缺 ${item.missing}` : item.missing_information?.join("；") || "配套条件尚未确认",
       status: item.status === "conflict" ? "conflict" : "unknown",
     }));
-  return [...checks, ...suggestions];
+  const prices: OpenItem[] = (checked.quotation_output?.issues ?? []).map((item, index) => ({
+    id: `price:${item.device_id}:${index}`, category: '供货价格', object: deviceNames.get(item.device_id) ?? '报价',
+    message: item.message, status: 'unknown', href: '', action: { type: 'edit_price', device_id: item.device_id },
+  }));
+  return [...checks, ...suggestions, ...prices];
 }
 
 function actionLabel(type?: string) {
   return ({ select_candidate: '选择产品', edit_supply: '分配供货', edit_resources: '补充需求',
-    add_system: '建立系统', add_requirement: '添加角色需求', edit_requirement: '关联系统角色', assign_device: '关联用途', edit_accessory: '处理配套', edit_definition: '维护系统知识', edit_system_inputs: '填写项目需求', edit_inspection: '维护用途检查' } as Record<string, string>)[type ?? ''] ?? '补充知识依据';
+    edit_price: '处理报价', add_system: '建立系统', add_requirement: '添加角色需求', edit_requirement: '关联系统角色', assign_device: '关联用途', edit_accessory: '处理配套', edit_definition: '维护系统知识', edit_system_inputs: '填写项目需求', edit_inspection: '维护用途检查' } as Record<string, string>)[type ?? ''] ?? '补充知识依据';
 }

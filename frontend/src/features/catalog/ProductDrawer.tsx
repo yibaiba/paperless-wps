@@ -18,6 +18,7 @@ export function ProductDrawer({ id, onClose }: { id?: string; onClose: () => voi
     {query.isLoading ? <Spin /> : null}
     {query.error ? <Alert type="error" title={query.error.message} showIcon /> : null}
     {product ? <>
+      {product.source_kind === "manual" ? <Alert type="info" title="人工维护资料，非 Excel 原文" description={`${product.provenance?.actor ?? ""}：${product.provenance?.evidence ?? ""}`} /> : null}
       <Tag>{product.sheet}</Tag>
       <ReviewSummaryTag summary={product.review_summary} />
       <Typography.Title level={3}>{product.name || '名称待核对'}</Typography.Title>
@@ -26,7 +27,7 @@ export function ProductDrawer({ id, onClose }: { id?: string; onClose: () => voi
         { key: 'brand', label: '品牌', children: product.brand || '未提供' },
         { key: 'unit', label: '单位', children: product.unit || '未提供' },
         { key: 'category', label: '原表分组', children: product.category || '未提供' },
-        { key: 'source', label: '原表位置', children: `${product.sheet} · 第 ${product.row} 行` },
+        { key: 'source', label: '资料位置', children: product.source_kind === "manual" ? "人工资料记录" : `${product.sheet} · 第 ${product.row} 行` },
       ]} />
       {product.hidden ? <Alert className="section-gap" type="warning" title="这条记录来自隐藏工作表，适用状态需要核对。" /> : null}
       <Tabs className="section-gap" defaultActiveKey="spec" items={[

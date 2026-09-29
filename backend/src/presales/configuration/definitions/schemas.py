@@ -4,6 +4,7 @@ from pydantic import Field, model_validator
 
 from ..common import Authored, Input, Text
 from ..knowledge.schemas import Selector
+from .generation import Recommendation, RoleFulfillment, RoleQuantity
 
 
 class InspectionReference(Input):
@@ -12,6 +13,9 @@ class InspectionReference(Input):
 
 
 class RoleDefinition(Input):
+    quantity_basis: RoleQuantity | None = None
+    fulfilled_by: RoleFulfillment | None = None
+    output_kind: Literal["hardware", "software", "license", "accessory"] = "hardware"
     inspection_profile: InspectionReference | None = None
     id: Text
     name: Text
@@ -32,6 +36,12 @@ class SystemDefinition(Authored):
             raise ValueError("角色标识不能重复")
         if self.status == "confirmed" and not self.roles:
             raise ValueError("确认系统需求定义前请维护角色")
+        for role in self.roles:
+            if role.fulfilled_by and (
+                role.fulfilled_by.role_id == role.id
+                or role.fulfilled_by.role_id not in {r.id for r in self.roles}
+            ):
+                raise ValueError("配套满足关系必须引用此系统的其他角色")
         return self
 
 
@@ -49,6 +59,7 @@ class Coverage(Input):
 
 
 class KnowledgePackage(Authored):
+    recommendations: list[Recommendation] = Field(default_factory=list)
     name: Text
     system_definition_id: Text
     definition_revision: int = Field(ge=1)

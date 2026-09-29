@@ -68,6 +68,28 @@ class CatalogService:
         return self.entities.save("product", data, **options)
 
     def save_variant(self, data: VariantInput, **options):
+        identity = options.get("entity_id")
+        if identity:
+            previous = self.entities.get(identity, kind="variant").payload
+            preserved = {
+                key: previous[key]
+                for key in (
+                    "description",
+                    "supply_status",
+                    "replacements",
+                    "review_requirements",
+                    "included_items",
+                )
+                if key not in data.model_fields_set and key in previous
+            }
+            if preserved:
+                data = VariantInput.model_validate({**data.model_dump(mode="json"), **preserved})
+        targets = {i.variant_id for i in data.included_items if i.variant_id} | set(
+            data.replacements
+        )
+        self.validate_variant_ids(targets)
+        if identity in targets:
+            raise ValueError("配置不能包含自身")
         for identity in data.capability_ids:
             self.entities.get(identity, kind="capability")
         self.entities.get(data.product_id, kind="product")
@@ -81,12 +103,7 @@ class CatalogService:
 
     def audit(self, import_id):
         products = CatalogRepository(self.session).products(import_id)
-        records = {
-            record.id: record
-            for record in self.session.scalars(
-                select(ProductRecord).where(ProductRecord.import_id == import_id)
-            )
-        }
+        records = {record.id: record for record in self.session.scalars(select(ProductRecord))}
         counts = Counter(product["model"] for product in products)
         links = {row.source_id: row for row in self.session.scalars(select(SourceLink))}
         blocks = {row.source_id: row for row in self.session.scalars(select(SourceBlock))}

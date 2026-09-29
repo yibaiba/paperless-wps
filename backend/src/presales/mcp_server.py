@@ -16,8 +16,9 @@ from presales.lists.schemas import (
     CreateList,
     ExportList,
     GetList,
-    Page,
+    PlanList,
     SaveList,
+    SystemsList,
     UpdateList,
 )
 from presales.quotation.artifacts import FileArtifacts
@@ -31,11 +32,15 @@ def create_server(*, session_factory, engine, renderer, files, web_origin="http:
     server = MCPServer(
         "艾索清单与报价",
         instructions=(
-            "先查系统和产品，再建立清单草稿。只采用有出处的配置及价格；未知搭配可存草稿。"
+            "先用 systems_list 获取需求字段，以 requirements_patch 提交客户需求，"
+            "再 list_plan 生成提案。"
+            "用 list_get proposal_questions 区分客户需求与内部知识缺口；缺口不能由模型编造。"
+            "proposal_apply 整批采用所选方案，只有采用后才改变实际清单。只采用有出处的配置及价格。"
             "list_update 操作需要稳定对象 ID；配套通过 list_get issues 读取建议及计算指纹。"
             "每次写入提供预期修订与 operation_id，重试保持相同 ID 和内容。"
             "list_check 后用返回的 check_fingerprint 保存；保存是草稿，不是人工认证。"
             "用 list_get 的 template/quotation/issues/evidence/changes 视图按需读取。"
+            "价格更新用 price_updates 视图预览，再用 price_versions_adopt 明确采用所选修订。"
         ),
     )
 
@@ -46,7 +51,7 @@ def create_server(*, session_factory, engine, renderer, files, web_origin="http:
             ).call(name, arguments)
 
     @server.tool(structured_output=True)
-    def systems_list(request: Page) -> dict[str, Any]:
+    def systems_list(request: SystemsList) -> dict[str, Any]:
         """查询系统定义、角色、知识包及未映射历史系统；支持分页。"""
         return call("systems_list", request.model_dump(mode="json"))
 
@@ -56,9 +61,11 @@ def create_server(*, session_factory, engine, renderer, files, web_origin="http:
         return call("catalog_search", request.model_dump(mode="json"))
 
     @server.tool(structured_output=True)
-    def catalog_get(variant_id: str, draft_id: str | None = None) -> dict[str, Any]:
+    def catalog_get(
+        variant_id: str, draft_id: str | None = None, on_date: str | None = None
+    ) -> dict[str, Any]:
         """查看具体配置、原始资料和价格列；草稿上下文下返回固定版本依据。"""
-        return call("catalog_get", dict(variant_id=variant_id, draft_id=draft_id))
+        return call("catalog_get", dict(variant_id=variant_id, draft_id=draft_id, on_date=on_date))
 
     @server.tool(structured_output=True)
     def list_search(
@@ -73,6 +80,11 @@ def create_server(*, session_factory, engine, renderer, files, web_origin="http:
     def list_create(request: CreateList) -> dict[str, Any]:
         """创建持久草稿，或基于明确的项目保存版本建立改单草稿。"""
         return call("list_create", request.model_dump(mode="json"))
+
+    @server.tool(structured_output=True)
+    def list_plan(request: PlanList) -> dict[str, Any]:
+        """按固定草稿生成持久提案，不改变设备；按 next_offset 和 proposal_id 延迟生成替代方案。"""
+        return call("list_plan", request.model_dump(mode="json"))
 
     @server.tool(structured_output=True)
     def list_get(request: GetList) -> dict[str, Any]:

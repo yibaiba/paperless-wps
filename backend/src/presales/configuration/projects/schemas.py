@@ -9,6 +9,8 @@ from ..catalog.schemas import Attribute
 from ..common import Authored, Input, Text
 from ..knowledge.schemas import Resource
 from .evolution_schemas import AccessoryChoice, SupplyAllocation
+from .inclusion_schemas import IncludedAllocation
+from .planning.state import GeneratedOrigin, GenerationState
 
 
 class Room(Input):
@@ -48,6 +50,7 @@ class Requirement(Input):
 
 
 class Deployment(Input):
+    generated_origin: GeneratedOrigin | None = None
     id: Text
     name: Text
     variant_id: Text
@@ -69,6 +72,10 @@ class AccessoryAllocation(Input):
 
 
 class Configuration(Authored):
+    generation: GenerationState = Field(default_factory=GenerationState)
+    room_inputs: dict[str, list[Attribute]] = Field(default_factory=dict)
+    project_inputs: list[Attribute] = Field(default_factory=list)
+    included_allocations: list[IncludedAllocation] = Field(default_factory=list)
     quotation: Quotation | None = None
     calculation_version: Literal[1, 2, 3] = 1
     definition_snapshot_id: str | None = None
@@ -91,11 +98,19 @@ class Configuration(Authored):
             self.requirements,
             self.devices,
             self.accessory_allocations,
+            self.included_allocations,
             self.supply_allocations,
         ):
             if len({i.id for i in items}) != len(items):
                 raise ValueError("同类对象标识不能重复")
+        if self.included_allocations and self.calculation_version != 3:
+            raise ValueError("已含内容抵扣需要先预览并升级至计算语义版本 3")
         rooms, systems = {r.id for r in self.rooms}, {s.id for s in self.systems}
+        if self.room_inputs.keys() - rooms:
+            raise ValueError("房间输入引用了不存在的房间")
+        for inputs in [self.project_inputs, *self.room_inputs.values()]:
+            if len({a.key for a in inputs}) != len(inputs):
+                raise ValueError("范围输入不能包含重复参数")
         devices = {d.id: d for d in self.devices}
         if any(s.room_id and s.room_id not in rooms for s in self.systems):
             raise ValueError("系统引用的房间不存在")
@@ -108,6 +123,8 @@ class Configuration(Authored):
             count = sum(r.device_id == device.id for r in self.requirements)
             if count > 1 and device.quantity != 1:
                 raise ValueError("共用设备请按单台实例维护，再关联多个角色")
+        if any(item.device_id not in devices for item in self.included_allocations):
+            raise ValueError("已含内容抵扣引用的宿主设备不存在")
         if any(item.device_id not in devices for item in self.accessory_allocations):
             raise ValueError("配套分配引用的设备不存在")
         if len({c.demand_id for c in self.accessory_choices}) != len(self.accessory_choices):

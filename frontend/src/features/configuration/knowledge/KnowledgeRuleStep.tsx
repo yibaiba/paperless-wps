@@ -1,5 +1,6 @@
 import { Alert, Button, Collapse, Form, Input, InputNumber, Select, Space } from "antd";
 import type { Knowledge } from "../types";
+import { QuantityInputSelect } from "./QuantityInputSelect";
 import { ConditionsEditor } from "./ConditionsEditor";
 import { required, units } from "../shared";
 import { KnowledgeSentence } from "./KnowledgeSentence";
@@ -65,10 +66,12 @@ export function KnowledgeRuleStep({
   );
 }
 
-function AccessoryCalculationFields({
+export function AccessoryCalculationFields({
   quantitySource,
+  includeNeedKey = true,
 }: {
   quantitySource?: Knowledge["quantity_source"];
+  includeNeedKey?: boolean;
 }) {
   return (
     <>
@@ -95,14 +98,7 @@ function AccessoryCalculationFields({
         </Form.Item>
         {quantitySource === "environment" ? (
           <Form.Item name="quantity_key" label="需求参数" rules={required}>
-            <Select
-              style={{ width: 180 }}
-              options={[
-                { value: "terminal_count", label: "终端数量" },
-                { value: "user_count", label: "用户人数" },
-                { value: "room_count", label: "房间数量" },
-              ]}
-            />
+            <QuantityInputSelect />
           </Form.Item>
         ) : null}
       </Space>
@@ -123,9 +119,9 @@ function AccessoryCalculationFields({
         <Form.Item name="factor" label="系数 / 容量 / 固定数量">
           <InputNumber stringMode />
         </Form.Item>
-        <Form.Item name="need_key" label="需求标识（可选）">
+        {includeNeedKey ? <Form.Item name="need_key" label="需求标识（可选）">
           <Input placeholder="例如：server" />
-        </Form.Item>
+        </Form.Item> : null}
       </Space>
     </>
   );

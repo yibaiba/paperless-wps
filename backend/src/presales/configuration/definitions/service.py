@@ -2,6 +2,7 @@ from sqlalchemy import select
 
 from ..catalog.service import CatalogService
 from ..common import Entities, view
+from ..knowledge.evidence import validate_evidence_refs
 from ..models import Revision
 
 
@@ -26,6 +27,9 @@ class Definitions:
         if options.get("entity_id"):
             self.entities.get(options["entity_id"], kind="system_definition")
         for role in data.roles:
+            for basis in (role.quantity_basis, role.fulfilled_by):
+                if basis:
+                    validate_evidence_refs(self.session, basis.evidence_refs)
             for identity in role.capability_ids:
                 self.entities.get(identity, kind="capability")
         profiles = [
@@ -48,12 +52,21 @@ class Definitions:
     def save_package(self, data, **options):
         if options.get("entity_id"):
             self.entities.get(options["entity_id"], kind="knowledge_package")
+        payload = self.package_payload(data)
+        return self.entities.save("knowledge_package", payload, **options)
+
+    def package_payload(self, data):
         definition = self.revision(
             data.system_definition_id, data.definition_revision, kind="system_definition"
         )
         role_ids = {r["id"] for r in definition["roles"]}
         if any(item.role_id not in role_ids for item in data.coverage):
             raise ValueError("覆盖结论引用的角色不属于此系统版本")
+        for recommendation in data.recommendations:
+            validate_evidence_refs(self.session, recommendation.evidence_refs)
+            if recommendation.role_id not in role_ids:
+                raise ValueError("推荐顺序引用的角色不属于此系统版本")
+            CatalogService(self.session).validate_variant_ids(recommendation.variant_ids)
         rules = [self.revision(m.id, m.revision, kind="knowledge") for m in data.members]
         for rule in rules:
             if rule.get("system_definition_id") not in (None, "", data.system_definition_id):
@@ -64,8 +77,7 @@ class Definitions:
             CatalogService(self.session).validate_variant_ids(
                 item.selector.variant_ids + item.selector.exclude_variant_ids
             )
-        payload = dict(data.model_dump(mode="json"), definition=definition, rules=rules)
-        return self.entities.save("knowledge_package", payload, **options)
+        return dict(data.model_dump(mode="json"), definition=definition, rules=rules)
 
     def current_snapshot(self):
         return dict(

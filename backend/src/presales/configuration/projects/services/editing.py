@@ -43,6 +43,26 @@ def replace_item(items, value, *, key="id"):
 
 def apply_operation(data, *, operation, repository):
     action = operation.action
+    if action == "requirements_patch":
+        from ..planning.requirements import patch_requirements
+
+        return patch_requirements(data, operation, repository=repository)
+    if action == "proposal_apply":
+        from ..planning.application import apply_proposal
+
+        return apply_proposal(data, operation, repository=repository)
+    if action == "price_versions_adopt":
+        from presales.catalog_updates.project_prices import adopt_versions
+
+        return adopt_versions(repository.session, data, operation)
+    if action == "system_setup":
+        from .setup import apply_setup
+
+        return apply_setup(data, operation, session=repository.session)
+    if action in {"included_link", "included_remove"}:
+        from .inclusions import edit_inclusion
+
+        return edit_inclusion(data, operation, repository=repository)
     if action == "accessory_choice_clear":
         data["accessory_choices"] = [
             c for c in data["accessory_choices"] if c["demand_id"] != operation.demand_id
@@ -108,6 +128,14 @@ def put(data, operation):
     value = operation.value.model_dump(mode="json")
     previous = next((i for i in data[collection] if i["id"] == value["id"]), None)
     if collection == "devices" and previous:
+        if previous.get("generated_origin"):
+            value["generated_origin"] = dict(
+                previous["generated_origin"],
+                variant_locked=previous["generated_origin"]["variant_locked"]
+                or previous["variant_id"] != value["variant_id"],
+                quantity_locked=previous["generated_origin"]["quantity_locked"]
+                or previous["quantity"] != value["quantity"],
+            )
         if all(previous[k] == value[k] for k in ("variant_id", "source_id")):
             for key in ("variant_snapshot", "source_snapshot", "origin_suggestion"):
                 value[key] = previous.get(key)
@@ -120,7 +148,14 @@ def put(data, operation):
 
 
 def remove(data, operation, *, repository):
+    from ..planning.references import remove_generation_references
+
     collection, identity = operation.collection, operation.id
+    removed_ids = {identity} | {
+        r["id"]
+        for r in data["requirements"]
+        if collection == "systems" and r["system_id"] == identity
+    }
     if not any(i["id"] == identity for i in data[collection]):
         raise ValueError("待删除对象不存在")
     if collection == "devices":
@@ -130,8 +165,10 @@ def remove(data, operation, *, repository):
             for s in checked["suggestions"]
             if s.get("scope") == "device" and s.get("scope_id") == identity
         }
-        for key in ("accessory_allocations", "accessory_choices"):
-            data[key] = [item for item in data[key] if item["demand_id"] not in removed_demands]
+        for key in ("accessory_allocations", "included_allocations", "accessory_choices"):
+            data[key] = [
+                item for item in data.get(key, []) if item["demand_id"] not in removed_demands
+            ]
     data[collection] = [i for i in data[collection] if i["id"] != identity]
     if collection == "rooms":
         data["systems"] = [
@@ -144,8 +181,8 @@ def remove(data, operation, *, repository):
             dict(r, device_id=None) if r["device_id"] == identity else r
             for r in data["requirements"]
         ]
-        for key in ("accessory_allocations", "supply_allocations"):
-            data[key] = [a for a in data[key] if a["device_id"] != identity]
+        for key in ("accessory_allocations", "included_allocations", "supply_allocations"):
+            data[key] = [a for a in data.get(key, []) if a["device_id"] != identity]
         data["drawing_xml"] = remove_device_references(data["drawing_xml"], identity)
         if data.get("quotation"):
             data["quotation"]["prices"] = [
@@ -153,6 +190,7 @@ def remove(data, operation, *, repository):
             ]
             data["quotation"]["sections"].pop(identity, None)
             data["quotation"].get("descriptions", {}).pop(identity, None)
+    data["generation"] = remove_generation_references(data["generation"], removed_ids)
     return data
 
 
@@ -162,6 +200,10 @@ def quote_edit(data, operation):
             **(data.get("quotation") or {}),
             **operation.value.model_dump(mode="json", exclude_unset=True),
         }
+        if data.get("quotation") is None and not merged.get("price_adoption_date"):
+            from presales.catalog_updates.prices import beijing_today
+
+            merged["price_adoption_date"] = str(beijing_today())
         data["quotation"] = Quotation.model_validate(merged).model_dump(mode="json")
         return
     quote = data.get("quotation")
@@ -188,6 +230,8 @@ def patch_device(data, operation):
         data["quotation"]["sections"][operation.device_id] = operation.section
         return data
     changes = operation.model_dump(mode="json", exclude={"action", "device_id"}, exclude_none=True)
+    if operation.quantity is not None and device.get("generated_origin"):
+        changes["generated_origin"] = dict(device["generated_origin"], quantity_locked=True)
     data["devices"] = [
         dict(d, **changes) if d["id"] == device["id"] else d for d in data["devices"]
     ]

@@ -15,6 +15,7 @@ from ..output import output_line
 from ..readiness import project_readiness
 from .coverage import coverage_checks
 from .demands import accessory_demands_v3
+from .inclusions import included_fulfillment
 from .inspections import prepare_inspections
 from .resource_review import resource_policy_checks
 from .supply import supply_projection
@@ -28,6 +29,8 @@ def evaluate_v3(data, *, variants, catalog_variants, engine, definitions):
     suggestions = accessory_demands_v3(
         data, variants=variants, catalog_variants=catalog_variants, engine=engine
     )
+    suggestions, included_checks = included_fulfillment(data, suggestions)
+    checks.extend(included_checks)
     active = [s for s in suggestions if s["selected"]]
     checks.extend(accessory_allocation_checks(data, active))
     checks.extend(selection_checks(suggestions))
@@ -47,6 +50,11 @@ def evaluate_v3(data, *, variants, catalog_variants, engine, definitions):
             )
         policies[identity] = review["selected"]
     usages = resource_usages(data, active, policies, inspection_policies=inspection_policies)
+    from .fulfillment import alias_consumers, fulfillment_aliases
+
+    usages = alias_consumers(
+        usages, fulfillment_aliases(data, definitions=definitions, demands=active)
+    )
     checks.extend(usage_checks(data, usages, variants=variants))
     supply, supply_checks = supply_projection(data)
     checks.extend(supply_checks)
@@ -209,25 +217,23 @@ def usage_checks(data, usages, *, variants):
 def sharing(data, device, consumers, *, variant):
     requirements = {r["id"]: r for r in data["requirements"]}
     systems = {s["id"]: s for s in data["systems"]}
-    ids = {
-        (
-            systems[c["system_id"]].get("definition_id"),
-            requirements[c["requirement_id"]].get("role_id"),
+    from ...knowledge.semantics import shared_roles_match
+
+    uses = [
+        dict(
+            c,
+            system_definition_id=systems[c["system_id"]].get("definition_id"),
+            role_id=requirements[c["requirement_id"]].get("role_id"),
         )
         for c in consumers
-    }
-    names = {c["system"] + "/" + c["role"] for c in consumers}
+    ]
     rules = [
         r
         for r in data["knowledge_snapshot"]
         if r["kind"] == "sharing"
         and r["status"] == "confirmed"
         and scope_matches(variant, r["selector"])
-        and (
-            ids <= {(s["system_definition_id"], s["role_id"]) for s in r["shared_role_refs"]}
-            if r.get("shared_role_refs")
-            else names <= set(r["shared_roles"])
-        )
+        and shared_roles_match(r, uses)
     ]
     results = [evaluate_rules_v3(rules, context_for(variant, c["environment"])) for c in consumers]
     states = {r["status"] for r in results}

@@ -62,6 +62,21 @@ class ListService:
                 self.repository, project_id=request.project_id, revision=request.revision
             )
         )
+        if request.view.startswith("proposal"):
+            from presales.configuration.projects.planning.service import ProposalService
+
+            return ProposalService(self).read(request, record)
+        if request.view == "price_updates":
+            from presales.catalog_updates.prices import beijing_today
+            from presales.catalog_updates.project_prices import preview_prices
+
+            data = record["configuration"]
+            day = (
+                request.price_adoption_date
+                or (data.get("quotation") or {}).get("price_adoption_date")
+                or beijing_today()
+            )
+            return preview_prices(self.session, data, adoption_date=day)
         if request.view == "template":
             from presales.quotation.template import template_description
 
@@ -85,6 +100,9 @@ class ListService:
 
     def _update(self, request):
         record = self.locked(request)
+        from presales.configuration.projects.planning.application import validate_proposal_batch
+
+        validate_proposal_batch(self.repository, record, request.operations)
         if any(op.action == "accessory_apply" for op in request.operations) and (
             record.payload["checked_config_hash"] != digest(record.payload["configuration"])
         ):

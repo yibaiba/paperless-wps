@@ -15,7 +15,8 @@ def adopt_prices(configuration):
     for device in data["devices"]:
         old = previous.get(device["id"])
         if old and (
-            old["mode"] in ("manual", "import") or old["price_column"] == quote["price_column"]
+            old["mode"] in ("manual", "import", "version", "pending")
+            or old["price_column"] == quote["price_column"]
         ):
             prices.append(old)
             continue
@@ -39,11 +40,24 @@ def adopt_prices(configuration):
 def unit_price(device, selection):
     if not selection:
         return None, "尚未采用报价单价"
-    if any(selection[k] != device[k] for k in ("variant_id", "source_id")):
+    if selection["mode"] == "pending":
+        return None, selection["evidence"]
+    identity_fields = (
+        ("variant_id",) if selection["mode"] == "version" else ("variant_id", "source_id")
+    )
+    if any(selection[k] != device[k] for k in identity_fields):
         return None, "型号或资料来源已更换，原报价单价已过期，请重新采用价格"
+    if selection["mode"] == "version":
+        from presales.catalog_updates.hashing import configuration_hash
+
+        if (
+            configuration_hash(device.get("variant_snapshot") or {})
+            != selection["price_reference"]["configuration_hash"]
+        ):
+            return None, "配置参数已变化，原版本价格已过期，请重新核对价格"
     raw = (
         selection["unit_price"]
-        if selection["mode"] in ("manual", "import")
+        if selection["mode"] in ("manual", "import", "version", "pending")
         else (
             (device.get("source_snapshot") or {}).get("prices", {}).get(selection["price_column"])
         )

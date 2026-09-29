@@ -64,6 +64,17 @@ def candidate_results(data, *, session, search=None, catalog=None):
         }
         for v in variants
     ]
+    for item in checked:
+        variant = item["variant"]
+        from presales.catalog_updates.impacts import pending_reviews
+
+        reviews = pending_reviews(variant, knowledge, uses=[requirement])
+        if reviews and item["status"] == "pass":
+            item["status"] = "unknown"
+            item["catalog_review"] = reviews
+        if variant.get("supply_status", "available") != "available":
+            item["status"] = "conflict"
+            item["supply_message"] = "此配置已停止选用，历史引用保留"
     return sorted(
         checked,
         key=lambda item: (

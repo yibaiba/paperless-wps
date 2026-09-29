@@ -13,21 +13,33 @@ TAX_TERMS = (
 )
 
 
+class PriceReference(Input):
+    id: Text
+    revision: int = Field(ge=1)
+    adopted_on: date
+    configuration_hash: Text
+
+
 class QuotedPrice(Input):
     device_id: Text
     variant_id: Text
     source_id: Text
-    mode: Literal["source", "manual", "import"] = "source"
+    mode: Literal["source", "manual", "import", "version", "pending"] = "source"
     price_column: str = ""
     unit_price: Decimal | None = Field(default=None, ge=0, allow_inf_nan=False)
     evidence: str = ""
+    price_reference: PriceReference | None = None
 
     @model_validator(mode="after")
     def manual_evidence(self):
+        if self.mode == "pending" and (self.unit_price is not None or not self.evidence):
+            raise ValueError("待确认价格须保留原因且不得填写金额")
         if self.mode == "manual" and (self.unit_price is None or not self.evidence):
             raise ValueError("人工单价必须提供金额及采用依据")
         if self.mode == "import" and not self.evidence.strip():
             raise ValueError("导入价格必须保留文件或粘贴来源依据")
+        if self.mode == "version" and (not self.price_reference or self.unit_price is None):
+            raise ValueError("版本价格必须携带固定金额与修订引用")
         return self
 
 
@@ -45,6 +57,7 @@ class Quotation(Input):
     sales_contact: str = ""
     designer_contact: str = ""
     design_date: date | None = None
+    price_adoption_date: date | None = None
     room_description: str = ""
     price_column: str = ""
     tax_terms: Literal[TAX_TERMS] = TAX_TERMS

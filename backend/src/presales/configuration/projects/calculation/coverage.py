@@ -59,11 +59,9 @@ def coverage_checks(data, definitions, variants, *, demands=()):
 
 def required_roles(system, requirements, definition):
     selected = {r.get("role_id") for r in requirements}
-    roles = [
-        r
-        for r in definition["roles"]
-        if r["required"] and (not r["feature"] or r["feature"] in system.get("features", []))
-    ]
+    from ...definitions.requirements import active_required_roles
+
+    roles = active_required_roles(definition, system.get("features", []))
     checks = [
         coverage_check(
             "缺少必要角色：" + r["name"],
@@ -71,6 +69,8 @@ def required_roles(system, requirements, definition):
             responsibility="project",
             system_id=system["id"],
             role_id=r["id"],
+            role_name=r["name"],
+            feature=r.get("feature", ""),
         )
         for r in roles
         if r["id"] not in selected

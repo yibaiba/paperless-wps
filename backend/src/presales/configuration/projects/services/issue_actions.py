@@ -9,6 +9,7 @@ def with_issue_actions(checked, *, annotate_only=False):
         "supply": "edit_supply",
         "capacity": "edit_resources",
         "accessory_allocation": "edit_accessory",
+        "included_allocation": "edit_accessory",
         "accessory_choice": "edit_accessory",
         "coverage": "edit_definition",
         "inspection": "edit_inspection",
@@ -29,6 +30,9 @@ def with_issue_actions(checked, *, annotate_only=False):
             device_id=check.get("device_id"),
             requirement_id=check.get("requirement_id"),
             system_id=check.get("system_id"),
+            role_id=check.get("role_id"),
+            role_name=check.get("role_name"),
+            feature=check.get("feature"),
             demand_id=check.get("demand_id"),
             rule_id=check.get("rule_id"),
             profile_id=check.get("profile_id"),
@@ -78,7 +82,9 @@ def with_issue_actions(checked, *, annotate_only=False):
             )
         checks.append(dict(check, action=action))
     if annotate_only:
-        return dict(checked, checks=checks)
+        from .issue_metadata import annotate_issues
+
+        return dict(checked, checks=annotate_issues(checks))
     used = {u["device_id"] for u in checked["device_usages"] if u["consumers"]}
     for device in data["devices"]:
         if device["id"] not in used:
@@ -93,6 +99,9 @@ def with_issue_actions(checked, *, annotate_only=False):
                     ),
                 )
             )
+    from .issue_metadata import annotate_issues
+
+    checks = annotate_issues(checks)
     result = dict(checked, checks=checks)
     if data.get("calculation_version") == 3:
         from ..calculation.evaluate import readiness_v3

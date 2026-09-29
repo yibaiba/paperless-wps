@@ -4,7 +4,8 @@ export interface QuotedPrice {
   device_id: string;
   variant_id: string;
   source_id: string;
-  mode: "source" | "manual" | "import";
+  mode: "source" | "manual" | "import" | "version" | "pending";
+  price_reference?: { id: string; revision: number; adopted_on: string; configuration_hash: string } | null;
   price_column: string;
   unit_price: string | null;
   evidence: string;
@@ -17,6 +18,7 @@ export interface Quotation {
   sales_contact: string;
   designer_contact: string;
   design_date: string | null;
+  price_adoption_date?: string | null;
   room_description: string;
   price_column: string;
   tax_terms: string;

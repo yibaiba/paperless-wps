@@ -119,9 +119,9 @@ def device_usage_checks(device, usage, *, variant, knowledge):
 
 def unique_consumers(consumers):
     result = {}
-    for consumer in consumers:
+    for consumer in sorted(consumers, key=lambda c: bool(c.get("fulfilled_by_requirement_id"))):
         current = result.setdefault(
-            consumer["requirement_id"],
+            consumer.get("fulfilled_by_requirement_id", consumer["requirement_id"]),
             {**consumer, "resources": [], "capacity_expected": False},
         )
         current["capacity_expected"] = current["capacity_expected"] or consumer["capacity_expected"]

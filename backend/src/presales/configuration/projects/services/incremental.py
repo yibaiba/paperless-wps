@@ -13,6 +13,7 @@ from .definition_snapshot import project_knowledge, resolve_definitions
 from .editing import edit_configuration
 
 PROJECTION_ACTIONS = {
+    "price_versions_adopt",
     "description_set",
     "section_set",
     "price_set",
@@ -40,6 +41,9 @@ def edit_check(previous, operations, *, repository):
         return repository.check(data)
     checked = deepcopy(previous)
     payload = adopt_prices(data.model_dump(mode="json"))
+    from presales.catalog_updates.project_prices import validate_references
+
+    validate_references(repository.session, payload)
     supply, supply_checks = supply_projection(payload)
     checked["checks"] = [
         c for c in checked["checks"] if c["kind"] not in ("supply", "assignment")

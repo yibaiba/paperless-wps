@@ -3,6 +3,7 @@ from typing import Annotated, Literal
 
 from pydantic import Field, model_validator
 
+from presales.catalog_updates.schemas import PriceAdoptOperation
 from presales.configuration.common import Input, Text
 from presales.configuration.projects.evolution_schemas import SupplyAllocation
 from presales.configuration.projects.schemas import (
@@ -14,6 +15,10 @@ from presales.configuration.projects.schemas import (
     System,
 )
 from presales.quotation.schemas import Quotation, QuotedPrice
+
+from .inclusion_schemas import IncludedAllocation
+from .planning.schemas import ProposalApply, RequirementsPatch
+from .services.setup import SystemSetup
 
 
 class RoomPut(Input):
@@ -37,7 +42,12 @@ class DeviceInput(Deployment):
 
     @model_validator(mode="after")
     def server_snapshots(self):
-        if self.source_snapshot or self.variant_snapshot or self.origin_suggestion:
+        if (
+            self.source_snapshot
+            or self.variant_snapshot
+            or self.origin_suggestion
+            or self.generated_origin
+        ):
             raise ValueError("产品快照和配套出处由服务端提供")
         return self
 
@@ -140,6 +150,16 @@ class AuthorSet(Input):
     evidence: Text
 
 
+class IncludedLink(Input):
+    action: Literal["included_link"]
+    value: IncludedAllocation
+
+
+class IncludedRemove(Input):
+    action: Literal["included_remove"]
+    allocation_id: Text
+
+
 class AccessoryLink(Input):
     action: Literal["accessory_link"]
     value: AccessoryAllocation
@@ -164,8 +184,18 @@ class AccessoryChoiceClear(Input):
     demand_id: Text
 
 
+class SystemSetupOperation(SystemSetup):
+    action: Literal["system_setup"]
+
+
 Operation = Annotated[
-    AccessoryChoiceClear
+    RequirementsPatch
+    | ProposalApply
+    | PriceAdoptOperation
+    | SystemSetupOperation
+    | IncludedLink
+    | IncludedRemove
+    | AccessoryChoiceClear
     | AccessoryLink
     | QuotationReplace
     | KnowledgeRefresh

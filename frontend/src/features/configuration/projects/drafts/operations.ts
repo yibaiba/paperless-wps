@@ -2,8 +2,8 @@ import type { Configuration, Deployment } from '../../types';
 
 export type Operation = Record<string, unknown> & { action: string };
 const equal = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
-const deviceInput = ({ source_snapshot, variant_snapshot, origin_suggestion, ...value }: Deployment) => {
-  void source_snapshot; void variant_snapshot; void origin_suggestion; return value;
+const deviceInput = ({ source_snapshot, variant_snapshot, origin_suggestion, generated_origin, ...value }: Deployment) => {
+  void source_snapshot; void variant_snapshot; void origin_suggestion; void generated_origin; return value;
 };
 
 /** Forms express intent locally; the server alone validates and applies these commands. */
@@ -50,6 +50,14 @@ export function configurationOperations(before: Configuration, after: Configurat
   }
   for (const allocation of after.accessory_allocations) {
     if (!equal(allocation, before.accessory_allocations.find((a) => a.id === allocation.id))) operations.push({ action: 'accessory_link', value: allocation });
+  }
+  for (const allocation of before.included_allocations ?? []) {
+    if (!equal(allocation, after.included_allocations?.find((a) => a.id === allocation.id)) && after.devices.some((d) => d.id === allocation.device_id)) {
+      operations.push({ action: 'included_remove', allocation_id: allocation.id });
+    }
+  }
+  for (const allocation of after.included_allocations ?? []) {
+    if (!equal(allocation, before.included_allocations?.find((a) => a.id === allocation.id))) operations.push({ action: 'included_link', value: allocation });
   }
   if (!equal(before.quotation, after.quotation)) operations.push({ action: 'quotation_replace', value: after.quotation ?? null });
   if (after.actor.trim() && after.evidence.trim() && (before.actor !== after.actor || before.evidence !== after.evidence)) operations.push({ action: 'author_set', actor: after.actor, evidence: after.evidence });

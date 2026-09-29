@@ -20,6 +20,7 @@ export function ProjectToolbar({
   onImport,
   onView,
   secondaryActions,
+  proposalAction,
 }: {
   projectId: string;
   name: string;
@@ -38,6 +39,7 @@ export function ProjectToolbar({
   onImport: () => void;
   onView: (tab: string) => void;
   secondaryActions: ReactNode;
+  proposalAction?: ReactNode;
 }) {
   const [moreOpen, setMoreOpen] = useState(false);
   return (
@@ -50,6 +52,7 @@ export function ProjectToolbar({
         </div>
       </div>
       <Space wrap>
+      {proposalAction}
       <Button disabled={!canUndo || busy} onClick={onUndo}>撤销</Button>
       <Button disabled={!canRedo || busy} onClick={onRedo}>重做</Button>
       <Popover open={moreOpen} onOpenChange={setMoreOpen} trigger="click" placement="bottomRight" title="项目管理" content={

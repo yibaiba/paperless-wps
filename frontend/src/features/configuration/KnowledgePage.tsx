@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Alert,
@@ -36,8 +36,12 @@ import { MaintenanceTasks } from "./knowledge/MaintenanceTasks";
 
 export default function KnowledgePage() {
   const [params] = useSearchParams();
+  const navigate = useNavigate();
   return <div className="configuration-page">
     <Typography.Title level={2}>产品搭配知识</Typography.Title>
+    {params.get('return_project') ? <Alert type="info" title="正在为项目补充公共资料；保存知识不会自动修改项目" action={<Button onClick={() => navigate('/configuration/' + encodeURIComponent(params.get('return_project')!) + '?' + new URLSearchParams({
+      ...(params.get('return_draft') ? { draft: params.get('return_draft')! } : {}), from_knowledge: '1', system: params.get('return_system') ?? '', requirement: params.get('return_requirement') ?? '',
+    }))}>返回项目草稿</Button>} /> : null}
     <Tabs defaultActiveKey={params.get("view") ?? "products"} destroyOnHidden items={[
       { key: "products", label: "按产品维护", children: <KnowledgeWorkbench /> },
       { key: "systems", label: "按系统版本维护", children: <SystemVersionWorkbench /> },

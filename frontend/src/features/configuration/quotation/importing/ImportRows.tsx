@@ -9,7 +9,7 @@ export function ImportRows({ rows, choices, onChange }: { rows: ImportRow[]; cho
     }))}>采用唯一型号候选</Button><Typography.Text type="secondary">多个版本或多个来源仍需逐行选择；相同型号的多行分别创建独立设备。</Typography.Text></Space>
     <Table rowKey="id" size="small" dataSource={rows} pagination={{ pageSize: 8 }} scroll={{ x: 1550 }} columns={[
       { title: '导入', width: 65, render: (_, row) => <Checkbox aria-label={`导入第${row.sourceRow}行`} checked={row.include} onChange={(e) => update(row, { include: e.target.checked })} /> },
-      { title: '原表', width: 190, render: (_, row) => <><div>第 {row.sourceRow} 行 · {row.name}</div><div>{row.model} / {row.unit}</div></> },
+      { title: '原表', width: 190, render: (_, row) => <><div>第 {row.sourceRow} 行 · {row.name}</div><div>{row.model} / {row.unit}</div>{row.mergedNoteRange ? <Typography.Text type="secondary">共享备注：{row.mergedNoteRange}</Typography.Text> : null}</> },
       { title: '选择配置与来源（必选）', width: 370, render: (_, row) => {
         const exact = matchingChoices(row, choices), rest = choices.filter((c) => !exact.includes(c));
         return <Select aria-label={`第${row.sourceRow}行产品配置`} showSearch optionFilterProp="label" style={{ width: '100%' }} value={row.choice || undefined}

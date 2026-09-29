@@ -20,3 +20,12 @@ test('sparse nested projection preserves unmodified identities, truncates rows a
  assert.equal(result.lines[0],before.lines[0]);assert.equal(result.lines[1].note,'new');assert.equal(result.total,null);assert.equal('stale' in result,false);
  assert.equal(before.lines[1].note,'old');assert.equal(applyProjectionPatch(result.lines,{items:{},length:1}).length,1);
 });
+
+test('included credit uses shared operations and preserves device identity', () => {
+ const allocation={id:'credit',demand_id:'need',device_id:'a',included_item_id:'bundled',host_variant_id:'v',host_variant_revision:1,quantity:'1',evidence:'依据'};
+ const next={...base,included_allocations:[allocation]};
+ assert.deepEqual(configurationOperations(base,next),[{action:'included_link',value:allocation}]);
+ assert.deepEqual(configurationOperations(next,base),[{action:'included_remove',allocation_id:'credit'}]);
+ assert.deepEqual(configurationOperations(next,{...base,devices:[]}),[{action:'remove',collection:'devices',id:'a'}]);
+ assert.deepEqual(configurationOperations(next,next),[]);
+});

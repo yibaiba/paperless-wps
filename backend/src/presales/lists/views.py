@@ -58,7 +58,7 @@ def read_view(record, request):
     if request.view == "allocations":
         items = [
             dict(a, allocation_type=kind)
-            for kind in ("supply", "accessory")
+            for kind in ("supply", "accessory", "included")
             for a in record["configuration"].get(kind + "_allocations", [])
         ]
         return dict(result, **page(items, request))

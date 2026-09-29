@@ -23,15 +23,9 @@ def validate_knowledge(session, data):
         data.selector.variant_ids + data.selector.exclude_variant_ids + data.target_variant_ids
     )
     CatalogService(session).validate_variant_ids(data.reviewed_variant_ids)
-    from presales.storage import ProductRecord
+    from .evidence import validate_evidence_refs
 
-    for reference in data.evidence_refs:
-        source = session.get(ProductRecord, reference.source_id)
-        if not source:
-            raise ValueError("证据引用的来源不存在")
-        text = "\n".join(str(v) for v in source.payload.values())
-        if reference.quote not in text:
-            raise ValueError("证据摘录未在所选原始来源中找到，请核对原文")
+    validate_evidence_refs(session, data.evidence_refs)
 
 
 def save(session, data, **options):

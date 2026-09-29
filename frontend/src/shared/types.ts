@@ -1,5 +1,6 @@
 import type {AttributeProfile} from '../features/catalog/attributes/types';
 export interface CatalogImport {
+  source_kind?: "excel" | "manual";
   id: string; filename: string; created_at: string; sheets: string[];
   record_count: number; issue_count: number; already_imported?: boolean;
 }
@@ -10,6 +11,7 @@ export interface Product {
   review_summary: ReviewSummary;
 }
 export interface ProductDetail extends Product {
+  source_kind?: "excel" | "manual"; provenance?: { actor: string; evidence: string };
   specification: string; short_specification: string; tender_specification: string;
   prices: Record<string, string>; sources: Record<string, string>;
   issues: Issue[];

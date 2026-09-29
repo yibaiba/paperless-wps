@@ -27,7 +27,27 @@ export interface Product extends Authored {
   brand: string;
   category: string;
 }
+export interface IncludedItem {
+  id: string; name: string; variant_id: string | null;
+  kind: Deployment["kind"]; quantity: string | null; need_keys: string[];
+  status: "draft" | "confirmed" | "disabled"; evidence: string;
+}
+export interface IncludedAllocation {
+  id: string; demand_id: string; device_id: string; included_item_id: string;
+  host_variant_id: string; host_variant_revision: number; quantity: string; evidence: string;
+}
+export interface IncludedOffer {
+  device_id: string; included_item_id: string; host_variant_id: string; host_variant_revision: number;
+  name: string; variant_id: string | null; kind: Deployment["kind"];
+  status: string; reason: string; evidence: string;
+  per_unit: string | null; total: string | null; allocated: string; available: string | null;
+}
 export interface Variant extends Authored {
+  description?: string;
+  supply_status?: "available" | "discontinued" | "not_for_sale";
+  replacements?: string[];
+  review_requirements?: Record<string, unknown>[];
+  included_items?: IncludedItem[];
   capability_ids?: string[];
   id: string;
   revision: number;
@@ -66,6 +86,7 @@ export interface Knowledge extends Authored {
   role_id?: string;
   activation_conditions?: Condition[];
   alternative_group?: string;
+  identity_mapping?: Record<string, unknown> | null;
   quantity_review?: "unreviewed" | "confirmed";
   quantity_evidence?: string;
   resource_policy?: "unknown" | "required" | "not_applicable";
@@ -139,6 +160,7 @@ export interface Requirement {
   device_id: string | null;
 }
 export interface Deployment {
+  generated_origin?: { key: string; proposal_id: string; variant_locked: boolean; quantity_locked: boolean } | null;
   id: string;
   name: string;
   variant_id: string;
@@ -158,6 +180,7 @@ export interface AccessoryAllocation {
   evidence: string;
 }
 export interface Configuration extends Authored {
+  included_allocations?: IncludedAllocation[];
   quotation?: import("./quotation/types").Quotation | null;
   calculation_version: 1 | 2 | 3;
   definition_snapshot_id?: string | null;
@@ -173,12 +196,25 @@ export interface Configuration extends Authored {
   knowledge_snapshot_id?: string | null;
 }
 export interface IssueAction {
+  role_id?: string; role_name?: string; feature?: string;
   system_ids?: string[];
   profile_id?: string; input_key?: string;
   rule_id?: string;
   type: string; device_id?: string; requirement_id?: string; requirement_ids?: string[]; system_id?: string; demand_id?: string; variant_id?: string; missing_fields?: string[];
 }
+export interface IncludedAllocationCheck extends Check {
+  allocation_id: string;
+  included_item_id: string;
+  counted_quantity: string;
+  allocated_quantity: string;
+  current_host_variant_id: string | null;
+  current_host_variant_revision: number | null;
+  current_evidence: string;
+  included_name: string;
+}
 export interface Check {
+  check_id?: string; group_id?: string; category?: "requirements" | "selection" | "commercial" | "knowledge"; objects?: { kind: string; id: string }[];
+  allocation_id?: string;
   responsibility?: "project" | "knowledge";
   code?: string;
   action?: IssueAction;
@@ -197,6 +233,10 @@ export interface Check {
   evidence?: Record<string, unknown>[];
 }
 export interface Suggestion {
+  included_allocation_checks?: IncludedAllocationCheck[];
+  included_offers?: IncludedOffer[];
+  included_quantity?: string;
+  separately_allocated?: string;
   quantity_inputs?: { device_id: string; requirement_id?: string; source_id: string; variant_revision?: number; parameter: string; value: string | null; unit: string; error?: string | null }[];
   selected?: boolean;
   selection_conflict?: boolean;
@@ -357,9 +397,10 @@ export interface SystemDefinition extends Authored {
   status: "draft" | "confirmed";
   legacy_names: string[];
   inspection_profiles?: InspectionProfile[];
-  roles: { id: string; name: string; required: boolean; feature: string; capability_ids: string[]; inspection_profile?: { id: string; revision: number } | null }[];
+  roles: { quantity_basis?: import("./knowledge/generationTypes").RoleQuantity | null; fulfilled_by?: import("./knowledge/generationTypes").RoleFulfillment | null; output_kind?: Deployment["kind"]; id: string; name: string; required: boolean; feature: string; capability_ids: string[]; inspection_profile?: { id: string; revision: number } | null }[];
 }
 export interface KnowledgePackage extends Authored {
+  recommendations?: import("./knowledge/generationTypes").Recommendation[];
   id: string;
   revision: number;
   name: string;

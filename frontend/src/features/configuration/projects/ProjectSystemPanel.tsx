@@ -39,7 +39,7 @@ export function ProjectSystemPanel({
         >
           添加角色需求
         </Button>
-        <Button disabled={!selectedSystem || busy} onClick={() => onSystemInputs(selectedSystem!)}>系统规模与输入</Button>
+        <Button disabled={!selectedSystem || busy} onClick={() => onSystemInputs(selectedSystem!)}>系统与需求</Button>
       </Space>
       <Tree
         treeData={tree}

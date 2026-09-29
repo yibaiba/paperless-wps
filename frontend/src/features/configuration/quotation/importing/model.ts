@@ -8,6 +8,7 @@ export const fields = [
 export type Field = typeof fields[number][0];
 export type Mapping = Partial<Record<Field, number>>;
 export interface ImportRow {
+  mergedNoteRange?: string;
   systemId?: string; requirementId?: string; roleName?: string; existingDeviceId?: string;
   raw: string[]; id: string; sourceRow: number; include: boolean; choice: string; kind: Deployment['kind'] | '';
   name: string; model: string; description: string; quantity: string;
@@ -71,7 +72,7 @@ export function importOperations(rows: ImportRow[], options: { choices: Choice[]
     if (row.unit.trim() && choice.unit.trim() && row.unit.trim() !== choice.unit.trim()) throw new Error(`第 ${row.sourceRow} 行：原表单位“${row.unit}”与产品库“${choice.unit}”不同，请核对单位及数量。`);
     const quantity = decimal(row.quantity, true, `第 ${row.sourceRow} 行数量`);
     const price = row.price.trim() ? decimal(row.price, false, `第 ${row.sourceRow} 行单价`) : null;
-    const id = options.newId(), evidence = `${options.evidence.trim()}；原表第 ${row.sourceRow} 行`;
+    const id = options.newId(), evidence = `${options.evidence.trim()}；原表第 ${row.sourceRow} 行${row.mergedNoteRange ? `；备注源合并区域：${row.mergedNoteRange}` : ''}`;
     const operations: EditOperation[] = [
       { action: 'device_put', value: { id, name: choice.name, variant_id: choice.variantId, source_id: choice.sourceId, quantity, kind: row.kind, note: row.note } },
       { action: 'purchase_set', device_id: id, quantity, evidence },
@@ -84,9 +85,13 @@ export function importOperations(rows: ImportRow[], options: { choices: Choice[]
 }
 
 function assignmentOperations(row: ImportRow, deviceId: string, options: { configuration?: Configuration; newId: () => string; assigned: Set<string> }): EditOperation[] {
-  if (!row.systemId) return [];
+  if (!row.systemId) {
+    if (row.requirementId) throw new Error(`第 ${row.sourceRow} 行：已选角色缺少所属系统，请重新关联。`);
+    return [];
+  }
   if (!options.configuration?.systems.some((s) => s.id === row.systemId)) throw new Error(`第 ${row.sourceRow} 行：系统不存在。`);
   const requirement = options.configuration.requirements.find((r) => r.id === row.requirementId);
+  if (row.requirementId && !requirement) throw new Error(`第 ${row.sourceRow} 行：已选角色不存在，请重新选择。`);
   if (requirement) {
     if (requirement.system_id !== row.systemId || options.assigned.has(requirement.id)) throw new Error(`第 ${row.sourceRow} 行：角色重复分配或不属于该系统。`);
     if (requirement.device_id && requirement.device_id !== deviceId) throw new Error(`第 ${row.sourceRow} 行：角色已关联其他设备，请在选型面板明确换型。`);

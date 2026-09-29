@@ -10,6 +10,7 @@ BUSINESS_COLLECTIONS = (
     "requirements",
     "devices",
     "accessory_allocations",
+    "included_allocations",
     "supply_allocations",
 )
 
@@ -54,6 +55,9 @@ def preview_cleanup(checked):
     active = {s["id"] for s in checked["suggestions"] if s.get("selected", True)}
     result["accessory_allocations"] = [
         a for a in result["accessory_allocations"] if a["demand_id"] in active
+    ]
+    result["included_allocations"] = [
+        a for a in result.get("included_allocations", []) if a["demand_id"] in active
     ]
     return result
 

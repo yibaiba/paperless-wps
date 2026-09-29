@@ -1,3 +1,4 @@
+from datetime import date
 from typing import Literal
 
 from pydantic import Field, model_validator
@@ -9,6 +10,14 @@ from presales.configuration.projects.edit_schemas import Operation
 class Page(Input):
     offset: int = Field(default=0, ge=0)
     limit: int = Field(default=50, gt=0)
+
+
+class SystemsList(Page):
+    definition_id: str = ""
+    knowledge_package_id: str = ""
+    definition_snapshot_id: str | None = None
+    knowledge_snapshot_id: str | None = None
+    features: list[str] = Field(default_factory=list)
 
 
 class CreateList(Authored):
@@ -28,6 +37,12 @@ class DraftWrite(Input):
     draft_id: Text
     expected_revision: int = Field(ge=1)
     operation_id: Text
+
+
+class PlanList(DraftWrite):
+    proposal_id: str | None = None
+    option_offset: int = Field(default=0, ge=0)
+    deployment: Literal["independent", "shared"] = "independent"
 
 
 class UpdateList(DraftWrite):
@@ -52,11 +67,20 @@ class ExportList(Input):
 
 
 class GetList(Page):
+    proposal_id: str | None = None
+    option_id: str | None = None
     draft_id: str | None = None
     project_id: str | None = None
     revision: int | None = Field(default=None, ge=1)
+    price_adoption_date: date | None = None
     view: Literal[
+        "proposals",
+        "proposal_lines",
+        "proposal_questions",
+        "proposal_decisions",
+        "proposal_changes",
         "summary",
+        "price_updates",
         "devices",
         "procurement",
         "quotation",
@@ -83,6 +107,7 @@ class CatalogSearch(Page):
 
 
 class CatalogGet(Input):
+    on_date: date | None = None
     variant_id: Text
     draft_id: str | None = None
 

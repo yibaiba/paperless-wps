@@ -1,3 +1,4 @@
+import { beijingDate } from "../catalog/updates/types";
 import { Form, Input, InputNumber, Modal, Select } from "antd";
 import type { Quotation, QuotedPrice, QuoteTemplate } from "./types";
 import type { Deployment } from "../types";
@@ -9,7 +10,7 @@ export function QuotationForm({ value, template, projectName, onApply, onClose }
   const [form] = Form.useForm();
   const initial: Quotation = value ?? {
     template_id: template.id, currency: "CNY", customer: "", project_name: projectName,
-    sales_contact: "", designer_contact: "", design_date: null, room_description: "",
+    sales_contact: "", designer_contact: "", design_date: null, price_adoption_date: beijingDate(), room_description: "",
     price_column: "", tax_terms: template.tax_terms, prices: [], sections: {},
   };
   return <Modal open title="报价资料与采用价格" onCancel={onClose} onOk={() => form.submit()}>
@@ -17,6 +18,7 @@ export function QuotationForm({ value, template, projectName, onApply, onClose }
       onApply({ ...initial, ...fields, design_date: fields.design_date || null }); onClose();
     }}>
       <Form.Item label="采用产品库价格列" name="price_column"><Select allowClear options={template.price_columns.map((p) => ({ value: p, label: p }))} onClear={() => form.setFieldValue("price_column", "")} /></Form.Item>
+      <Form.Item label="价格采用日期（北京时间，保存后固定）" name="price_adoption_date"><Input type="date" /></Form.Item>
       <Form.Item label="客户名称" name="customer"><Input /></Form.Item>
       <Form.Item label="项目名称" name="project_name"><Input /></Form.Item>
       <Form.Item label="销售经理 / 联系电话" name="sales_contact"><Input /></Form.Item>
@@ -34,9 +36,9 @@ export function PriceForm({ device, quotation, onApply, onClose }: {
 }) {
   const [form] = Form.useForm();
   const previous = quotation.prices.find((p) => p.device_id === device.id);
-  const mode = Form.useWatch("mode", form) ?? (previous?.mode === "import" ? "manual" : previous?.mode) ?? "source";
+  const mode = Form.useWatch("mode", form) ?? ((previous?.mode === "import" || previous?.mode === "version" || previous?.mode === "pending") ? "manual" : previous?.mode) ?? "source";
   return <Modal open title={`报价单价 · ${device.name}`} onCancel={onClose} onOk={() => form.submit()}>
-    <Form form={form} layout="vertical" initialValues={{ mode: (previous?.mode === "import" ? "manual" : previous?.mode) ?? "source", unit_price: previous?.unit_price, evidence: previous?.evidence ?? "", section: quotation.sections[device.id] ?? "" }} onFinish={(fields) => {
+    <Form form={form} layout="vertical" initialValues={{ mode: ((previous?.mode === "import" || previous?.mode === "version" || previous?.mode === "pending") ? "manual" : previous?.mode) ?? "source", unit_price: previous?.unit_price, evidence: previous?.evidence ?? "", section: quotation.sections[device.id] ?? "" }} onFinish={(fields) => {
       const price: QuotedPrice = { device_id: device.id, variant_id: device.variant_id,
         source_id: device.source_id, mode: fields.mode, price_column: quotation.price_column,
         unit_price: fields.mode === "manual" ? String(fields.unit_price) : null,

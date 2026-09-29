@@ -32,7 +32,9 @@ class DraftCatalog:
 
     def variants(self, *, ids=None):
         if self._data is None:
-            self._data = Entities(self.session).get(self.snapshot_id, kind="list_catalog_snapshot").payload
+            self._data = (
+                Entities(self.session).get(self.snapshot_id, kind="list_catalog_snapshot").payload
+            )
         return deepcopy([v for v in self._data["variants"] if ids is None or v["id"] in ids])
 
 

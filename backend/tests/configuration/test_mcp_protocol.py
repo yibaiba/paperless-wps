@@ -29,7 +29,7 @@ async def protocol(path, *, catalog, output, expected):
         async with ClientSession(read, write, read_timeout_seconds=15) as client:
             await client.initialize()
             tools = await client.list_tools()
-            assert len(tools.tools) == 10
+            assert len(tools.tools) == 11
 
             async def call(name, request):
                 result = await client.call_tool(name, {"request": request})

@@ -129,7 +129,7 @@ def matches(variant, query):
     return all(term.casefold() in text.casefold() for term in query.split())
 
 
-def catalog_detail(session, *, variant_id, draft_id=None):
+def catalog_detail(session, *, variant_id, draft_id=None, on_date=None):
     draft = Entities(session).get(draft_id, kind="list_draft").payload if draft_id else None
     catalog = (
         DraftCatalog(session, draft["catalog_snapshot_id"]) if draft else CatalogService(session)
@@ -145,16 +145,35 @@ def catalog_detail(session, *, variant_id, draft_id=None):
         selected = next((d for d in data["devices"] if d["variant_id"] == variant_id), None)
         if selected:
             variant = selected["variant_snapshot"]
+    from presales.catalog.parser import PRICE_HEADERS
+    from presales.catalog_updates.prices import Prices, beijing_today
+
+    price_service = Prices(session)
+    day = on_date or beijing_today()
     sources = [session.get(ProductRecord, identity) for identity in variant["source_ids"]]
     return dict(
         variant=variant,
+        prices=dict(
+            on_date=str(day),
+            current={
+                c: price_service.effective(variant_id, c, day)
+                for c in sorted(PRICE_HEADERS)
+            },
+        ),
         sources=[dict(id=s.id, import_id=s.import_id, **s.payload) for s in sources],
         knowledge=[k for k in knowledge if scope_matches(variant, k["selector"])],
     )
 
 
 def systems(session, request):
-    definitions = Entities(session).list("system_definition")
+    from presales.configuration.definitions.requirements import (
+        RequirementDescription,
+        definitions_for,
+        read_description,
+    )
+
+    snapshot = definitions_for(session, request.definition_snapshot_id)
+    definitions = snapshot["definitions"]
     known = {d["name"] for d in definitions}
     legacy = sorted(
         {
@@ -163,7 +182,7 @@ def systems(session, request):
             if k.get("system") and k["system"] not in known
         }
     )
-    return dict(
+    result = dict(
         **page(definitions, request),
         packages=[
             dict(
@@ -173,7 +192,24 @@ def systems(session, request):
                 status=p["status"],
                 system_definition_id=p["system_definition_id"],
             )
-            for p in Entities(session).list("knowledge_package")
+            for p in (
+                snapshot["packages"]
+                if request.definition_snapshot_id
+                else Entities(session).list("knowledge_package")
+            )
         ],
         unmapped_systems=[dict(name=s, status="unmapped") for s in legacy],
     )
+
+    if request.definition_id:
+        result["requirement_description"] = read_description(
+            session,
+            RequirementDescription(
+                definition_id=request.definition_id,
+                knowledge_package_id=request.knowledge_package_id,
+                definition_snapshot_id=request.definition_snapshot_id,
+                knowledge_snapshot_id=request.knowledge_snapshot_id,
+                features=request.features,
+            ),
+        )
+    return result

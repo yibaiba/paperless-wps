@@ -31,6 +31,7 @@ def empty_configuration():
         requirements=[],
         devices=[],
         accessory_allocations=[],
+        included_allocations=[],
         accessory_choices=[],
         supply_allocations=[],
         definition_snapshot_id=None,
@@ -139,14 +140,25 @@ class ProjectConfigurations:
             self.session, data=result, refresh=refresh
         )
         result["drawing_xml"] = project_drawing(result["drawing_xml"], devices=result["devices"])
+        from presales.catalog_updates.project_prices import validate_references
+
+        validate_references(self.session, result)
         return adopt_prices(result), variants, current
 
     def check(self, data, *, refresh=False, upgrade=False):
+        from presales.catalog_updates.impacts import apply_review_checks
+
         from .services.issue_actions import with_issue_actions
 
-        return with_issue_actions(
-            with_quotation(self._check(data, refresh=refresh, upgrade=upgrade))
-        )
+        checked = self._check(data, refresh=refresh, upgrade=upgrade)
+        payload = checked["configuration"]
+        knowledge = payload.get("knowledge_snapshot") or []
+        if payload.get("calculation_version") == 3:
+            from .services.definition_snapshot import project_knowledge, resolve_definitions
+
+            definitions, _ = resolve_definitions(self.session, payload)
+            knowledge = project_knowledge(payload, definitions)
+        return with_issue_actions(with_quotation(apply_review_checks(checked, knowledge=knowledge)))
 
     def _check(self, data, *, refresh=False, upgrade=False):
         payload, variants, catalog_variants = self.prepare(data, refresh=refresh)

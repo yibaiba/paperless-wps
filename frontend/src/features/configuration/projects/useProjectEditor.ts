@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { App } from "antd";
 import { api } from "../../../shared/api";
 import type {
@@ -51,10 +51,12 @@ export function useProjectEditor({
     [author, setAuthor] = useState(false),
     [requirementModal, setRequirementModal] = useState<{
       systemId: string;
+      requestedRole?: { id: string; name: string };
       initial?: Requirement;
     }>();
-  const [selectedSystem, setSelectedSystem] = useState<string>(),
-    [selectedRequirement, setSelectedRequirement] = useState<string>(),
+  const [params] = useSearchParams();
+  const [selectedSystem, setSelectedSystem] = useState<string | undefined>(params.get("system") || undefined),
+    [selectedRequirement, setSelectedRequirement] = useState<string | undefined>(params.get("requirement") || undefined),
     [deviceModal, setDeviceModal] = useState<string>();
   const [preview, setPreview] = useState<{
       configuration: Configuration;
@@ -73,6 +75,7 @@ export function useProjectEditor({
   });
   const persistence = usePersistentDraft({ projectId, saved, configuration: config, initialWorkspace: workspace,
     accept: (result) => { setChecked(result); draft.replaceCurrent(result.configuration); },
+    acceptOperation: (result) => { setChecked(result); draft.commit(result.configuration); },
   });
   const { drawing, check, save, apply, acceptChecked, reloadSaved } = useProjectRequests({
     projectId, draft, saved, checked, setSaved, setChecked, savedJson, saveWorkspace: persistence.save,

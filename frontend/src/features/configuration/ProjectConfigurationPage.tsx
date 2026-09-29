@@ -1,3 +1,4 @@
+import { ProposalPanel } from "./projects/ProposalPanel";
 import { AssignDeviceDialog } from "./projects/AssignDeviceDialog";
 import { DraftRecovery } from "./projects/drafts/DraftRecovery";
 import { DraftPreviewContext } from "./projects/drafts/context";
@@ -5,7 +6,7 @@ import type { Workspace } from "./projects/drafts/transport";
 import { preloadQuotationSheet } from './quotation/loadSheet';
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Alert, Button, Card, Modal, Space, Tabs, Typography } from "antd";
 import { api } from "../../shared/api";
 import type { ProjectConfiguration } from "./types";
@@ -33,6 +34,7 @@ import { ProjectDefinitionPanel } from "./projects/ProjectDefinitionPanel";
 import { ProjectChangePanel } from "./projects/ProjectChangePanel";
 import { ProjectConfirmation } from "./projects/ProjectConfirmation";
 import { QuotationPanel } from "./quotation/QuotationPanel";
+import { requestedRole } from "./projects/definitionSelection";
 import { SystemInputsForm } from "./projects/forms/SystemInputsForm";
 
 export default function ProjectConfigurationPage() {
@@ -63,9 +65,11 @@ function ConfigurationEditor({
 }) {
   const [inputSystemChoices, setInputSystemChoices] = useState<string[]>([]);
   const [inputsSystemId, setInputsSystemId] = useState<string>();
+  const [customInputsSystemId, setCustomInputsSystemId] = useState<string>();
   const [resourceRoles, setResourceRoles] = useState<string[]>([]);
   const [assignDevice, setAssignDevice] = useState<string>();
   const navigate = useNavigate();
+  const [returnParams] = useSearchParams();
   const [sheetPending, setSheetPending] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [reviewTab, setReviewTab] = useState("todo");
@@ -107,11 +111,15 @@ function ConfigurationEditor({
   const savedProjectionStale = checked ? checkedStale : dirty;
   const selecting = tab === "list" || tab === "drawing";
   const showInspector = selecting && (!!requirement || !!editingDevice);
+  const openMaintenance = (query: Record<string, string>, context?: { systemId?: string; requirementId?: string }) => navigate('/knowledge?' + new URLSearchParams({ ...query,
+    return_project: projectId, return_draft: editor.persistence.id ?? '', return_system: context?.systemId ?? selectedSystem ?? '',
+    return_requirement: context?.requirementId ?? requirement?.id ?? '' }));
   return (
     <DraftPreviewContext.Provider value={editor.persistence.preview}><div className="configuration-page">
       {editor.persistence.error ? <Alert type="error" title={editor.persistence.error} action={<Button onClick={editor.persistence.retry}>重试同步</Button>} /> : <Typography.Text type="secondary" role="status">
         {editor.persistence.syncing || editor.persistence.unsynced ? "草稿同步中…" : editor.persistence.id ? "工作草稿已同步；保存版本后可导出" : "修改会自动保存为工作草稿"}
       </Typography.Text>}
+      {returnParams.get('from_knowledge') ? <Alert type="info" title="已返回原项目草稿，维护后的资料尚未应用" action={<Button onClick={() => setChangeRequest({ refresh: true, cleanup: false })}>预览资料升级差异</Button>} /> : null}
       {assignDevice && config.devices.some((d) => d.id === assignDevice) ? <AssignDeviceDialog deviceId={assignDevice} configuration={config} onApply={draft.commit} onClose={() => setAssignDevice(undefined)} /> : null}
       <Modal open={inputSystemChoices.length > 0} title="选择需要核对规模的系统" footer={null} onCancel={() => setInputSystemChoices([])}><Space orientation="vertical">{config.systems.filter((s) => inputSystemChoices.includes(s.id)).map((s) => <Button key={s.id} onClick={() => { setInputsSystemId(s.id); setInputSystemChoices([]); }}>{s.name}</Button>)}</Space></Modal>
       <Modal open={resourceRoles.length > 0} title="选择需要补充资源需求的角色" footer={null} onCancel={() => setResourceRoles([])}>
@@ -134,7 +142,9 @@ function ConfigurationEditor({
         onRedo={draft.redo}
         onImport={() => setImportOpen(true)}
         onView={setTab}
+        proposalAction={<ProposalPanel disabled={busy || sheetPending} readyWorkspace={editor.persistence.readyWorkspace} execute={editor.persistence.execute} onApply={editor.acceptChecked} />}
         secondaryActions={<>
+          <Button disabled={!selectedSystem || busy} onClick={() => setCustomInputsSystemId(selectedSystem)}>高级：系统自定义输入</Button>
           <Button onClick={() => setChangeRequest({ refresh: false, cleanup: false })}>预览本次改单</Button>
           <Button onClick={() => setChangeRequest({ refresh: false, cleanup: true })}>预览失效配套关联清理</Button>
           <ProjectConfirmation projectId={projectId} saved={saved} dirty={dirty} onConfirmed={editor.reloadSaved} />
@@ -303,6 +313,7 @@ function ConfigurationEditor({
                   ),
                   supply_allocations: (config.supply_allocations ?? []).filter((a) => a.device_id !== editingDevice.id),
                   accessory_choices: (config.accessory_choices ?? []).filter((c) => !removedDemandIds.has(c.demand_id)),
+                  included_allocations: (config.included_allocations ?? []).filter((a) => a.device_id !== editingDevice.id && !removedDemandIds.has(a.demand_id)),
                   accessory_allocations: config.accessory_allocations.filter(
                     (item) =>
                       item.device_id !== editingDevice.id &&
@@ -348,6 +359,7 @@ function ConfigurationEditor({
         stale={checkedStale}
         busy={busy}
         onCheck={(refresh) => refresh ? setChangeRequest({ refresh: true, cleanup: false }) : check.mutate(false)}
+        onIncludedChange={(next) => draft.commit(next)}
         onChoice={(demandId, selected) => draft.commit({ ...config, accessory_choices: [
           ...(config.accessory_choices ?? []).filter((c) => c.demand_id !== demandId), { demand_id: demandId, selected },
         ] })}
@@ -360,21 +372,22 @@ function ConfigurationEditor({
         if (action.type === 'edit_resources' && action.requirement_ids?.length) { setResourceRoles(action.requirement_ids); return; }
         if (action.type === 'assign_device' && action.device_id) { setAssignDevice(action.device_id); return; }
         if (action.type === 'add_system') { setSystemModal(true); return; }
-        if (action.type === 'add_requirement' && action.system_id) { setRequirementModal({ systemId: action.system_id }); return; }
+        if (action.type === 'add_requirement' && action.system_id) { setRequirementModal({ systemId: action.system_id, requestedRole: requestedRole(action) }); return; }
+        if (action.type === 'edit_price') { setTab('quotation'); return; }
         if (action.type === 'edit_supply') { setTab('supply'); return; }
         if (action.type === 'edit_system_inputs') { if (action.system_id) setInputsSystemId(action.system_id); else setInputSystemChoices(action.system_ids ?? []); return; }
-        if (action.type === 'edit_inspection') { navigate('/knowledge?' + new URLSearchParams({ view: 'inspections', ...(action.profile_id ? { profile: action.profile_id } : {}) })); return; }
-        if (action.type === 'edit_definition') { navigate('/knowledge?view=systems'); return; }
-        if (action.type === 'edit_knowledge') { navigate('/knowledge?' + new URLSearchParams(action.rule_id ? { rule: action.rule_id } : { variant: action.variant_id ?? '' })); return; }
+        if (action.type === 'edit_inspection') { openMaintenance({ view: 'inspections', ...(action.profile_id ? { profile: action.profile_id } : {}) }); return; }
+        if (action.type === 'edit_definition') { openMaintenance({ view: 'systems', system: config.systems.find(s => s.id === action.system_id)?.definition_id ?? '' }, { systemId: action.system_id, requirementId: action.requirement_id }); return; }
+        if (action.type === 'edit_knowledge') { openMaintenance(action.rule_id ? { rule: action.rule_id, variant: action.variant_id ?? '' } : { variant: action.variant_id ?? '' }); return; }
         setTab('list');
         const role = config.requirements.find((r) => r.id === action.requirement_id);
         if (['edit_resources', 'edit_requirement'].includes(action.type) && role) setRequirementModal({ systemId: role.system_id, initial: role });
         else if (role) { setDeviceModal(undefined); setSelectedRequirement(role.id); setSelectedSystem(role.system_id); }
         else if (action.device_id) { const related = config.requirements.filter((r) => r.device_id === action.device_id); if (related.length === 1) setRequirementModal({ systemId: related[0].system_id, initial: related[0] }); else setAssignDevice(action.device_id); }
       }} />
-      {inputsSystemId && config.systems.find((s) => s.id === inputsSystemId) ? <SystemInputsForm
-        system={config.systems.find((s) => s.id === inputsSystemId)!} configuration={config}
-        onClose={() => setInputsSystemId(undefined)} onApply={(inputs) => draft.commit({ ...config, systems: config.systems.map((s) => s.id === inputsSystemId ? { ...s, inputs } : s) })} /> : null}
+      {customInputsSystemId && config.systems.some(s => s.id === customInputsSystemId) ? <SystemInputsForm system={config.systems.find(s => s.id === customInputsSystemId)!} configuration={config} onClose={() => setCustomInputsSystemId(undefined)} onApply={inputs => draft.commit({ ...config, systems: config.systems.map(s => s.id === customInputsSystemId ? { ...s, inputs } : s) })} /> : null}
+      {inputsSystemId && config.systems.find((s) => s.id === inputsSystemId) ? <SystemForm
+        configuration={config} systemId={inputsSystemId} onClose={() => setInputsSystemId(undefined)} onApply={draft.commit} /> : null}
       {systemModal ? (
         <SystemForm
           configuration={config}
@@ -394,6 +407,8 @@ function ConfigurationEditor({
           systemId={requirementModal.systemId}
           definitionId={config.systems.find((s) => s.id === requirementModal.systemId)?.definition_id}
           definitionSnapshotId={config.definition_snapshot_id}
+          knowledgePackageId={config.systems.find((s) => s.id === requirementModal.systemId)?.knowledge_package_id}
+          requestedRole={requirementModal.requestedRole}
           systemName={
             config.systems.find((s) => s.id === requirementModal.systemId)!.kind
           }

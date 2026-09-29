@@ -1,3 +1,4 @@
+import { PriceUpdates } from "./PriceUpdates";
 import { lazy, Suspense, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Alert, App, Button, Collapse, Descriptions, Empty, Space, Spin, Typography } from "antd";
@@ -19,6 +20,7 @@ export function QuotationPanel({ configuration, output, saved, dirty, stale, bus
   sheetControls: SheetControls;
   dirty: boolean; stale: boolean; busy: boolean; checking: boolean; onApply: (value: Configuration) => void; onCheck: () => void;
 }) {
+  const [priceUpdates, setPriceUpdates] = useState(false);
   const [editing, setEditing] = useState(false);
   const { message } = App.useApp();
   const template = useQuery({ queryKey: configurationKeys.quoteTemplate, queryFn: () => api<QuoteTemplate>("/quotation-template") });
@@ -29,6 +31,7 @@ export function QuotationPanel({ configuration, output, saved, dirty, stale, bus
   return <Space orientation="vertical" style={{ width: "100%" }} size="middle">
     <Space wrap>
       <Button onClick={() => setEditing(true)} disabled={!template.data || busy}>报价资料与价格列</Button>
+      <Button disabled={busy || !quote?.price_column} onClick={() => setPriceUpdates(true)}>检查价格更新</Button>
       <Button onClick={onCheck} disabled={busy} loading={checking}>{stale ? '重新检查并计算报价' : '检查并计算报价'}</Button>
       <Button disabled={busy || dirty || !saved.revision || !saved.configuration.quotation} loading={exporting.isPending} onClick={() => exporting.mutate()}>导出清单和公司报价模板</Button>
     </Space>
@@ -50,6 +53,7 @@ export function QuotationPanel({ configuration, output, saved, dirty, stale, bus
     </> : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="先填写报价资料，再选择产品库价格或逐项调价"><Button type="primary" disabled={!template.data || busy} onClick={() => setEditing(true)}>设置本次报价</Button></Empty>}
     <SheetBoundary><Suspense fallback={<Spin description="正在加载报价工作表…" />}><QuotationSheet {...sheetControls} output={output} stale={stale} /></Suspense></SheetBoundary>
     {exporting.data?.artifacts.map((artifact) => <a key={artifact.id} href={artifact.download_path} download>{artifact.filename}</a>)}
+    {priceUpdates ? <PriceUpdates context={sheetControls} onClose={() => setPriceUpdates(false)} /> : null}
     {editing && template.data ? <QuotationForm value={quote} template={template.data} projectName={saved.name} onClose={() => setEditing(false)} onApply={(quotation) => onApply({ ...configuration, quotation })} /> : null}
   </Space>;
 }

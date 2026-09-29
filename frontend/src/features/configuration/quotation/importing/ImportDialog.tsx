@@ -8,8 +8,9 @@ import type { useSheetEditing } from '../sheet/useSheetEditing';
 import { parseClipboard } from '../sheet/model';
 import { catalogChoices, detectHeader, detectMapping, fields, importOperations, mappedRows, type ImportRow, type Mapping } from './model';
 import { ImportRows } from './ImportRows';
+import { withMergedNotes, type MergedRegion } from './mergedNotes';
 
-type Workbook = { sheets: { name: string; rows: string[][] }[] };
+type Workbook = { sheets: { name: string; rows: string[][]; merges?: MergedRegion[] }[] };
 export function ImportDialog({ editor, initialText, onClose, configuration }: {
   configuration: Configuration;
   editor: ReturnType<typeof useSheetEditing>; initialText?: string; onClose: () => void;
@@ -22,6 +23,7 @@ export function ImportDialog({ editor, initialText, onClose, configuration }: {
   const [pricesConfirmed, setPricesConfirmed] = useState(false);
   const choices = useMemo(() => catalogChoices(variants), [variants]);
   const matrix = book?.sheets[sheet]?.rows ?? [];
+  const merges = book?.sheets[sheet]?.merges ?? [];
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true);
@@ -74,7 +76,11 @@ export function ImportDialog({ editor, initialText, onClose, configuration }: {
         <Space wrap>{fields.map(([key, label]) => <label key={key}>{label} <Select allowClear aria-label={`${label}对应列`} value={mapping[key]} style={{ width: 135 }}
           options={Array.from({ length: matrix.reduce((maximum, row) => Math.max(maximum, row.length), 0) }, (_, value) => ({ value, label: `第${value + 1}列 ${matrix[header]?.[value] ?? ''}` }))}
           onChange={(value) => { setMapping((m) => ({ ...m, [key]: value })); setRows([]); reset(); }} /></label>)}</Space>
-        <Button onClick={() => { setRows(mappedRows(matrix, header, mapping)); reset(); }}>生成逐行核对表</Button>
+        {merges.length ? <Alert type="info" title={`原表含 ${merges.length} 个合并区域`} description={<>
+          <div>纵向单列备注会带入对应明细并标明出处，请逐行核对。数量、单价及跨列内容保留原值，不自动复制或拆分。</div>
+          <Typography.Paragraph ellipsis={{ rows: 2, expandable: true, symbol: '展开合并范围' }}>{merges.map((region) => region.range).join('、')}</Typography.Paragraph>
+        </>} /> : null}
+        <Button onClick={() => { setRows(withMergedNotes(mappedRows(matrix, header, mapping), { matrix, header, mapping, merges })); reset(); }}>生成逐行核对表</Button>
       </> : null}
       {rows.length ? <ImportRows rows={rows} choices={choices} onChange={(value) => { setRows(value); reset(); }} /> : null}
       {systemOpen ? <SystemForm configuration={staged} onApply={(next) => { setStaged(next); reset(); }} onClose={() => setSystemOpen(false)} /> : null}

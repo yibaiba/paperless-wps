@@ -11,6 +11,7 @@ import {
   useProducts,
 } from "./shared";
 
+import { IncludedItemsEditor } from "./catalog/IncludedItemsEditor";
 import { useDefinitions } from "./knowledge/useDefinitions";
 
 export function ProductEditor({
@@ -164,6 +165,7 @@ export function VariantEditor({
             </Form.Item>
           ))}
         </Space>
+        <IncludedItemsEditor hostId={variant?.id} />
         <AuthorFields />
       </Form>
     </Modal>

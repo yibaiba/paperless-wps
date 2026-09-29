@@ -13,15 +13,18 @@ from .reviews import ReviewIndex, ReviewRepository, review_summary
 
 def import_view(record: CatalogImport) -> dict:
     return {
-        key: getattr(record, key)
-        for key in (
-            "id",
-            "filename",
-            "created_at",
-            "sheets",
-            "record_count",
-            "issue_count",
-        )
+        "source_kind": "manual" if record.digest.startswith("manual:") else "excel",
+        **{
+            key: getattr(record, key)
+            for key in (
+                "id",
+                "filename",
+                "created_at",
+                "sheets",
+                "record_count",
+                "issue_count",
+            )
+        },
     }
 
 

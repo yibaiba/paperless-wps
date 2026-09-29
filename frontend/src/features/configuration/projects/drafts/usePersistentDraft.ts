@@ -5,13 +5,13 @@ import { api, ApiError } from '../../../../shared/api';
 import type { Checked, Configuration, ProjectConfiguration } from '../../types';
 import type { EditPreview } from '../../quotation/sheet/useSheetEditing';
 import type { EditOperation } from '../../quotation/sheet/model';
-import { configurationOperations } from './operations';
+import { type Operation, configurationOperations } from './operations';
 import { mergeDelta, post, writeRequest, type Delta, type Workspace } from './transport';
 
 const key = (config: Configuration) => JSON.stringify(config);
 interface Options {
   projectId: string; saved: ProjectConfiguration; configuration: Configuration;
-  initialWorkspace?: Workspace; accept: (checked: Checked) => void;
+  initialWorkspace?: Workspace; accept: (checked: Checked) => void; acceptOperation: (checked: Checked) => void;
 }
 export function usePersistentDraft(options: Options) {
   const live = useRef(options); live.current = options;
@@ -20,6 +20,7 @@ export function usePersistentDraft(options: Options) {
   const synced = useRef(key(options.initialWorkspace?.configuration ?? options.saved.configuration));
   const checkpoints = useRef(new Map<string, number>(options.initialWorkspace ? [[key(options.initialWorkspace.configuration), options.initialWorkspace.revision]] : []));
   const pending = useRef<(() => Promise<Workspace>) | undefined>(undefined);
+  const operationPending = useRef(false);
   const pendingKey = useRef<string | undefined>(undefined);
   const creating = useRef<Promise<Workspace> | undefined>(undefined);
   const running = useRef(false), alive = useRef(true);
@@ -65,15 +66,17 @@ export function usePersistentDraft(options: Options) {
       }
       const result = await pending.current();
       const appliedKey = pendingKey.current!;
+      const wasOperation = operationPending.current; operationPending.current = false;
       pending.current = undefined; pendingKey.current = undefined; remote.current = result;
-      checkpoints.current.set(appliedKey, result.revision);
+      if (!wasOperation) checkpoints.current.set(appliedKey, result.revision);
       checkpoints.current.set(key(result.configuration), result.revision);
       synced.current = appliedKey;
       if (alive.current && key(live.current.configuration) === appliedKey) {
-        synced.current = key(result.configuration); live.current.accept(result.checked);
+        synced.current = key(result.configuration);
+        if (wasOperation) live.current.acceptOperation(result.checked); else live.current.accept(result.checked);
       }
     } catch (cause) {
-      if (cause instanceof ApiError && cause.status === 422) { pending.current = undefined; pendingKey.current = undefined; }
+      if (cause instanceof ApiError && (cause.status === 422 || cause.status === 409)) { pending.current = undefined; pendingKey.current = undefined; operationPending.current = false; }
       if (alive.current) setError(cause instanceof Error ? cause.message : String(cause));
     }
     finally { running.current = false; if (alive.current) { setSyncing(false); render((v) => v + 1); } }
@@ -119,5 +122,30 @@ export function usePersistentDraft(options: Options) {
     savePending.current = undefined;
     return result;
   };
-  return { syncing, unsynced, error, retry: synchronize, preview, save, id: remote.current?.id };
+  const readyWorkspace = async () => {
+    if (running.current || pending.current || key(live.current.configuration) !== synced.current) throw new Error('草稿尚未同步，请完成同步后生成方案。');
+    return ensure();
+  };
+  const execute = async (operations: Operation[]) => {
+    const workspace = await readyWorkspace();
+    running.current = true; setSyncing(true); setError('');
+    const beforeKey = key(live.current.configuration);
+    const request = writeRequest(workspace, operations);
+    pendingKey.current = beforeKey; operationPending.current = true;
+    checkpoints.current.set(beforeKey, workspace.revision);
+    pending.current = async () => mergeDelta(workspace, await post<Delta>(`/work-drafts/${workspace.id}/edit`, request));
+    try {
+      const result = await pending.current();
+      remote.current = result; pending.current = undefined; pendingKey.current = undefined; operationPending.current = false;
+      checkpoints.current.set(beforeKey, workspace.revision);
+      checkpoints.current.set(key(result.configuration), result.revision);
+      synced.current = key(result.configuration);
+      if (key(live.current.configuration) !== beforeKey) throw new Error('采用期间本地已变化，提案已同步但未覆盖本地编辑，请恢复草稿核对。');
+      return result.checked;
+    } catch (cause) {
+      if (cause instanceof ApiError && (cause.status === 422 || cause.status === 409)) { pending.current = undefined; pendingKey.current = undefined; operationPending.current = false; }
+      setError(cause instanceof Error ? cause.message : String(cause)); throw cause;
+    } finally { running.current = false; setSyncing(false); render(v => v + 1); }
+  };
+  return { syncing, unsynced, error, retry: synchronize, preview, save, readyWorkspace, execute, id: remote.current?.id };
 }

@@ -11,6 +11,7 @@ from fastapi.responses import JSONResponse
 
 from .api import router
 from .catalog.attributes.routes import router as attributes_router
+from .catalog_updates.routes import router as catalog_updates_router
 from .configuration.catalog.routes import router as configuration_catalog_router
 from .configuration.definitions.routes import router as definitions_router
 from .configuration.extraction.provider import ModelClient
@@ -97,6 +98,7 @@ def create_app(
     application.include_router(attributes_router)
     application.include_router(topology_router)
     application.include_router(configuration_catalog_router)
+    application.include_router(catalog_updates_router)
     application.include_router(knowledge_router)
     application.include_router(definitions_router)
     application.include_router(extraction_router)

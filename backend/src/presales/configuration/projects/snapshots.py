@@ -66,6 +66,8 @@ class SnapshotResolver:
         if any(snapshot.get(k) != v for k, v in record.payload.items()):
             raise ValueError("快照内容与历史版本不一致，请重新选择产品或重新检查")
         if kind == "variant":
+            if snapshot.get("included_items", []) != record.payload.get("included_items", []):
+                raise ValueError("已含内容与历史配置版本不一致，请重新核对资料")
             product = snapshot.get("product")
             if not product or product.get("id") != record.payload["product_id"]:
                 raise ValueError("配置快照缺少匹配的产品版本")

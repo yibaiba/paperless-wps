@@ -44,9 +44,11 @@ export function useSheetEditing(context: SheetContext) {
       assertPreviewVersion(started, { draft: live.current.draftVersion, project: live.current.saved.revision,
         generation: generation.current }, result.draft_version);
       if (apply) initial.onChecked(result.checked); else { previewOrigin.current = started; setPreview(result); }
+      return true;
     } catch (cause) {
       const text = cause instanceof Error ? cause.message : String(cause);
       if (alive.current) { setError(text); void message.error(text); }
+      return false;
     } finally { inFlight.current = false; if (alive.current) setBusy(false); }
   };
   const edit = (edits: CellEdit[], batch: boolean) => {

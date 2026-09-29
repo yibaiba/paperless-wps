@@ -3,6 +3,7 @@ import { Alert, Button, Card, Descriptions, InputNumber, Switch, Tag, Select, Sp
 import type { ApplyChoice, Configuration, Suggestion, Variant } from "./types";
 import { Status, sourceOptions, variantOptions } from "./shared";
 import { NewSupplyDialog } from "./projects/NewSupplyDialog";
+import { IncludedContentPanel } from "./projects/IncludedContentPanel";
 import { QuantityEvidence } from "./projects/QuantityEvidence";
 
 interface Props {
@@ -12,6 +13,7 @@ interface Props {
   busy: boolean;
   stale: boolean;
   onApply: (suggestion: Suggestion, choice: ApplyChoice) => void;
+  onIncludedChange?: (configuration: Configuration) => void;
   onChoice?: (demandId: string, selected: boolean) => void;
 }
 
@@ -26,7 +28,7 @@ export function AccessorySuggestionCard(props: Props) {
   const candidates = variants?.filter((item) =>
     suggestion.rule.target_variant_ids.includes(item.id),
   );
-  const chosenId = variantId ?? (candidates?.length === 1 ? candidates[0].id : undefined);
+  const chosenId = variantId;
   const variant = candidates?.find((item) => item.id === chosenId);
   const chosenSource =
     sourceId ?? (variant?.source_ids.length === 1 ? variant.source_ids[0] : undefined);
@@ -95,6 +97,7 @@ export function AccessorySuggestionCard(props: Props) {
             .join("、")}
         </Typography.Paragraph>
       ) : null}
+      <IncludedContentPanel configuration={configuration} suggestion={suggestion} disabled={busy || stale} onChange={props.onIncludedChange} />
       {hasMissing ? (
         <Space wrap align="end">
           <Select

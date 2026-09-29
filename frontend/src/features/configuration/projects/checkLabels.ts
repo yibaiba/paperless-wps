@@ -8,6 +8,7 @@ export const checkLabels: Record<string, string> = {
   sharing: "共用部署",
   capacity: "资源容量",
   resource_policy: "容量检查口径",
+  included_allocation: "已含内容抵扣",
   accessory_allocation: "配套分配",
   coverage: "系统知识范围",
   supply: "供货核算",

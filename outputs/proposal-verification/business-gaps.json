@@ -1,0 +1,53 @@
+{
+  "knowledge-packages": {
+    "total": 4,
+    "statuses": {
+      "draft": 4
+    }
+  },
+  "packages": [
+    {
+      "id": "28b513aa-c06b-448d-aedd-afc5090f0733",
+      "name": "会议预约与信息发布系统 · 试点资料核对",
+      "status": "draft",
+      "roles": 4,
+      "recommendations": 0
+    },
+    {
+      "id": "3febf40b-da31-508a-bd92-8cf88819f972",
+      "name": "分布式无纸化会务系统2.0 · 历史报价资料核对",
+      "status": "draft",
+      "roles": 28,
+      "recommendations": 0
+    },
+    {
+      "id": "7f012387-66e6-5534-b832-261dcca5abf1",
+      "name": "安全无纸化V3.0 · 历史报价资料核对",
+      "status": "draft",
+      "roles": 13,
+      "recommendations": 0
+    },
+    {
+      "id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+      "name": "红盾无纸化会议系统 · Windows · 试点资料核对",
+      "status": "draft",
+      "roles": 10,
+      "recommendations": 0
+    }
+  ],
+  "definitions": {
+    "total": 4,
+    "statuses": {
+      "draft": 4
+    }
+  },
+  "knowledge": {
+    "total": 209,
+    "statuses": {
+      "confirmed": 115,
+      "draft": 92,
+      "disabled": 2
+    }
+  },
+  "confirmed_sharing": 0
+}

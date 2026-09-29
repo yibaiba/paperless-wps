@@ -1,6 +1,7 @@
 import { Alert, Form, Input, Select, Space, Typography } from "antd";
 import type { Knowledge, Variant } from "../types";
-import { SystemTypeInput } from "../SystemTypeInput";
+import { QuickIdentity } from "./QuickIdentity";
+import { SharedRoleSelect } from "./SharedRoleSelect";
 import { required, variantOptions } from "../shared";
 
 export function KnowledgeRelationStep({
@@ -10,8 +11,8 @@ export function KnowledgeRelationStep({
   kind?: Knowledge["kind"];
   variants?: Variant[];
 }) {
-  const form = Form.useFormInstance();
-  const status = Form.useWatch("status", form) as Knowledge["status"];
+
+
   return (
     <>
       <Typography.Title level={5}>这条知识要表达什么？</Typography.Title>
@@ -39,7 +40,7 @@ export function KnowledgeRelationStep({
       </Form.Item>
       {kind === "suitability" ? <SuitabilityFields /> : null}
       {kind === "accessory" ? (
-        <AccessoryFields variants={variants} confirmed={status === "confirmed"} />
+        <AccessoryFields variants={variants} />
       ) : null}
       {kind === "sharing" ? <SharingFields /> : null}
     </>
@@ -49,12 +50,7 @@ export function KnowledgeRelationStep({
 function SuitabilityFields() {
   return (
     <Space wrap align="start" size="middle">
-      <Form.Item name="system" label="用于哪个系统 / 方案版本" rules={required}>
-        <SystemTypeInput />
-      </Form.Item>
-      <Form.Item name="role" label="承担什么角色" rules={required}>
-        <Input placeholder="例如：服务端软件、会议终端、服务器" />
-      </Form.Item>
+      <QuickIdentity />
       <Form.Item name="effect" label="结论">
         <Select
           style={{ width: 220 }}
@@ -70,10 +66,8 @@ function SuitabilityFields() {
 
 function AccessoryFields({
   variants,
-  confirmed,
 }: {
   variants?: Variant[];
-  confirmed: boolean;
 }) {
   return (
     <>
@@ -95,12 +89,8 @@ function AccessoryFields({
       <Form.Item
         name="target_variant_ids"
         label="可以选择哪些具体配套产品"
-        extra="暂时不知道型号时可以留空并保存为草稿。"
-        rules={
-          confirmed
-            ? [{ type: "array", min: 1, message: "已确认知识必须选择配套产品" }]
-            : []
-        }
+        extra="暂时不知道型号时可以留空；即使关系已确认，也需补齐候选和数量依据后才能应用。"
+
       >
         <Select
           mode="multiple"
@@ -124,10 +114,10 @@ function SharingFields() {
         description="产品分别适用于两个系统，不代表它们可以共用同一台设备。"
         style={{ marginBottom: 16 }}
       />
+      <Form.Item name="shared_role_refs" label="共同使用的系统与角色"><SharedRoleSelect /></Form.Item>
       <Form.Item
         name="shared_roles"
-        label="允许共同使用这台设备的系统 / 角色"
-        rules={[{ type: "array", min: 2, message: "至少填写两个系统 / 角色" }]}
+        label="历史文字关联（未映射时保留）"
       >
         <Select
           mode="tags"

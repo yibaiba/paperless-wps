@@ -108,7 +108,10 @@ def incomplete_demand(rule, scope_id, entries, missing):
 def with_selection(data, demand):
     choices = {c["demand_id"]: c for c in data.get("accessory_choices", [])}
     required = demand["rule"].get("accessory_type", "required") == "required"
-    allocated = any(a["demand_id"] == demand["id"] for a in data["accessory_allocations"])
+    allocated = any(
+        a["demand_id"] == demand["id"]
+        for a in [*data["accessory_allocations"], *data.get("included_allocations", [])]
+    )
     choice = choices.get(demand["id"])
     selected = required or (choice["selected"] if choice else allocated)
     return dict(

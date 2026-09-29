@@ -6,12 +6,16 @@ import { AttributeEditor, cleanAttributes, required, units, useAttributeDefiniti
 
 import { useDefinitions } from "../../knowledge/useDefinitions";
 
+import { selectedDefinition } from "../definitionSelection";
+
 export function RequirementForm({
   initial,
   systemId,
   systemName,
   definitionId,
   definitionSnapshotId,
+  knowledgePackageId,
+  requestedRole,
   onApply,
   onClose,
 }: {
@@ -20,12 +24,14 @@ export function RequirementForm({
   systemName: string;
   definitionId?: string;
   definitionSnapshotId?: string | null;
+  knowledgePackageId?: string;
+  requestedRole?: { id: string; name: string };
   onApply: (requirement: Requirement) => void;
   onClose: () => void;
 }) {
   const [form] = Form.useForm();
   const definitions = useDefinitions(definitionSnapshotId);
-  const definition = definitions.data?.definitions.find((d) => d.id === definitionId);
+  const definition = selectedDefinition({ definition_id: definitionId, knowledge_package_id: knowledgePackageId }, definitions.data);
   return (
     <Modal
       open
@@ -37,7 +43,7 @@ export function RequirementForm({
       <Form
         form={form}
         layout="vertical"
-        initialValues={initial ?? { role: "服务端", environment: [], resources: [] }}
+        initialValues={initial ?? { role: requestedRole?.name ?? "服务端", role_id: requestedRole?.id, environment: [], resources: [] }}
         onFinish={(values) => {
           onApply({
             ...initial,

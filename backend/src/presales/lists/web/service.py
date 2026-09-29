@@ -122,6 +122,9 @@ class WebDrafts:
 
     def _edit(self, request):
         record = self.lists.locked(request)
+        from presales.configuration.projects.planning.application import validate_proposal_batch
+
+        validate_proposal_batch(self.repository, record, request.operations)
         before = record.payload["configuration"]
         previous = record.payload["checked"]
         catalog_id = edit_catalog_snapshot(self.session, record.payload, request.operations)
@@ -152,6 +155,9 @@ class WebDrafts:
         record = self.entities.get(identity, kind="list_draft")
         if record.revision != request.expected_revision:
             raise RuleConflict("VERSION_CONFLICT：草稿已变化，请重新预览")
+        from presales.configuration.projects.planning.application import validate_proposal_batch
+
+        validate_proposal_batch(self.repository, record, request.operations)
         self.repository.catalog = DraftCatalog(
             self.session, edit_catalog_snapshot(self.session, record.payload, request.operations)
         )

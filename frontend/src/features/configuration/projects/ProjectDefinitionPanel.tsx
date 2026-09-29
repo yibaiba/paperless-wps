@@ -1,6 +1,8 @@
-import { Alert, Card, Select, Space, Typography } from "antd";
+import { Alert, Card, Select, Space, Tag, Typography } from "antd";
 import type { Configuration } from "../types";
 import { useDefinitions } from "../knowledge/useDefinitions";
+
+import { selectedDefinition, requiredRoleLabel } from "./definitionSelection";
 
 export function ProjectDefinitionPanel({ configuration, onApply }: { configuration: Configuration; onApply: (next: Configuration) => void }) {
   const definitions = useDefinitions(configuration.definition_snapshot_id);
@@ -8,7 +10,7 @@ export function ProjectDefinitionPanel({ configuration, onApply }: { configurati
     <Alert showIcon type="info" title="关联系统定义与知识包" description="选择具体定义后，必要角色与知识覆盖才有核对依据。历史项目的映射由你明确选择。" />
     {definitions.error ? <Alert type="error" title={definitions.error.message} /> : null}
     {configuration.systems.map((system) => {
-      const definition = definitions.data?.definitions.find((d) => d.id === system.definition_id);
+      const definition = selectedDefinition(system, definitions.data);
       return <Card key={system.id} title={system.name} size="small">
         <Space orientation="vertical" style={{ width: "100%" }}>
           <Typography.Text>系统版本定义</Typography.Text>
@@ -22,6 +24,10 @@ export function ProjectDefinitionPanel({ configuration, onApply }: { configurati
           <Select style={{ width: "100%" }} allowClear value={system.knowledge_package_id || undefined} placeholder="选择固定修订"
             options={definitions.data?.packages.filter((p) => p.system_definition_id === system.definition_id).map((p) => ({ value: p.id, label: `${p.name} · ${p.branch} · v${p.revision}` }))}
             onChange={(id) => onApply({ ...configuration, definition_snapshot_id: null, systems: configuration.systems.map((s) => s.id === system.id ? { ...s, knowledge_package_id: id ?? "" } : s) })} />
+          {definition ? <>
+            <Typography.Text type="secondary">当前采用：{definition.name} · v{definition.revision}{system.knowledge_package_id ? "（知识包固定修订）" : ""}</Typography.Text>
+            <Space wrap>{definition.roles.map(role => <Tag key={role.id}>{role.name} · {requiredRoleLabel(role, definition.status)}</Tag>)}</Space>
+          </> : null}
           <Typography.Text>本次选择的功能</Typography.Text>
           <Select mode="multiple" style={{ width: "100%" }} value={system.features ?? []}
             options={[...new Set(definition?.roles.map((r) => r.feature).filter(Boolean))].map((f) => ({ value: f, label: f }))}

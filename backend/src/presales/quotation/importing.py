@@ -7,6 +7,8 @@ from zipfile import BadZipFile
 from openpyxl import load_workbook
 from openpyxl.utils.exceptions import InvalidFileException
 
+from .merged_cells import workbook_merges
+
 
 def workbook_cells(content):
     try:
@@ -14,8 +16,13 @@ def workbook_cells(content):
     except (BadZipFile, InvalidFileException, OSError, ValueError) as error:
         raise ValueError("无法读取 XLSX 工作簿，请检查文件格式或是否加密") from error
     try:
+        merges = workbook_merges(content)
         return dict(
-            sheets=[dict(name=sheet.title, rows=sheet_rows(sheet)) for sheet in workbook.worksheets]
+            sheets=[
+                dict(name=sheet.title, rows=sheet_rows(sheet))
+                | ({"merges": merges[sheet.title]} if merges[sheet.title] else {})
+                for sheet in workbook.worksheets
+            ]
         )
     finally:
         workbook.close()
