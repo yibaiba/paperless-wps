@@ -6,6 +6,7 @@ import type { Checked, Configuration, ProjectConfiguration } from '../../types';
 import type { EditPreview } from '../../quotation/sheet/useSheetEditing';
 import type { EditOperation } from '../../quotation/sheet/model';
 import { type Operation, configurationOperations } from './operations';
+import { createSaveTransaction } from './saveTransaction';
 import { mergeDelta, post, writeRequest, type Delta, type Workspace } from './transport';
 
 const key = (config: Configuration) => JSON.stringify(config);
@@ -30,7 +31,16 @@ export function usePersistentDraft(options: Options) {
   const creationId = useRef(crypto.randomUUID());
   const currentKey = key(options.configuration);
   const unsynced = currentKey !== synced.current;
+  const saveTransaction = useRef<ReturnType<typeof createSaveTransaction> | undefined>(undefined);
+  saveTransaction.current ??= createSaveTransaction({
+    post, newId: () => crypto.randomUUID(),
+    isRejected: (cause) => cause instanceof ApiError && (cause.status === 409 || cause.status === 422),
+    readWorkspace: (id) => api<Workspace>('/work-drafts/' + id),
+    readProject: () => api<ProjectConfiguration>('/configuration/projects/' + live.current.projectId),
+    acceptWorkspace: (workspace) => { remote.current = workspace; },
+  });
   const ensure = async () => {
+    await saveTransaction.current!.settle();
     if (remote.current) return remote.current;
     const current = live.current;
     creating.current ??= post<Workspace>('/work-drafts', { project_id: current.projectId,
@@ -103,24 +113,10 @@ export function usePersistentDraft(options: Options) {
     const result = await post<Delta & { draft_version: number }>(`/work-drafts/${workspace.id}/preview`, { expected_revision: workspace.revision, draft_version: version, operations });
     return { draft_version: result.draft_version, checked: mergeDelta(workspace, { ...result, revision: workspace.revision }).checked, changes: [] } as EditPreview;
   };
-  const savePending = useRef<(() => Promise<ProjectConfiguration>) | undefined>(undefined);
   const save = async () => {
     if (running.current || pending.current || key(live.current.configuration) !== synced.current) throw new Error('草稿尚未同步，请先重试同步。');
     const workspace = await ensure();
-    if (!savePending.current) {
-      const checkRequest = { draft_id: workspace.id, expected_revision: workspace.revision, operation_id: crypto.randomUUID() };
-      const saveId = crypto.randomUUID();
-      savePending.current = async () => {
-        const checked = await post<{ revision: number; check_fingerprint: string }>('/list-tools/list_check', checkRequest);
-        await post('/list-tools/list_save', { draft_id: workspace.id, expected_revision: checked.revision,
-          operation_id: saveId, expected_project_revision: workspace.base_revision, fingerprint: checked.check_fingerprint });
-        remote.current = await api<Workspace>('/work-drafts/' + workspace.id);
-        return api<ProjectConfiguration>('/configuration/projects/' + live.current.projectId);
-      };
-    }
-    const result = await savePending.current();
-    savePending.current = undefined;
-    return result;
+    return saveTransaction.current!.save(workspace);
   };
   const readyWorkspace = async () => {
     if (running.current || pending.current || key(live.current.configuration) !== synced.current) throw new Error('草稿尚未同步，请完成同步后生成方案。');

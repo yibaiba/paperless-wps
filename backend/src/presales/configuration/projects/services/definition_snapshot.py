@@ -30,9 +30,11 @@ def resolve_definitions(session, data, *, refresh=False):
 
 
 def project_knowledge(data, definitions):
-    rules = {item["id"]: item for item in data["knowledge_snapshot"]}
     packages = {item["id"]: item for item in definitions["packages"]}
-    pinned = {}
+    selected = {system.get("knowledge_package_id") or None for system in data["systems"]}
+    if not selected or selected == {None}:
+        return data["knowledge_snapshot"]
+    scoped, pinned = {}, {}
     for system in data["systems"]:
         identity = system.get("knowledge_package_id")
         if not identity:
@@ -41,10 +43,21 @@ def project_knowledge(data, definitions):
         if not package or package["system_definition_id"] != system.get("definition_id"):
             raise ValueError("项目知识包不存在、未发布或不属于所选系统")
         for rule in package["rules"]:
-            if rule["id"] in pinned and pinned[rule["id"]]["revision"] != rule["revision"]:
+            if rule["id"] in pinned and pinned[rule["id"]] != rule["revision"]:
                 raise ValueError("所选知识包引用同一关系的不同修订，请明确统一版本")
-            pinned[rule["id"]] = rule
-    return list((rules | pinned).values())
+            pinned[rule["id"]] = rule["revision"]
+            add_membership(scoped, rule, identity)
+    if None in selected:
+        for rule in data["knowledge_snapshot"]:
+            add_membership(scoped, rule, None)
+    return list(scoped.values())
+
+
+def add_membership(scoped, rule, package_id):
+    key = (rule["id"], rule["revision"])
+    entry = scoped.setdefault(key, dict(rule, _knowledge_packages=[]))
+    if package_id not in entry["_knowledge_packages"]:
+        entry["_knowledge_packages"].append(package_id)
 
 
 def definition_version_changes(session, data):

@@ -136,20 +136,7 @@ def revise_variant(session, *, variant, decision):
         else:
             if incoming["product_id"] != variant["product_id"]:
                 raise ValueError("修正原配置不能更换产品身份，请新增配置")
-            impact = affected(session, variant)
             fields.update(incoming)
-            fields["review_requirements"] = impact["rules"] or [
-                dict(id="configuration_changed", name="参数变更待复核")
-            ]
-            Entities(session).save(
-                "catalog_impact",
-                dict(
-                    **impact,
-                    actor=decision.actor,
-                    evidence=decision.evidence,
-                    changed_revision=variant["revision"] + 1,
-                ),
-            )
     fields.update(actor=decision.actor, evidence=decision.evidence)
     return CatalogService(session).save_variant(
         VariantInput.model_validate(fields),

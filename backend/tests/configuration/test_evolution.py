@@ -126,13 +126,16 @@ def test_no_coverage_and_empty_system_are_not_ready(client, config):
 
 def test_optional_unselected_unknown_quantity_is_only_advice(client, catalog, config):
     data = ready_project(client, catalog, config)
-    modern_rule(
+    rule = modern_rule(
         client,
         catalog["variants"][0],
         kind="accessory",
         accessory_type="optional",
         target_variant_ids=[catalog["variants"][1]["id"]],
     )
+    from .package_helpers import publish_members
+
+    publish_members(client, data["systems"], [rule])
     result = post(client, "/check", dict(configuration=data))
     assert result["suggestions"][0]["status"] == "unknown"
     assert result["suggestions"][0]["selected"] is False

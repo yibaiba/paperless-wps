@@ -1,8 +1,9 @@
 from copy import deepcopy
 from decimal import Decimal
+from itertools import chain
 
 from ..schemas import Configuration
-from .accessory_choices import locked_accessory, new_accessory, reusable_accessory
+from .accessory_choices import locked_accessory, new_accessory, reusable_accessory_options
 from .context import ordered_candidates
 from .cycles import dependency_cycle
 from .devices import bind_role, stable_id
@@ -40,8 +41,9 @@ def accessory_branches(context, data, *, tasks, processed=frozenset(), path=()):
             context, included, tasks=tasks, processed=processed, path=path
         )
         return
-    options = list(accessory_options(context, data, demand=demand, checked=checked, tasks=tasks))
-    if not options:
+    options = accessory_options(context, data, demand=demand, checked=checked, tasks=tasks)
+    first = next(options, None)
+    if first is None:
         gap = question(
             "accessory_candidate_missing",
             demand["id"],
@@ -53,7 +55,7 @@ def accessory_branches(context, data, *, tasks, processed=frozenset(), path=()):
         ):
             yield result, [gap, *gaps], decisions
         return
-    for option, gaps, decision in options:
+    for option, gaps, decision in chain([first], options):
         cycle = dependency_cycle(option, demand, decision.get("device_id"), checked["suggestions"])
         if cycle:
             gap = question(
@@ -109,7 +111,7 @@ def accessory_options(context, data, *, demand, checked, tasks):
             )
     for choice in choices:
         variant = choice["variant"]
-        reused = reusable_accessory(
+        yield from reusable_accessory_options(
             context,
             data,
             variant=variant,
@@ -119,8 +121,6 @@ def accessory_options(context, data, *, demand, checked, tasks):
             gaps=[gap] if gap else [],
             ranking=ranking,
         )
-        if reused:
-            yield reused
         yield new_accessory(
             context,
             data,

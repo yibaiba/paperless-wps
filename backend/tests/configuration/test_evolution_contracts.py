@@ -38,13 +38,16 @@ def test_device_ids_are_project_scoped_and_legacy_paths_still_work(client, catal
 
 def test_none_coverage_cannot_override_mandatory_accessory(client, catalog, config):
     data = ready_project(client, catalog, config)
-    knowledge(
+    rule = knowledge(
         client,
         catalog["variants"][0],
         schema_version=2,
         kind="accessory",
         target_variant_ids=[catalog["variants"][1]["id"]],
     )
+    from .package_helpers import publish_members
+
+    publish_members(client, data["systems"], [rule])
     checked = post(client, "/check", dict(configuration=data))
     assert any(c["kind"] == "coverage" and c["status"] == "conflict" for c in checked["checks"])
 

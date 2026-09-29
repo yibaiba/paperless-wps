@@ -127,3 +127,15 @@ def available(data, device, demand, demands):
         Decimal(0),
     )
     return max(Decimal(device["quantity"]) - used, Decimal(0))
+
+
+def shareable_generated_device(data, device):
+    return (
+        bool(device.get("generated_origin"))
+        and device["kind"] == "hardware"
+        and Decimal(device["quantity"]) == 1
+        and not any(
+            a["device_id"] == device["id"] and a["source"] == "existing"
+            for a in data["supply_allocations"]
+        )
+    )

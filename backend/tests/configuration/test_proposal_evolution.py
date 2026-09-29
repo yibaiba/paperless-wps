@@ -148,7 +148,7 @@ def test_independent_and_shared_without_and_with_evidence(client, catalog):
         dict(system_definition_id=s["definition_id"], role_id="terminal")
         for s in checked["configuration"]["systems"]
     ]
-    post(
+    rule = post(
         client,
         "/knowledge",
         dict(
@@ -160,6 +160,9 @@ def test_independent_and_shared_without_and_with_evidence(client, catalog):
             **AUTHOR,
         ),
     )
+    from .package_helpers import publish_members
+
+    publish_members(client, checked["configuration"]["systems"], [rule])
     upgraded = call(
         client,
         "list_check",

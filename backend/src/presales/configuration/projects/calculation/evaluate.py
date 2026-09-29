@@ -128,6 +128,7 @@ def compatibility(data, *, systems, variants, definitions):
             requirement=dict(
                 requirement,
                 system=system["kind"],
+                knowledge_package_id=system.get("knowledge_package_id"),
                 system_definition_id=system.get("definition_id", ""),
                 capability_ids=role_capabilities(role_context, definitions),
             ),
@@ -240,6 +241,7 @@ def sharing(data, device, consumers, *, variant):
         dict(
             c,
             system_definition_id=systems[c["system_id"]].get("definition_id"),
+            knowledge_package_id=systems[c["system_id"]].get("knowledge_package_id"),
             role_id=requirements[c["requirement_id"]].get("role_id"),
         )
         for c in consumers

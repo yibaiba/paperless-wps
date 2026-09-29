@@ -90,9 +90,15 @@ class CatalogService:
         self.validate_variant_ids(targets)
         if identity in targets:
             raise ValueError("配置不能包含自身")
-        for identity in data.capability_ids:
-            self.entities.get(identity, kind="capability")
+        for capability_id in data.capability_ids:
+            self.entities.get(capability_id, kind="capability")
         self.entities.get(data.product_id, kind="product")
+        if identity:
+            from .review import with_revision_review
+
+            data = with_revision_review(
+                self.session, previous=self.variants(ids=[identity])[0], incoming=data
+            )
         return self.entities.save("variant", data, **options)
 
     def link(self, data):

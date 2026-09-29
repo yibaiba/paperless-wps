@@ -2,7 +2,7 @@
 
 from decimal import Decimal
 
-from .devices import allocation, available, device_for, put_device
+from .devices import allocation, available, device_for, put_device, shareable_generated_device
 from .questions import question
 
 
@@ -91,20 +91,18 @@ def new_accessory(context, data, *, variant, demand, needed, gaps, ranking):
     )
 
 
-def reusable_accessory(context, data, *, variant, demand, demands, allowed, gaps, ranking):
+def reusable_accessory(
+    context, data, *, variant, demand, demands, allowed, gaps, ranking, batches=None
+):
     remaining = Decimal(demand["missing"])
     result = data
     used = []
-    for existing in data["devices"]:
-        if existing["variant_id"] != variant["id"]:
-            continue
-        shared = (
-            context.deployment == "shared"
-            and demand["rule"]["allocation_mode"] == "shareable"
-            and Decimal(existing["quantity"]) == 1
-        )
-        if existing["id"] not in allowed and not shared:
-            continue
+    candidates = (
+        batches
+        if batches is not None
+        else reusable_batches(context, data, variant=variant, demand=demand, allowed=allowed)
+    )
+    for existing in candidates:
         amount = min(remaining, available(result, existing, demand, demands))
         if amount <= 0:
             continue
@@ -137,3 +135,44 @@ def reusable_accessory(context, data, *, variant, demand, demands, allowed, gaps
             evidence=demand["explanation"],
         ),
     )
+
+
+def reusable_batches(context, data, *, variant, demand, allowed):
+    own_key = "accessory:" + demand["id"]
+    return [
+        device
+        for device in data["devices"]
+        if device["variant_id"] == variant["id"]
+        and (device.get("generated_origin") or {}).get("key") != own_key
+        and (
+            device["id"] in allowed
+            or (
+                context.deployment == "shared"
+                and demand["rule"]["allocation_mode"] == "shareable"
+                and shareable_generated_device(data, device)
+            )
+        )
+    ]
+
+
+def reusable_accessory_options(context, data, **options):
+    batches = reusable_batches(
+        context, data, **{key: options[key] for key in ("variant", "demand", "allowed")}
+    )
+    needed = Decimal(options["demand"]["missing"])
+    capacities = [available(data, d, options["demand"], options["demands"]) for d in batches]
+
+    def selections(start, remaining, chosen):
+        if remaining <= 0:
+            yield chosen
+            return
+        for index in range(start, len(batches)):
+            if capacities[index] > 0:
+                yield from selections(
+                    index + 1, remaining - capacities[index], [*chosen, batches[index]]
+                )
+        if chosen:
+            yield chosen
+
+    for selected in selections(0, needed, []):
+        yield reusable_accessory(context, data, **options, batches=selected)

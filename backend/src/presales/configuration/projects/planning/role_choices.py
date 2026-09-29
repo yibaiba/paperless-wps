@@ -3,7 +3,7 @@
 from decimal import Decimal
 
 from ..role_allocations import device_ids
-from .devices import bind_role, device_for, put_device
+from .devices import bind_role, device_for, put_device, shareable_generated_device
 from .questions import question
 
 
@@ -40,10 +40,8 @@ def reusable_batches(context, data, *, requirement, quantity, variant):
             continue
         shared = (
             context.deployment == "shared"
-            and origin
-            and device["kind"] == "hardware"
             and quantity == 1
-            and Decimal(device["quantity"]) == 1
+            and shareable_generated_device(data, device)
         )
         if device["id"] in allowed or shared:
             result.append(device)

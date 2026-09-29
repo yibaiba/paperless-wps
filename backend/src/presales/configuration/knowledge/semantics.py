@@ -3,6 +3,7 @@
 from collections import defaultdict
 
 from .evaluator import check_condition, context_for, environment_checks, scope_matches
+from .package_scope import package_allows
 
 
 def condition_result(conditions, context):
@@ -61,6 +62,8 @@ def evaluate_rules_v3(rules, context):
 
 
 def role_matches(rule, requirement):
+    if not package_allows(rule, requirement.get("knowledge_package_id")):
+        return False
     for identity, label in (("system_definition_id", "system"), ("role_id", "role")):
         if rule.get(identity):
             if rule[identity] != requirement.get(identity):
@@ -71,6 +74,8 @@ def role_matches(rule, requirement):
 
 
 def shared_roles_match(rule, uses):
+    if not all(package_allows(rule, use.get("knowledge_package_id")) for use in uses):
+        return False
     if rule.get("shared_role_refs"):
         roles = {(u.get("system_definition_id"), u.get("role_id")) for u in uses}
         return roles <= {

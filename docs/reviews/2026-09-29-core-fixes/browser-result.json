@@ -1,0 +1,15 @@
+{
+  "revision": 6,
+  "devices": [
+    {
+      "id": "existing-0",
+      "quantity": "16",
+      "note": ""
+    },
+    {
+      "id": "14134379-9412-50d3-bfe4-563d7542ca36",
+      "quantity": "16",
+      "note": "最终构建 · 保存失败后继续编辑 C"
+    }
+  ]
+}

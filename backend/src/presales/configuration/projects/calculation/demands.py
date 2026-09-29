@@ -4,6 +4,7 @@ from decimal import Decimal
 from presales.rules.calculation import digest
 
 from ...knowledge.evaluator import context_for, scope_matches
+from ...knowledge.package_scope import package_allows
 from ...knowledge.semantics import condition_result, evaluate_rules_v3, scope_is_reviewed
 from ..accessory_demands import (
     calculated_demand,
@@ -23,7 +24,7 @@ def accessory_demands_v3(data, *, variants, catalog_variants, engine):
     ]
     owners = direct_owners(data)
     # Only fixed project configurations participate; later catalogue edits cannot alter history.
-    cycles = cyclic_rule_ids(rules, variants.values())
+    cycles = scoped_cycles(data, rules, variants.values())
     while True:
         demands = collect_demands(
             data, rules=rules, owners=owners, variants=variants, engine=engine, cycles=cycles
@@ -64,7 +65,12 @@ def collect_demands(data, *, rules, owners, variants, engine, cycles):
                 demand = incomplete_demand(rule, scope_id, entries, missing)
             else:
                 demand = calculated_demand(
-                    data, rule, scope_id, entries, engine, rule["id"] in cycles
+                    data,
+                    rule,
+                    scope_id,
+                    entries,
+                    engine,
+                    demand_has_cycle(data, rule, entries, cycles=cycles),
                 )
             demand["quantity_inputs"] = [input_evidence(rule, entry) for entry in entries]
             results.append(with_selection(data, demand))
@@ -145,7 +151,11 @@ def contributions(data, *, rule, owners, variants):
             if activation == "fail":
                 continue
             scope_id = scope_identity(rule, device, requirement, systems)
-            evaluation = evaluate_rules_v3([rule, *denial_rules(data, rule, variant)], context)
+            package_id = systems.get(requirement.get("system_id"), {}).get("knowledge_package_id")
+            denials = [
+                r for r in denial_rules(data, rule, variant) if package_allows(r, package_id)
+            ]
+            evaluation = evaluate_rules_v3([rule, *denials], context)
             if not scope_id:
                 scope_id = "unknown:" + device["id"]
                 evaluation = dict(evaluation, status="unknown")
@@ -206,10 +216,12 @@ def input_evidence(rule, entry):
 
 def applicable_roles(served, rule, systems):
     if not served:
-        return [{}]
+        return [{}] if package_allows(rule, None) else []
     result = []
     for requirement in served:
         system = systems[requirement["system_id"]]
+        if not package_allows(rule, system.get("knowledge_package_id")):
+            continue
         if rule.get("system_definition_id"):
             if rule["system_definition_id"] != system.get("definition_id"):
                 continue
@@ -249,3 +261,20 @@ def contribution_key(rule, scope_id, device, requirement):
     ):
         return (scope_id, device["id"], requirement["id"])
     return (scope_id, device["id"])
+
+
+def scoped_cycles(data, rules, variants):
+    packages = {s.get("knowledge_package_id") for s in data["systems"]} | {None}
+    return {
+        package: cyclic_rule_ids([r for r in rules if package_allows(r, package)], variants)
+        for package in packages
+    }
+
+
+def demand_has_cycle(data, rule, entries, *, cycles):
+    systems = {s["id"]: s for s in data["systems"]}
+    return any(
+        rule["id"]
+        in cycles[systems.get(e["requirement"].get("system_id"), {}).get("knowledge_package_id")]
+        for e in entries
+    )

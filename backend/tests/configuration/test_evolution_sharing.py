@@ -181,7 +181,12 @@ def test_shared_separate_existing_over_capacity_delete(client, catalog):
     allocate(shared, initial["suggestions"], ["shared", "shared"])
     unknown = post(client, "/check", dict(configuration=shared))
     assert next(c for c in unknown["checks"] if c["kind"] == "sharing")["status"] == "unknown"
-    modern_rule(client, catalog["variants"][1], kind="sharing", shared_role_refs=refs)
+    rule = modern_rule(client, catalog["variants"][1], kind="sharing", shared_role_refs=refs)
+    outside = post(client, "/check", dict(configuration=shared, refresh_knowledge=True))
+    assert next(c for c in outside["checks"] if c["kind"] == "sharing")["status"] == "unknown"
+    from .package_helpers import publish_members
+
+    publish_members(client, shared["systems"], [rule])
     passed = post(client, "/check", dict(configuration=shared, refresh_knowledge=True))
     assert passed["readiness"]["ready_for_confirmation"]
     assert (

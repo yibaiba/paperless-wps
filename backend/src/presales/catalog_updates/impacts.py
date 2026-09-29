@@ -1,5 +1,6 @@
 from presales.configuration.common import Entities
 from presales.configuration.knowledge.evaluator import scope_matches
+from presales.configuration.knowledge.package_scope import package_allows
 
 
 def affected(session, variant):
@@ -49,7 +50,7 @@ def pending_reviews(variant, knowledge, *, uses=None):
         ]
         if not applicable:
             return True
-        return any(
+        return all(
             r["id"] == review["id"]
             and r["revision"] > review["revision"]
             and variant["id"] in r.get("reviewed_variant_ids", [])
@@ -68,7 +69,8 @@ def relevant_rule(rule, uses):
         consumers = {u.get("requirement_id", index) for index, u in enumerate(uses)}
         return len(consumers) > 1 and shared_roles_match(rule, uses)
     return any(
-        all(
+        package_allows(rule, use.get("knowledge_package_id"))
+        and all(
             rule.get(identity) == use.get(identity)
             if rule.get(identity)
             else not rule.get(label) or rule[label] == use.get(label)
@@ -88,6 +90,7 @@ def usage_contexts(checked):
                 consumer,
                 role_id=requirements[consumer["requirement_id"]].get("role_id"),
                 system_definition_id=systems[consumer["system_id"]].get("definition_id"),
+                knowledge_package_id=systems[consumer["system_id"]].get("knowledge_package_id"),
             )
             for consumer in usage["consumers"]
         ]
