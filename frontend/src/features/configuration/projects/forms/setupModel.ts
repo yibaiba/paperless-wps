@@ -2,7 +2,7 @@ import type { Attribute, Configuration, System } from '../../types';
 export type SetupInput = { key: string; label: string; kind: Attribute['kind']; unit: string; scope: 'system' | 'role'; purpose: 'project_input' | 'product_requirement'; evidence: unknown[] };
 export type SetupRole = { id: string; name: string; active: boolean; necessary: boolean; feature: string; inputs: SetupInput[] };
 export type SetupDescription = { definition_id: string; definition_revision: number; definition_status: string; name: string; package_revision?: number; roles: SetupRole[]; features: string[]; notice: string; readiness?: { roles: { id: string; name: string; missing: string[] }[]; rules: { id: string; name: string; missing: string[] }[] } | null };
-export type SetupValues = { name: string; definition_id: string; knowledge_package_id?: string; room_mode: "new" | "existing"; room_id: string; room_name: string; features?: string[]; role_ids?: string[]; inputs?: Record<string, Attribute["value"]>; actor?: string; evidence?: string };
+export type SetupValues = { name: string; definition_id: string; knowledge_package_id?: string; room_mode: "new" | "existing"; room_id: string; room_name: string; features?: string[]; features_confirmed?: boolean; role_ids?: string[]; inputs?: Record<string, Attribute["value"]>; actor?: string; evidence?: string };
 export type SetupField = SetupInput & { roleId?: string; formKey: string };
 export function previousParameter(field: SetupField, configuration: Configuration, systemId?: string) {
   const values = field.scope === 'system' ? configuration.systems.find(s => s.id === systemId)?.inputs : configuration.requirements.find(r => r.system_id === systemId && r.role_id === field.roleId)?.environment;
@@ -44,5 +44,5 @@ export function setupPayload(options: { configuration: Configuration; systemId: 
       environments[field.roleId!] = [...existing.filter(a => a.key !== field.key), parameter];
     }
   }
-  return { system, new_room: newRoom ?? null, role_ids: values.role_ids ?? [], role_environment: environments };
+  return { system, features_confirmed: values.features_confirmed ?? false, new_room: newRoom ?? null, role_ids: values.role_ids ?? [], role_environment: environments };
 }

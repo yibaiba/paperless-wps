@@ -29,3 +29,11 @@ test('included credit uses shared operations and preserves device identity', () 
  assert.deepEqual(configurationOperations(next,{...base,devices:[]}),[{action:'remove',collection:'devices',id:'a'}]);
  assert.deepEqual(configurationOperations(next,next),[]);
 });
+
+test('feature-only confirmation persists as a business operation and undo clears it', () => {
+ const before = { ...base, systems: [{ id: 's', name: '隔离' }], generation: { features_confirmed: [], sources: [{ id: 'keep' }] } };
+ const after = { ...before, generation: { ...before.generation, features_confirmed: ['s'] } };
+ assert.deepEqual(configurationOperations(before, after), [{ action: 'system_setup', system: before.systems[0], features_confirmed: true }]);
+ assert.deepEqual(configurationOperations(after, before), [{ action: 'system_setup', system: before.systems[0], features_confirmed: false }]);
+ assert.deepEqual(configurationOperations(after, after), []);
+});

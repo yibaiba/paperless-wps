@@ -1,0 +1,27 @@
+FFF                                                                      [100%]
+=================================== FAILURES ===================================
+____________ test_unknown_feature_choice_cannot_confirm_after_apply ____________
+backend/tests/configuration/test_next_review.py:49: in test_unknown_feature_choice_cannot_confirm_after_apply
+    assert confirmed.status_code == 422, f'Unconfirmed feature choices allowed confirmation: {confirmed.status_code}, readiness={actual["checked"]["readiness"]}'
+E   AssertionError: Unconfirmed feature choices allowed confirmation: 200, readiness={'status': 'pass', 'ready_for_draft': True, 'ready_for_confirmed_output': False, 'counts': {'rooms': 1, 'systems': 1, 'requirements': 1, 'selected_requirements': 1, 'devices': 1, 'conflicts': 0, 'unknowns': 0, 'open_accessories': 0, 'accessory_unknowns': 0, 'accessory_conflicts': 0}, 'pending_by_kind': {}, 'stages': [{'key': 'requirements', 'label': '项目需求', 'status': 'pass', 'message': '已建立 1 个角色需求'}, {'key': 'selection', 'label': '产品选型', 'status': 'pass', 'message': '全部角色已关联实际配置'}, {'key': 'accessories', 'label': '配套与缺件', 'status': 'pass', 'message': '没有待补配套'}, {'key': 'verification', 'label': '方案校验', 'status': 'pass', 'message': '已知兼容、共享和容量检查均通过'}, {'key': 'output', 'label': '清单与输出', 'status': 'pass', 'message': '已满足确认条件，请保存后确认该版本'}], 'ready_for_confirmation': True, 'known_checks': 'pass', 'coverage': 'pass'}
+E   assert 200 == 422
+E    +  where 200 = <Response [200 OK]>.status_code
+________________ test_proposal_removal_cleans_reuse_references _________________
+backend/tests/configuration/test_next_review.py:66: in test_proposal_removal_cleans_reuse_references
+    assert response.status_code == 200, f'Next unrelated requirement edit fails after valid removal: {response.text}; preferences={data["generation"]["preferences"]}'
+E   AssertionError: Next unrelated requirement edit fails after valid removal: {"detail":"第 1 项修改：允许复用的设备不存在"}; preferences=[{'requirement_id': '729ca948-b8f1-5cd7-93ce-aa4efdf79c77', 'required_variant_id': '', 'excluded_variant_ids': [], 'reusable_device_ids': ['14134379-9412-50d3-bfe4-563d7542ca36'], 'source_id': '', 'evidence': '隔离允许复用当前设备'}]
+E   assert 422 == 200
+E    +  where 422 = <Response [422 Unprocessable Content]>.status_code
+_________________ test_room_fixed_quantity_requires_room_scope _________________
+backend/tests/configuration/test_next_review.py:78: in test_room_fixed_quantity_requires_room_scope
+    assert quantity_check['status']=='unknown', f'Room quantity accepted without room: {quantity_check}, readiness={actual["checked"]["readiness"]}'
+E   AssertionError: Room quantity accepted without room: {'kind': 'role_allocation', 'requirement_id': '729ca948-b8f1-5cd7-93ce-aa4efdf79c77', 'system_id': 'system', 'role_id': 'terminal', 'status': 'pass', 'required': '1', 'allocated': '1', 'message': '需求 1，已分配 1', 'evidence': [{'basis': {'actor': '测试维护者', 'evidence': '隔离测试资料，不是业务确认', 'status': 'confirmed', 'scope': 'room', 'input_key': '', 'input_unit': '', 'mode': 'per_group', 'factor': '1', 'evidence_refs': []}, 'calculation': {'quantity': '1', 'input': {'quantity': '1', 'factor': '1'}, 'expression': 'number(quantity) > 0 ? number(factor) : 0', 'engine': 'GoRules ZEN 0.53.0'}}], 'quantity_gap': None, 'action': {'type': 'edit_requirement', 'device_id': None, 'requirement_id': '729ca948-b8f1-5cd7-93ce-aa4efdf79c77', 'system_id': 'system', 'role_id': 'terminal', 'role_name': None, 'feature': None, 'demand_id': None, 'rule_id': None, 'profile_id': None, 'input_key': None, 'variant_id': None, 'requirement_ids': [], 'missing_fields': []}, 'code': 'role_allocation', 'check_id': 'e48a1e8f950f7c5f9322186d4c0a92475cf2dc8801a76379dd51f2281296d34c:0', 'group_id': 'e48a1e8f950f7c5f9322186d4c0a92475cf2dc8801a76379dd51f2281296d34c:0', 'category': 'requirements', 'objects': [{'kind': 'system', 'id': 'system'}, {'kind': 'requirement', 'id': '729ca948-b8f1-5cd7-93ce-aa4efdf79c77'}]}, readiness={'status': 'pass', 'ready_for_draft': True, 'ready_for_confirmed_output': False, 'counts': {'rooms': 1, 'systems': 1, 'requirements': 1, 'selected_requirements': 1, 'devices': 1, 'conflicts': 0, 'unknowns': 0, 'open_accessories': 0, 'accessory_unknowns': 0, 'accessory_conflicts': 0}, 'pending_by_kind': {}, 'stages': [{'key': 'requirements', 'label': '项目需求', 'status': 'pass', 'message': '已建立 1 个角色需求'}, {'key': 'selection', 'label': '产品选型', 'status': 'pass', 'message': '全部角色已关联实际配置'}, {'key': 'accessories', 'label': '配套与缺件', 'status': 'pass', 'message': '没有待补配套'}, {'key': 'verification', 'label': '方案校验', 'status': 'pass', 'message': '已知兼容、共享和容量检查均通过'}, {'key': 'output', 'label': '清单与输出', 'status': 'pass', 'message': '已满足确认条件，请保存后确认该版本'}], 'ready_for_confirmation': True, 'known_checks': 'pass', 'coverage': 'pass'}
+E   assert 'pass' == 'unknown'
+E
+E     - unknown
+E     + pass
+=========================== short test summary info ============================
+FAILED backend/tests/configuration/test_next_review.py::test_unknown_feature_choice_cannot_confirm_after_apply
+FAILED backend/tests/configuration/test_next_review.py::test_proposal_removal_cleans_reuse_references
+FAILED backend/tests/configuration/test_next_review.py::test_room_fixed_quantity_requires_room_scope
+3 failed in 1.80s

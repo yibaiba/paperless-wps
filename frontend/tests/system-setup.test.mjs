@@ -39,3 +39,9 @@ test('a historical value is never relabelled to a new unit without explicit inpu
   assert.equal(setupPayload(options).system.inputs[0].value, '16');
   assert.equal(configuration.systems[0].inputs[0].value, '8');
 });
+
+test('feature confirmation is explicit even when no optional features are selected', () => {
+  const options = { configuration: { systems: [], requirements: [] }, systemId: 's', roomId: 'r', description, fields: [], values: { name: '隔离', definition_id: 'def' } };
+  assert.equal(setupPayload(options).features_confirmed, false);
+  assert.equal(setupPayload({ ...options, values: { ...options.values, features_confirmed: true } }).features_confirmed, true);
+});

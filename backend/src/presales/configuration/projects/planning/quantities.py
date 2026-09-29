@@ -1,5 +1,6 @@
 from decimal import Decimal, InvalidOperation
 
+from .quantity_scope import scope_gap
 from .questions import question
 
 
@@ -12,6 +13,9 @@ def role_quantity(role, system, *, configuration, engine):
             question("role_quantity_missing", identity, "quantity_basis", "角色数量依据尚未确认"),
             None,
         )
+    gap = scope_gap(basis, system, configuration)
+    if gap:
+        return None, gap, None
     value = "1"
     if basis["mode"] != "per_group":
         fields = scope_inputs(basis["scope"], system, configuration)

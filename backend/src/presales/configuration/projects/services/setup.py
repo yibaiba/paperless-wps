@@ -12,6 +12,7 @@ from ..schemas import Configuration, EnvironmentParameter, Room, System
 
 class SystemSetup(Input):
     system: System
+    features_confirmed: bool | None = None
     new_room: Room | None = None
     role_ids: list[str] = Field(default_factory=list)
     role_environment: dict[str, list[EnvironmentParameter]] = Field(default_factory=dict)
@@ -51,6 +52,11 @@ def apply_setup(configuration, setup, *, session):
         data["systems"] = [system if s["id"] == system["id"] else s for s in data["systems"]]
     else:
         data["systems"].append(system)
+    if setup.features_confirmed is not None:
+        confirmed = [i for i in data["generation"]["features_confirmed"] if i != system["id"]]
+        data["generation"]["features_confirmed"] = sorted(
+            set(confirmed) | ({system["id"]} if setup.features_confirmed else set())
+        )
     for identity in dict.fromkeys(setup.role_ids):
         matches = [
             r

@@ -1,9 +1,10 @@
 from copy import deepcopy
 
-from presales.configuration.projects.drawing import project_drawing, remove_device_references
+from presales.configuration.projects.drawing import project_drawing
 from presales.configuration.projects.schemas import Configuration, SuggestionApply
 from presales.quotation.schemas import Quotation
 
+from .device_removal import remove_devices
 from .manual_edits import mark, prune
 from .quotation_editing import edit_quote_device
 
@@ -167,15 +168,7 @@ def remove(data, operation, *, repository):
         raise ValueError("待删除对象不存在")
     if collection == "devices":
         checked = repository.check(Configuration.model_validate(data))
-        removed_demands = {
-            s["id"]
-            for s in checked["suggestions"]
-            if s.get("scope") == "device" and s.get("scope_id") == identity
-        }
-        for key in ("accessory_allocations", "included_allocations", "accessory_choices"):
-            data[key] = [
-                item for item in data.get(key, []) if item["demand_id"] not in removed_demands
-            ]
+        return remove_devices(data, {identity}, demands=checked["suggestions"])
     data[collection] = [i for i in data[collection] if i["id"] != identity]
     if collection == "rooms":
         data["systems"] = [
@@ -183,19 +176,6 @@ def remove(data, operation, *, repository):
         ]
     if collection == "systems":
         data["requirements"] = [r for r in data["requirements"] if r["system_id"] != identity]
-    if collection == "devices":
-        from ..role_allocations import unbind_device
-
-        data["requirements"] = [unbind_device(r, identity) for r in data["requirements"]]
-        for key in ("accessory_allocations", "included_allocations", "supply_allocations"):
-            data[key] = [a for a in data.get(key, []) if a["device_id"] != identity]
-        data["drawing_xml"] = remove_device_references(data["drawing_xml"], identity)
-        if data.get("quotation"):
-            data["quotation"]["prices"] = [
-                p for p in data["quotation"]["prices"] if p["device_id"] != identity
-            ]
-            data["quotation"]["sections"].pop(identity, None)
-            data["quotation"].get("descriptions", {}).pop(identity, None)
     data["generation"] = remove_generation_references(data["generation"], removed_ids)
     return data
 

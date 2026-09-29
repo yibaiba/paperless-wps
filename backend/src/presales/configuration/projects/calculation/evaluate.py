@@ -15,6 +15,7 @@ from ..output import output_line
 from ..readiness import project_readiness
 from .coverage import coverage_checks
 from .demands import accessory_demands_v3
+from .feature_choices import feature_checks
 from .inclusions import included_fulfillment
 from .inspections import prepare_inspections
 from .resource_review import resource_policy_checks
@@ -30,6 +31,7 @@ def evaluate_v3(data, *, variants, catalog_variants, engine, definitions):
     data, inspection_checks, inspection_policies = prepare_inspections(data, definitions)
     systems = {s["id"]: s for s in data["systems"]}
     checks = compatibility(data, systems=systems, variants=variants, definitions=definitions)
+    checks.extend(feature_checks(input_data, definitions))
     suggestions = accessory_demands_v3(
         data, variants=variants, catalog_variants=catalog_variants, engine=engine
     )

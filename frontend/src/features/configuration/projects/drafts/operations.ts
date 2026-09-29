@@ -25,6 +25,12 @@ export function configurationOperations(before: Configuration, after: Configurat
       } else if (!equal(prev, next)) operations.push({ action, value: next });
     }
   }
+  for (const system of after.systems) {
+    const confirmed = after.generation?.features_confirmed.includes(system.id) ?? false;
+    if (confirmed !== (before.generation?.features_confirmed.includes(system.id) ?? false)) {
+      operations.push({ action: 'system_setup', system, features_confirmed: confirmed });
+    }
+  }
   for (const collection of ['requirements', 'devices', 'systems', 'rooms'] as const) {
     const ids = new Set(after[collection].map((v) => v.id));
     for (const item of before[collection]) if (!ids.has(item.id)) operations.push({ action: 'remove', collection, id: item.id });

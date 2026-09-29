@@ -33,6 +33,7 @@ def patch_requirements(configuration, operation, *, repository):
         )
         setup = SystemSetup(
             system=item.system,
+            features_confirmed=item.features_confirmed,
             role_ids=role_ids,
             role_environment={
                 r.role_id: r.environment for r in item.roles if r.environment is not None
@@ -40,11 +41,6 @@ def patch_requirements(configuration, operation, *, repository):
         )
         data = apply_setup(data, setup, session=repository.session)
         apply_role_resources(data, item)
-        confirmed = set(data["generation"].get("features_confirmed", []))
-        confirmed.discard(item.system.id)
-        if item.features_confirmed:
-            confirmed.add(item.system.id)
-        data["generation"]["features_confirmed"] = sorted(confirmed)
     if operation.room_inputs is not None:
         data["room_inputs"] = {
             k: [a.model_dump(mode="json") for a in v] for k, v in operation.room_inputs.items()

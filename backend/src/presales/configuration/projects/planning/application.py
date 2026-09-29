@@ -3,8 +3,9 @@ from copy import deepcopy
 from presales.rules.calculation import digest
 from presales.rules.repository import RuleConflict
 
-from ..drawing import project_drawing, remove_device_references
+from ..drawing import project_drawing
 from ..schemas import Configuration
+from ..services.device_removal import remove_devices
 from .pricing import validate_new_prices
 
 
@@ -37,20 +38,8 @@ def apply_proposal(configuration, operation, *, repository):
     }
     if removed & (existing | locked):
         raise ValueError("客户已有或人工锁定设备不能通过自动生成移除，请明确改单")
-    for collection in (
-        "devices",
-        "supply_allocations",
-        "accessory_allocations",
-        "included_allocations",
-    ):
-        key = "id" if collection == "devices" else "device_id"
-        data[collection] = [item for item in data[collection] if item[key] not in removed]
-    for identity in removed:
-        data["drawing_xml"] = remove_device_references(data["drawing_xml"], identity)
-    if data.get("quotation"):
-        data["quotation"]["prices"] = [
-            price for price in data["quotation"]["prices"] if price["device_id"] not in removed
-        ]
+    if removed:
+        data = remove_devices(data, removed, demands=option["checked"]["suggestions"])
     validate_new_prices(repository.session, before=configuration, proposed=data)
     old_ids = {d["id"] for d in configuration["devices"]}
     data["drawing_xml"] = project_drawing(

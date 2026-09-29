@@ -9,6 +9,7 @@ from ...common import Entities, view
 from ...definitions.service import Definitions
 from ...models import Entity
 from ..projections.comparison import configuration_diff
+from .confirmation_inputs import saved_input_checks
 
 
 class ProjectLifecycle:
@@ -37,6 +38,7 @@ class ProjectLifecycle:
             *product_constraints(checked["configuration"]),
             *budget_checks(checked["configuration"], checked),
             *interpretation_checks(checked["configuration"]),
+            *saved_input_checks(checked["configuration"], entities=self.entities),
         ]
         if not checked["readiness"].get("ready_for_confirmation") or any(
             c["status"] != "pass" for c in constraints

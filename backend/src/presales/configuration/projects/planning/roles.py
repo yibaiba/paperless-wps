@@ -33,7 +33,6 @@ def prepare_roles(context):
         if package["system_definition_id"] != system["definition_id"]:
             raise ValueError("知识包与系统版本不一致")
         definition = package["definition"]
-        questions.extend(feature_questions(data, definition, system))
         required_ids = {r["id"] for r in active_required_roles(definition, system["features"])}
         explicit_ids = {
             r["role_id"] for r in data["requirements"] if r["system_id"] == system["id"]
@@ -141,25 +140,6 @@ def role_branches(context, data, task):
         ranking_gap=ranking_gap,
         ranking=ranking,
     )
-
-
-def feature_questions(data, definition, system):
-    questions = []
-    if (
-        any(r["feature"] for r in definition["roles"])
-        and system["id"] not in data["generation"]["features_confirmed"]
-    ):
-        questions.append(
-            question(
-                "features_unknown",
-                system["id"],
-                "features",
-                "请确认需要启用的功能，未填写不等于不需要",
-                recipient="customer",
-                choices=sorted({r["feature"] for r in definition["roles"] if r["feature"]}),
-            )
-        )
-    return questions
 
 
 def locked_role(data, current, *, requirement, quantity, evidence):

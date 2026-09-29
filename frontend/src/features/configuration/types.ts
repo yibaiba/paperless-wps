@@ -181,6 +181,7 @@ export interface AccessoryAllocation {
   evidence: string;
 }
 export interface Configuration extends Authored {
+  generation?: { features_confirmed: string[]; [key: string]: unknown };
   manual_edits?: { requirements: string[]; accessory_allocations: string[]; included_allocations: string[] };
   included_allocations?: IncludedAllocation[];
   quotation?: import("./quotation/types").Quotation | null;

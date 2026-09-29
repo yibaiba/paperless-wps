@@ -13,6 +13,7 @@ def with_issue_actions(checked, *, annotate_only=False):
         "product_constraint": "select_candidate",
         "budget": "edit_price",
         "interpretation": "edit_system_inputs",
+        "feature_selection": "edit_system_inputs",
         "role_allocation": "edit_requirement",
         "supply": "edit_supply",
         "capacity": "edit_resources",
@@ -98,6 +99,8 @@ def with_issue_actions(checked, *, annotate_only=False):
                 source_id=check["source_id"],
                 missing_fields=[check["field"], "confirmed"],
             )
+        if check["kind"] == "feature_selection":
+            action["missing_fields"] = ["features", "features_confirmed"]
         gap = check.get("quantity_gap")
         if gap:
             action.update(
