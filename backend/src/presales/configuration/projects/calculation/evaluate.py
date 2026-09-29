@@ -22,7 +22,12 @@ from .supply import supply_projection
 
 
 def evaluate_v3(data, *, variants, catalog_variants, engine, definitions):
+    from ..role_allocations import project_allocations, restore_requirement_ids
+    from .role_allocations import allocation_checks
+
     input_data = data
+    allocated_checks = allocation_checks(data, definitions=definitions, engine=engine)
+    data, aliases = project_allocations(data)
     data, inspection_checks, inspection_policies = prepare_inspections(data, definitions)
     systems = {s["id"]: s for s in data["systems"]}
     checks = compatibility(data, systems=systems, variants=variants, definitions=definitions)
@@ -37,6 +42,7 @@ def evaluate_v3(data, *, variants, catalog_variants, engine, definitions):
     coverage, policies = coverage_checks(data, definitions, variants, demands=active)
     checks.extend(coverage)
     checks.extend(inspection_checks)
+    checks.extend(allocated_checks)
     for identity, review in inspection_policies.items():
         previous = policies.get(identity, "unknown")
         if previous != "unknown" and previous != review["selected"]:
@@ -58,7 +64,7 @@ def evaluate_v3(data, *, variants, catalog_variants, engine, definitions):
     checks.extend(usage_checks(data, usages, variants=variants))
     supply, supply_checks = supply_projection(data)
     checks.extend(supply_checks)
-    readiness = readiness_v3(data, checks, active, coverage)
+    readiness = readiness_v3(input_data, checks, active, coverage)
     usages_by_device = {u["device_id"]: u for u in usages}
     lines = [
         dict(output_line(d, usages_by_device.get(d["id"])), supply=supply[d["id"]])
@@ -70,23 +76,26 @@ def evaluate_v3(data, *, variants, catalog_variants, engine, definitions):
         if Decimal(line["supply"]["purchase"]) > 0
     ]
     fingerprint = digest([business_input(input_data), suggestions, definitions])
-    return dict(
-        checks=checks,
-        suggestions=suggestions,
-        device_usages=usages,
-        readiness=readiness,
-        project_output=dict(
-            status="draft",
-            ready_for_confirmed_output=False,
-            ready_for_confirmation=readiness["ready_for_confirmation"],
-            knowledge_snapshot_id=data["knowledge_snapshot_id"],
+    return restore_requirement_ids(
+        dict(
+            checks=checks,
+            suggestions=suggestions,
+            device_usages=usages,
+            readiness=readiness,
+            project_output=dict(
+                status="draft",
+                ready_for_confirmed_output=False,
+                ready_for_confirmation=readiness["ready_for_confirmation"],
+                knowledge_snapshot_id=data["knowledge_snapshot_id"],
+                calculation_version=3,
+                lines=lines,
+                procurement_lines=procurement,
+            ),
+            fingerprint=fingerprint,
+            versions=[dict(id=k["id"], revision=k["revision"]) for k in data["knowledge_snapshot"]],
             calculation_version=3,
-            lines=lines,
-            procurement_lines=procurement,
         ),
-        fingerprint=fingerprint,
-        versions=[dict(id=k["id"], revision=k["revision"]) for k in data["knowledge_snapshot"]],
-        calculation_version=3,
+        aliases,
     )
 
 
@@ -207,9 +216,17 @@ def usage_checks(data, usages, *, variants):
             ]
         )
         checks.extend(
-            capacity_checks(device, consumers, variant=variants[device["id"]], usage=usage)
+            capacity_checks(
+                allocated_device(device, consumers),
+                consumers,
+                variant=variants[device["id"]],
+                usage=usage,
+            )
         )
-        if len(consumers) > 1:
+        partitioned = Decimal(device["quantity"]) > 1 and all(
+            c.get("allocated_quantity") is not None and c["via"] == "direct" for c in consumers
+        )
+        if len(consumers) > 1 and not partitioned:
             checks.append(sharing(data, device, consumers, variant=variants[device["id"]]))
     return checks
 
@@ -278,3 +295,12 @@ def combine_status(checks):
         if not states or "unknown" in states
         else "pass"
     )
+
+
+def allocated_device(device, consumers):
+    if consumers and all(
+        c.get("allocated_quantity") is not None and c["via"] == "direct" for c in consumers
+    ):
+        quantity = sum((Decimal(c["allocated_quantity"]) for c in consumers), Decimal(0))
+        return dict(device, quantity=str(min(quantity, Decimal(device["quantity"]))))
+    return device

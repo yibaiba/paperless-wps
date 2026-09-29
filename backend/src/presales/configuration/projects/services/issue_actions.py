@@ -6,6 +6,7 @@ def with_issue_actions(checked, *, annotate_only=False):
     devices = {d["id"]: d for d in data["devices"]}
     actions = {
         "selection": "select_candidate",
+        "role_allocation": "edit_requirement",
         "supply": "edit_supply",
         "capacity": "edit_resources",
         "accessory_allocation": "edit_accessory",

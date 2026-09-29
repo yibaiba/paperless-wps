@@ -3,6 +3,7 @@ export const checkLabels: Record<string, string> = {
   project_configuration: "项目配置",
   project_input: "项目需求",
   inspection: "用途检查依据",
+  role_allocation: "角色数量分配",
   selection: "角色选型",
   compatibility: "产品适配",
   sharing: "共用部署",

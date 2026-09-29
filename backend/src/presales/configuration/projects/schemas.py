@@ -11,6 +11,7 @@ from ..knowledge.schemas import Resource
 from .evolution_schemas import AccessoryChoice, SupplyAllocation
 from .inclusion_schemas import IncludedAllocation
 from .planning.state import GeneratedOrigin, GenerationState
+from .role_allocations import RoleAllocation
 
 
 class Room(Input):
@@ -40,6 +41,7 @@ class EnvironmentParameter(Attribute):
 
 
 class Requirement(Input):
+    allocations: list[RoleAllocation] = Field(default_factory=list)
     role_id: str = ""
     id: Text
     system_id: Text
@@ -117,6 +119,14 @@ class Configuration(Authored):
         if any(r.system_id not in systems for r in self.requirements):
             raise ValueError("角色引用的系统不存在")
         for requirement in self.requirements:
+            if requirement.allocations:
+                if self.calculation_version != 3:
+                    raise ValueError("角色数量分配需要计算语义版本 3")
+                if requirement.device_id:
+                    raise ValueError("角色单设备关联与数量分配不能同时填写")
+                ids = [a.device_id for a in requirement.allocations]
+                if len(set(ids)) != len(ids) or set(ids) - devices.keys():
+                    raise ValueError("角色分配设备重复或不存在")
             if requirement.device_id and requirement.device_id not in devices:
                 raise ValueError("角色关联的实际设备不存在")
         for device in self.devices:

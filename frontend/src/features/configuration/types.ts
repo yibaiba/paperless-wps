@@ -151,6 +151,7 @@ export interface Resource {
   target_need_key?: string;
 }
 export interface Requirement {
+  allocations?: { device_id: string; quantity: string; evidence: string }[];
   role_id?: string;
   id: string;
   system_id: string;

@@ -1,3 +1,4 @@
+import { requirementDeviceIds, unlinkRoleDevice } from "./projects/roleAllocations";
 import { ProposalPanel } from "./projects/ProposalPanel";
 import { AssignDeviceDialog } from "./projects/AssignDeviceDialog";
 import { DraftRecovery } from "./projects/drafts/DraftRecovery";
@@ -193,7 +194,7 @@ function ConfigurationEditor({
               ...config,
               requirements: config.requirements.map((requirementItem) =>
                 requirementItem.id === item.id
-                  ? { ...requirementItem, device_id: null }
+                  ? { ...requirementItem, device_id: null, allocations: [] }
                   : requirementItem,
               ),
             })
@@ -307,9 +308,7 @@ function ConfigurationEditor({
                     (d) => d.id !== editingDevice.id,
                   ),
                   requirements: config.requirements.map((r) =>
-                    r.device_id === editingDevice.id
-                      ? { ...r, device_id: null }
-                      : r,
+                    unlinkRoleDevice(r, editingDevice.id),
                   ),
                   supply_allocations: (config.supply_allocations ?? []).filter((a) => a.device_id !== editingDevice.id),
                   accessory_choices: (config.accessory_choices ?? []).filter((c) => !removedDemandIds.has(c.demand_id)),
@@ -383,7 +382,7 @@ function ConfigurationEditor({
         const role = config.requirements.find((r) => r.id === action.requirement_id);
         if (['edit_resources', 'edit_requirement'].includes(action.type) && role) setRequirementModal({ systemId: role.system_id, initial: role });
         else if (role) { setDeviceModal(undefined); setSelectedRequirement(role.id); setSelectedSystem(role.system_id); }
-        else if (action.device_id) { const related = config.requirements.filter((r) => r.device_id === action.device_id); if (related.length === 1) setRequirementModal({ systemId: related[0].system_id, initial: related[0] }); else setAssignDevice(action.device_id); }
+        else if (action.device_id) { const related = config.requirements.filter((r) => requirementDeviceIds(r).includes(action.device_id!)); if (related.length === 1) setRequirementModal({ systemId: related[0].system_id, initial: related[0] }); else setAssignDevice(action.device_id); }
       }} />
       {customInputsSystemId && config.systems.some(s => s.id === customInputsSystemId) ? <SystemInputsForm system={config.systems.find(s => s.id === customInputsSystemId)!} configuration={config} onClose={() => setCustomInputsSystemId(undefined)} onApply={inputs => draft.commit({ ...config, systems: config.systems.map(s => s.id === customInputsSystemId ? { ...s, inputs } : s) })} /> : null}
       {inputsSystemId && config.systems.find((s) => s.id === inputsSystemId) ? <SystemForm
@@ -404,6 +403,7 @@ function ConfigurationEditor({
       ) : null}
       {requirementModal ? (
         <RequirementForm
+          devices={config.devices}
           systemId={requirementModal.systemId}
           definitionId={config.systems.find((s) => s.id === requirementModal.systemId)?.definition_id}
           definitionSnapshotId={config.definition_snapshot_id}

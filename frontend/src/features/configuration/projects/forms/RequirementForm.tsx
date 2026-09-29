@@ -1,6 +1,6 @@
 import { AutoComplete, Button, Form, Input, InputNumber, Modal, Select, Space, Typography } from "antd";
 import type { FormInstance } from "antd";
-import type { Requirement } from "../../types";
+import type { Deployment, Requirement } from "../../types";
 import { RoleInput } from "../../RoleInput";
 import { AttributeEditor, cleanAttributes, required, units, useAttributeDefinitions } from "../../shared";
 
@@ -10,6 +10,7 @@ import { selectedDefinition } from "../definitionSelection";
 
 export function RequirementForm({
   initial,
+  devices,
   systemId,
   systemName,
   definitionId,
@@ -20,6 +21,7 @@ export function RequirementForm({
   onClose,
 }: {
   initial?: Requirement;
+  devices: Deployment[];
   systemId: string;
   systemName: string;
   definitionId?: string;
@@ -65,6 +67,18 @@ export function RequirementForm({
           房间数、席位数等选择“项目输入”，用于数量或条件计算；操作系统等需要产品满足的条件选择“产品必须满足的参数”。
         </Typography.Paragraph>
         <AttributeEditor name="environment" />
+        {initial?.allocations?.length ? <>
+          <Typography.Paragraph>本角色由以下设备共同承担。修改分配量不会改变已有设备总量或供货来源。</Typography.Paragraph>
+          <Form.List name="allocations">{fields => fields.map(field => {
+            const allocation = initial.allocations![field.name];
+            return <Space key={field.key} align="start">
+              <Typography.Text>{devices.find(d => d.id === allocation.device_id)?.name ?? allocation.device_id}</Typography.Text>
+              <Form.Item name={[field.name, "device_id"]} hidden><Input /></Form.Item>
+              <Form.Item name={[field.name, "quantity"]} label="承担数量" rules={required}><InputNumber stringMode min="0" /></Form.Item>
+              <Form.Item name={[field.name, "evidence"]} label="分配依据" rules={required}><Input /></Form.Item>
+            </Space>;
+          })}</Form.List>
+        </> : null}
         <ResourceFields form={form} />
       </Form>
     </Modal>

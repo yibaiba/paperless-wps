@@ -92,7 +92,7 @@ def bind_role(data, requirement_id, device_id):
     return dict(
         data,
         requirements=[
-            dict(r, device_id=device_id) if r["id"] == requirement_id else r
+            dict(r, device_id=device_id, allocations=[]) if r["id"] == requirement_id else r
             for r in data["requirements"]
         ],
     )

@@ -151,9 +151,15 @@ def contributions(data, *, rule, owners, variants):
                 evaluation = dict(evaluation, status="unknown")
             if not scope_is_reviewed(rule, variant):
                 evaluation = dict(evaluation, status="unknown")
-            quantity = quantity_input(rule, device, requirement)
-            key = (scope_id, device["id"])
-            if rule.get("quantity_source") != "environment" and key in counted:
+            allocated = (
+                requirement.get("allocated_quantity")
+                if requirement.get("device_id") == device["id"]
+                else None
+            )
+            contributing = dict(device, quantity=allocated) if allocated is not None else device
+            quantity = quantity_input(rule, contributing, requirement)
+            key = contribution_key(rule, scope_id, device, requirement)
+            if key in counted:
                 quantity = (Decimal(0), None)
             counted.add(key)
             if not rule.get("calculation_scope") or scope_id.startswith("unknown:"):
@@ -226,3 +232,20 @@ def scope_identity(rule, device, requirement, systems):
         return "project"
     system = systems.get(requirement.get("system_id"), {})
     return system.get("id" if scope == "system" else "room_id")
+
+
+def contribution_key(rule, scope_id, device, requirement):
+    if rule.get("quantity_source") == "environment":
+        # Split physical batches must not repeat the same role-level input.
+        return (
+            (scope_id, requirement["allocation_parent_id"], "input")
+            if requirement.get("allocation_parent_id")
+            else (scope_id, device["id"], requirement.get("id"), "input")
+        )
+    if (
+        Decimal(device["quantity"]) > 1
+        and requirement.get("device_id") == device["id"]
+        and requirement.get("allocated_quantity") is not None
+    ):
+        return (scope_id, device["id"], requirement["id"])
+    return (scope_id, device["id"])

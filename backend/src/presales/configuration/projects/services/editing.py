@@ -177,10 +177,9 @@ def remove(data, operation, *, repository):
     if collection == "systems":
         data["requirements"] = [r for r in data["requirements"] if r["system_id"] != identity]
     if collection == "devices":
-        data["requirements"] = [
-            dict(r, device_id=None) if r["device_id"] == identity else r
-            for r in data["requirements"]
-        ]
+        from ..role_allocations import unbind_device
+
+        data["requirements"] = [unbind_device(r, identity) for r in data["requirements"]]
         for key in ("accessory_allocations", "included_allocations", "supply_allocations"):
             data[key] = [a for a in data.get(key, []) if a["device_id"] != identity]
         data["drawing_xml"] = remove_device_references(data["drawing_xml"], identity)

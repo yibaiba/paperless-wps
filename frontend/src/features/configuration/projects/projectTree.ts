@@ -1,3 +1,4 @@
+import { requirementDeviceIds } from "./roleAllocations";
 import type { Configuration, Requirement, System } from "../types";
 
 export interface ProjectTreeNode {
@@ -66,8 +67,8 @@ function systemNode(
       title:
         requirement.role +
         (showSelection
-          ? requirement.device_id
-            ? " · 已选"
+          ? requirementDeviceIds(requirement).length
+            ? requirement.allocations?.length ? ` · ${requirement.allocations.length} 组设备` : " · 已选"
             : " · 待选"
           : ""),
     })),

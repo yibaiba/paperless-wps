@@ -29,7 +29,7 @@ def fulfillment_aliases(data, *, definitions, demands):
                     a["demand_id"] in matches and a["device_id"] == requirement["device_id"]
                     for a in data["accessory_allocations"]
                 ):
-                    result[requirement["id"]] = parent["id"]
+                    result[requirement["id"]] = parent.get("allocation_parent_id", parent["id"])
     return result
 
 

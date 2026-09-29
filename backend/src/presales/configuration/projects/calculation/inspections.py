@@ -68,6 +68,22 @@ def prepare_inspections(data, definitions):
         profile = role_profile(system, requirement, definitions)
         if profile:
             apply_profile(requirement, profile, checks=checks, policies=policies)
+        if requirement.get("split_allocation") and any(
+            r.get("applies_to", "selected_device") == "selected_device"
+            for r in requirement["resources"]
+        ):
+            checks.append(
+                dict(
+                    kind="capacity",
+                    status="unknown",
+                    requirement_id=requirement["id"],
+                    code="role_resource_distribution",
+                    message="角色由多组设备承担，资源需求的分配依据待确认",
+                )
+            )
+            requirement["resources"] = [
+                r for r in requirement["resources"] if r.get("applies_to") == "accessory"
+            ]
         requirements.append(requirement)
     return dict(data, requirements=requirements), checks, policies
 

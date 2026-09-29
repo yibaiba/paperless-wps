@@ -20,7 +20,8 @@ def project_readiness(data, checks, suggestions):
             "systems": len(data.get("systems", [])),
             "requirements": len(data.get("requirements", [])),
             "selected_requirements": sum(
-                bool(item.get("device_id")) for item in data.get("requirements", [])
+                bool(item.get("device_id") or item.get("allocations"))
+                for item in data.get("requirements", [])
             ),
             "devices": len(data.get("devices", [])),
             "conflicts": sum(item.get("status") == "conflict" for item in checks),
@@ -63,7 +64,9 @@ def selection_stage(data):
     requirements = data.get("requirements", [])
     if not requirements:
         return stage("selection", "产品选型", "unknown", "尚未建立角色需求")
-    missing = [item for item in requirements if not item.get("device_id")]
+    missing = [
+        item for item in requirements if not (item.get("device_id") or item.get("allocations"))
+    ]
     return stage(
         "selection",
         "产品选型",

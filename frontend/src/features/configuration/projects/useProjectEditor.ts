@@ -1,3 +1,4 @@
+import { requirementDeviceIds } from "./roleAllocations";
 import { useMemo, useRef, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -102,7 +103,7 @@ export function useProjectEditor({
     const replacing =
       !existing &&
       previous &&
-      config.requirements.filter((r) => r.device_id === previous.id).length ===
+      config.requirements.filter((r) => requirementDeviceIds(r).includes(previous.id)).length ===
         1 && !config.accessory_allocations.some((a) => a.device_id === previous.id);
     const chosen = replacing ? { ...device, id: previous.id } : device;
     const devices = existing
@@ -117,7 +118,7 @@ export function useProjectEditor({
         devices,
         supply_allocations: supply && !existing ? [...allocations, { id: crypto.randomUUID(), device_id: chosen.id, quantity: chosen.quantity, ...supply }] : allocations,
         requirements: config.requirements.map((r) =>
-          r.id === requirement.id ? { ...r, device_id: chosen.id } : r,
+          r.id === requirement.id ? { ...r, device_id: chosen.id, allocations: [] } : r,
         ),
       },
       addIds: existing || replacing ? [] : [chosen.id],

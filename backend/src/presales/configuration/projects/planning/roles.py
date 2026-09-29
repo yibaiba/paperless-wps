@@ -1,12 +1,12 @@
 from copy import deepcopy
-from decimal import Decimal
 
 from ...definitions.requirements import active_required_roles
 from ..schemas import Requirement
 from .context import ordered_candidates
-from .devices import bind_role, device_for, put_device, stable_id
+from .devices import bind_role, stable_id
 from .quantities import role_quantity
 from .questions import question
+from .role_choices import candidate_branches
 
 
 def prepare_roles(context):
@@ -72,6 +72,8 @@ def role_branches(context, data, task):
         role, system, configuration=data, engine=context.repository.engine
     )
     current = next((d for d in data["devices"] if d["id"] == requirement["device_id"]), None)
+    if quantity == 0 and requirement.get("allocations"):
+        data = bind_role(data, requirement["id"], None)
     if quantity == 0 and current:
         origin = current.get("generated_origin")
         if origin and not origin["variant_locked"] and not origin["quantity_locked"]:
@@ -90,8 +92,13 @@ def role_branches(context, data, task):
             [dict(requirement_id=requirement["id"], quantity=str(quantity), evidence=evidence)],
         )
         return
-    if current and (
-        not current.get("generated_origin") or current["generated_origin"]["variant_locked"]
+    explicitly_reusable = current and current["id"] in context.preference(requirement["id"]).get(
+        "reusable_device_ids", []
+    )
+    if (
+        current
+        and not explicitly_reusable
+        and (not current.get("generated_origin") or current["generated_origin"]["variant_locked"])
     ):
         yield locked_role(
             data, current, requirement=requirement, quantity=quantity, evidence=evidence
@@ -170,88 +177,3 @@ def locked_role(data, current, *, requirement, quantity, evidence):
             )
         ],
     )
-
-
-def candidate_branches(context, data, *, task, quantity, evidence, choices, ranking_gap, ranking):
-    role, requirement = task["role"], task["requirement"]
-    preference = context.preference(requirement["id"])
-    reused = [
-        d
-        for d in data["devices"]
-        if d["id"] in preference.get("reusable_device_ids", [])
-        or (
-            context.deployment == "shared"
-            and d.get("generated_origin")
-            and d["kind"] == "hardware"
-            and quantity == 1
-            and d["quantity"] == "1"
-        )
-    ]
-    for choice in choices:
-        variant = choice["variant"]
-        for existing in [d for d in reused if d["variant_id"] == variant["id"]]:
-            yield (
-                bind_role(data, requirement["id"], existing["id"]),
-                [
-                    dict(
-                        question(
-                            "existing_quantity_insufficient",
-                            existing["id"],
-                            "quantity",
-                            f"已有设备数量 {existing['quantity']} 不足需求 {quantity}",
-                            recipient="customer",
-                        ),
-                        status="conflict",
-                    )
-                ]
-                if Decimal(existing["quantity"]) < quantity
-                else [],
-                [
-                    dict(
-                        requirement_id=requirement["id"],
-                        device_id=existing["id"],
-                        reason="明确允许复用",
-                        evidence=evidence,
-                    )
-                ],
-            )
-        device, gap = device_for(
-            context,
-            variant,
-            key="role:" + requirement["id"],
-            quantity=quantity,
-            kind=role.get("output_kind", "hardware"),
-            source_id=preference.get("source_id", ""),
-        )
-        if gap:
-            yield data, [gap], []
-            continue
-        result = bind_role(
-            put_device(data, device, context=context), requirement["id"], device["id"]
-        )
-        gaps = [ranking_gap] if ranking_gap else []
-        if device["quantity"] != str(quantity):
-            gaps.append(
-                question(
-                    "locked_quantity",
-                    device["id"],
-                    "quantity",
-                    "已锁定数量与计算需求不同",
-                    recipient="customer",
-                )
-            )
-        yield (
-            result,
-            gaps,
-            [
-                dict(
-                    requirement_id=requirement["id"],
-                    device_id=device["id"],
-                    variant_id=variant["id"],
-                    quantity=str(quantity),
-                    evidence=evidence,
-                    compatibility=choice["evidence"],
-                    recommendation=ranking,
-                )
-            ],
-        )

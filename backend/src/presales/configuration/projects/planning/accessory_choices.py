@@ -127,11 +127,12 @@ def reusable_accessory(context, data, *, variant, demand, demands, allowed, gaps
         )
     return (
         result,
-        [],
+        gaps,
         dict(
             demand_id=demand["id"],
             device_id=used[0],
             device_ids=used,
+            recommendation=ranking,
             reason="明确允许的已有设备先抵扣，余量另行生成；共享仍须核对依据与容量",
             evidence=demand["explanation"],
         ),

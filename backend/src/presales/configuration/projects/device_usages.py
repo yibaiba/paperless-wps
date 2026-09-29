@@ -62,6 +62,8 @@ def add_consumer(usage, requirement, systems, *, via, demand_id, resources, capa
         {
             "key": key,
             "requirement_id": requirement["id"],
+            "allocation_parent_id": requirement.get("allocation_parent_id"),
+            "allocated_quantity": requirement.get("allocated_quantity"),
             "system_id": system["id"],
             "system_name": system["name"],
             "system": system["kind"],
@@ -121,7 +123,9 @@ def unique_consumers(consumers):
     result = {}
     for consumer in sorted(consumers, key=lambda c: bool(c.get("fulfilled_by_requirement_id"))):
         current = result.setdefault(
-            consumer.get("fulfilled_by_requirement_id", consumer["requirement_id"]),
+            consumer.get("fulfilled_by_requirement_id")
+            or consumer.get("allocation_parent_id")
+            or consumer["requirement_id"],
             {**consumer, "resources": [], "capacity_expected": False},
         )
         current["capacity_expected"] = current["capacity_expected"] or consumer["capacity_expected"]

@@ -124,7 +124,9 @@ def proposal_option(context, checked, *, questions, decisions):
                     status="conflict",
                 )
             )
-    used = {r["device_id"] for r in data["requirements"]} | {
+    from ..role_allocations import device_ids
+
+    used = {identity for r in data["requirements"] for identity in device_ids(r)} | {
         a["device_id"] for a in data["accessory_allocations"]
     }
     removals = [
@@ -163,12 +165,11 @@ def preference_questions(data):
     result = []
     for preference in data["generation"]["preferences"]:
         requirement = requirements[preference["requirement_id"]]
-        device = devices.get(requirement["device_id"])
-        if not device:
-            continue
-        chosen = device["variant_id"]
-        if chosen in preference["excluded_variant_ids"] or (
-            preference["required_variant_id"] and chosen != preference["required_variant_id"]
+        from ..role_allocations import device_ids
+
+        chosen = {devices[identity]["variant_id"] for identity in device_ids(requirement)}
+        if chosen & set(preference["excluded_variant_ids"]) or (
+            preference["required_variant_id"] and chosen - {preference["required_variant_id"]}
         ):
             result.append(
                 dict(
