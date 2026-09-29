@@ -35,6 +35,11 @@ export function configurationOperations(before: Configuration, after: Configurat
     const ids = new Set(after[collection].map((v) => v.id));
     for (const item of before[collection]) if (!ids.has(item.id)) operations.push({ action: 'remove', collection, id: item.id });
   }
+  const roomInputsChanged = !equal(before.room_inputs ?? {}, after.room_inputs ?? {});
+  const projectInputsChanged = !equal(before.project_inputs ?? [], after.project_inputs ?? []);
+  if (roomInputsChanged || projectInputsChanged) operations.push({ action: 'requirements_patch',
+    ...(roomInputsChanged ? { room_inputs: after.room_inputs ?? {} } : {}),
+    ...(projectInputsChanged ? { project_inputs: after.project_inputs ?? [] } : {}) });
   for (const device of after.devices) {
     const allocations = (after.supply_allocations ?? []).filter((a) => a.device_id === device.id);
     if (!equal(allocations, (before.supply_allocations ?? []).filter((a) => a.device_id === device.id))) {

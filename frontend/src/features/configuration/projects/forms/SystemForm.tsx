@@ -5,7 +5,7 @@ import type { Configuration } from '../../types';
 import { api } from '../../../../shared/api';
 import { AuthorFields, required, ROOT } from '../../shared';
 import { useDefinitions } from '../../knowledge/useDefinitions';
-import { setupFields, setupPayload, type SetupDescription, type SetupValues } from './setupModel';
+import { setupFields, setupPayload, setupValue, type SetupDescription, type SetupValues } from './setupModel';
 import { SetupFields } from './SetupFields';
 
 export function SystemForm({ configuration, onApply, onClose, systemId: editingId }: {
@@ -17,12 +17,16 @@ export function SystemForm({ configuration, onApply, onClose, systemId: editingI
   const previous = configuration.systems.find(s => s.id === systemId);
   const identity = Form.useWatch('definition_id', form), packageId = Form.useWatch('knowledge_package_id', form);
   const features = Form.useWatch('features', form) ?? [], roleIds = Form.useWatch('role_ids', form) ?? [];
-  const roomMode = Form.useWatch('room_mode', form);
+  const roomMode = Form.useWatch('room_mode', form), selectedRoomId = Form.useWatch('room_id', form);
+  const effectiveRoomId = roomMode === 'new' ? newRoomId : selectedRoomId;
   const [review, setReview] = useState<{ configuration: Configuration; base: Configuration }>();
   const current = useRef(configuration); current.current = configuration;
   const description = useQuery({ queryKey: ['configuration', 'requirement-description', configuration.definition_snapshot_id, configuration.knowledge_snapshot_id, identity, packageId, features], enabled: !!identity,
     queryFn: () => api<SetupDescription>(ROOT + '/requirement-description', { method: 'POST', body: JSON.stringify({ definition_id: identity, knowledge_package_id: packageId ?? '', definition_snapshot_id: configuration.definition_snapshot_id, knowledge_snapshot_id: configuration.knowledge_snapshot_id, features }) }) });
   const fields = setupFields(description.data, roleIds);
+  const selectRoomInputs = (roomId: string) => {
+    for (const field of fields.filter(f => f.scope === 'room')) form.setFieldValue(['inputs', field.formKey], setupValue(field, configuration, { systemId, roomId }));
+  };
   const ambiguous = fields.some(f => fields.some(other => f.scope === other.scope && f.roleId === other.roleId && f.key === other.key && f.unit !== other.unit));
   const preview = useMutation({ mutationFn: async (values: SetupValues) => {
     const base = configuration;
@@ -37,8 +41,8 @@ export function SystemForm({ configuration, onApply, onClose, systemId: editingI
     {(definitions.error || description.error || preview.error) ? <Alert type="error" title={(definitions.error || description.error || preview.error)?.message} /> : null}
     {ambiguous ? <Alert type="error" title="同一需求字段存在不同单位，请先核对用途检查定义。原有输入未改动。" /> : null}
     <Form form={form} layout="vertical" disabled={preview.isPending} initialValues={{ ...previous, actor: configuration.actor, evidence: configuration.evidence, room_mode: previous?.room_id || configuration.rooms.length ? 'existing' : 'new', role_ids: configuration.requirements.filter(r => r.system_id === systemId).map(r => r.role_id).filter(Boolean), features: previous?.features ?? [], features_confirmed: configuration.generation?.features_confirmed.includes(systemId) ?? false, inputs: {} }} onValuesChange={() => { setReview(undefined); preview.reset(); }} onFinish={values => preview.mutate(values)}>
-      <Form.Item name="room_mode" label="房间"><Radio.Group options={[{ value: 'existing', label: '选择已有房间' }, { value: 'new', label: '新建房间（同名也独立）' }]} /></Form.Item>
-      {roomMode === 'new' ? <Form.Item name="room_name" label="新房间名称" rules={required}><Input /></Form.Item> : <Form.Item name="room_id" label="已有房间" rules={required}><Select options={configuration.rooms.map(r => ({ value: r.id, label: r.name }))} /></Form.Item>}
+      <Form.Item name="room_mode" label="房间"><Radio.Group onChange={event => selectRoomInputs(event.target.value === 'new' ? newRoomId : selectedRoomId ?? '')} options={[{ value: 'existing', label: '选择已有房间' }, { value: 'new', label: '新建房间（同名也独立）' }]} /></Form.Item>
+      {roomMode === 'new' ? <Form.Item name="room_name" label="新房间名称" rules={required}><Input /></Form.Item> : <Form.Item name="room_id" label="已有房间" rules={required}><Select onChange={selectRoomInputs} options={configuration.rooms.map(r => ({ value: r.id, label: r.name }))} /></Form.Item>}
       <Form.Item name="name" label="本项目中的系统名称" rules={required}><Input placeholder="例如：一楼无纸化" /></Form.Item>
       <Form.Item name="definition_id" label="系统版本" rules={required}><Select disabled={!!previous?.definition_id} options={definitions.data?.definitions.map(d => ({ value: d.id, label: d.name }))} onChange={() => form.setFieldsValue({ knowledge_package_id: '', role_ids: [], features: [], features_confirmed: false, inputs: {} })} /></Form.Item>
       <Form.Item name="knowledge_package_id" label="采用的配置资料版本" extra="可暂不选择，项目继续提示覆盖不足。已有项目升级需使用资料变更预览。"><Select disabled={!!previous?.knowledge_package_id} allowClear options={definitions.data?.packages.filter(p => p.system_definition_id === identity).map(p => ({ value: p.id, label: `${p.name} · v${p.revision}` }))} onChange={() => form.setFieldsValue({ role_ids: [], features: [], features_confirmed: false, inputs: {} })} /></Form.Item>
@@ -49,7 +53,7 @@ export function SystemForm({ configuration, onApply, onClose, systemId: editingI
       <Button onClick={() => form.setFieldValue('role_ids', [...new Set([...roleIds, ...(description.data?.roles.filter(r => r.necessary).map(r => r.id) ?? [])])])}>加入已确认的必要角色建议</Button>
       <Form.Item name="role_ids" label="本次建立或补充的角色" extra="只建立需求，不加入设备。已有角色即使取消选择也不会自动删除。"><Select mode="multiple" options={description.data?.roles.map(r => ({ value: r.id, label: `${r.name} · ${r.necessary ? '必需' : description.data.definition_status === 'draft' ? '必要性待核对' : r.active ? '可选' : '功能未启用'}` }))} /></Form.Item>
       {previous ? <Typography.Paragraph type="secondary">调整功能会保留已有需求与设备；可在预览中核对，移除请使用项目中的明确删除操作。</Typography.Paragraph> : null}
-      <SetupFields fields={fields} configuration={configuration} systemId={systemId} description={description.data} />
+      <SetupFields fields={fields} configuration={configuration} systemId={systemId} roomId={effectiveRoomId} description={description.data} />
       {!configuration.actor.trim() || !configuration.evidence.trim() ? <><Typography.Paragraph>首次建立需求，请记录本次整理人及需求来源。</Typography.Paragraph><AuthorFields /></> : null}
     </Form>
   </Drawer>{review ? <Modal open title="确认本次需求变更" onCancel={() => setReview(undefined)} onOk={() => {

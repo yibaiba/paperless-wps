@@ -45,3 +45,24 @@ test('feature confirmation is explicit even when no optional features are select
   assert.equal(setupPayload(options).features_confirmed, false);
   assert.equal(setupPayload({ ...options, values: { ...options.values, features_confirmed: true } }).features_confirmed, true);
 });
+
+test('room and project quantities retain their own scope through setup', () => {
+ const room = { ...count, scope: 'room' }, project = { ...count, key: 'total', scope: 'project' };
+ const description = { name: '隔离', roles: [{ id: 'r', inputs: [room, project] }] };
+ const configuration = { systems: [{ id: 's', room_id: 'room' }], requirements: [], room_inputs: { room: [{ key: 'terminals', kind: 'quantity', value: '3', unit: '台' }] }, project_inputs: [{ key: 'total', kind: 'quantity', value: '4', unit: '台' }] };
+ const fields = setupFields(description, ['r']);
+ const payload = setupPayload({ configuration, systemId: 's', roomId: 'room', description, fields, values: { name: '隔离', definition_id: 'def', role_ids: ['r'], inputs: {} } });
+ assert.deepEqual(payload.room_inputs, configuration.room_inputs.room);
+ assert.deepEqual(payload.project_inputs, configuration.project_inputs);
+ assert.deepEqual(payload.role_environment, {});
+});
+
+test('moving a system reads the selected room and never copies the old room scale', () => {
+ const description = { name: '隔离', roles: [{ id: 'r', inputs: [{ ...count, scope: 'room' }] }] };
+ const attribute = value => ({ key: 'terminals', kind: 'quantity', value, unit: '台' });
+ const configuration = { systems: [{ id: 's', room_id: 'old' }], requirements: [], room_inputs: { old: [attribute('32')], next: [attribute('48')] } };
+ const options = { configuration, systemId: 's', roomId: 'next', description, fields: setupFields(description, ['r']), values: { name: '隔离', definition_id: 'def', role_ids: ['r'], inputs: {} } };
+ assert.equal(setupPayload(options).room_inputs[0].value, '48');
+ assert.equal(setupPayload({ ...options, roomId: 'new' }).room_inputs[0].value, null);
+ assert.equal(configuration.room_inputs.old[0].value, '32');
+});

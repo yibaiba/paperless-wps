@@ -181,6 +181,8 @@ export interface AccessoryAllocation {
   evidence: string;
 }
 export interface Configuration extends Authored {
+  room_inputs?: Record<string, Attribute[]>;
+  project_inputs?: Attribute[];
   generation?: { features_confirmed: string[]; [key: string]: unknown };
   manual_edits?: { requirements: string[]; accessory_allocations: string[]; included_allocations: string[] };
   included_allocations?: IncludedAllocation[];

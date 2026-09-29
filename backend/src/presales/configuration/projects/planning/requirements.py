@@ -40,7 +40,7 @@ def patch_requirements(configuration, operation, *, repository):
             },
         )
         data = apply_setup(data, setup, session=repository.session)
-        apply_role_resources(data, item)
+        data = apply_role_resources(data, item)
     if operation.room_inputs is not None:
         data["room_inputs"] = {
             k: [a.model_dump(mode="json") for a in v] for k, v in operation.room_inputs.items()
@@ -102,11 +102,23 @@ def field_value(value, field):
 
 
 def apply_role_resources(data, item):
+    updates = {}
     for role in item.roles:
-        if role.resources is not None:
-            for requirement in data["requirements"]:
-                if (
-                    requirement["system_id"] == item.system.id
-                    and requirement["role_id"] == role.role_id
-                ):
-                    requirement["resources"] = [r.model_dump(mode="json") for r in role.resources]
+        if role.resources is None:
+            continue
+        matches = [
+            r
+            for r in data["requirements"]
+            if r["system_id"] == item.system.id and r["role_id"] == role.role_id
+        ]
+        if len(matches) > 1:
+            raise ValueError("该角色已有多项需求，请分别编辑资源，不批量覆盖")
+        if matches:
+            updates[matches[0]["id"]] = [r.model_dump(mode="json") for r in role.resources]
+    return dict(
+        data,
+        requirements=[
+            dict(r, resources=updates[r["id"]]) if r["id"] in updates else r
+            for r in data["requirements"]
+        ],
+    )

@@ -1,0 +1,8 @@
+......s..........ssss                                                    [100%]
+=========================== short test summary info ============================
+SKIPPED [1] backend/tests/configuration/test_web_draft_concurrency.py:7: 并发验收需要 PostgreSQL 隔离连接
+SKIPPED [1] backend/tests/paperless/test_catalog.py:4: 真实资料测试需要 PAPERLESS_CATALOG_PATH 和 TEST_DATABASE_URL
+SKIPPED [1] backend/tests/paperless/test_catalog.py:19: 真实资料测试需要 PAPERLESS_CATALOG_PATH 和 TEST_DATABASE_URL
+SKIPPED [1] backend/tests/paperless/test_catalog.py:33: 真实资料测试需要 PAPERLESS_CATALOG_PATH 和 TEST_DATABASE_URL
+SKIPPED [1] backend/tests/paperless/test_catalog.py:46: 真实资料测试需要 PAPERLESS_CATALOG_PATH 和 TEST_DATABASE_URL
+16 passed, 5 skipped in 6.02s

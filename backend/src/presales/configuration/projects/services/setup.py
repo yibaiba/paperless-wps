@@ -5,6 +5,7 @@ from uuid import NAMESPACE_URL, uuid5
 
 from pydantic import Field
 
+from ...catalog.schemas import Attribute
 from ...common import Input
 from ...definitions.requirements import RequirementDescription, read_description
 from ..schemas import Configuration, EnvironmentParameter, Room, System
@@ -14,6 +15,8 @@ class SystemSetup(Input):
     system: System
     features_confirmed: bool | None = None
     new_room: Room | None = None
+    room_inputs: list[Attribute] | None = None
+    project_inputs: list[Attribute] | None = None
     role_ids: list[str] = Field(default_factory=list)
     role_environment: dict[str, list[EnvironmentParameter]] = Field(default_factory=dict)
 
@@ -84,4 +87,17 @@ def apply_setup(configuration, setup, *, session):
                 resources=[],
             )
         )
-    return Configuration.model_validate(data).model_dump(mode="json")
+    return Configuration.model_validate(with_scope_inputs(data, setup)).model_dump(mode="json")
+
+
+def with_scope_inputs(data, setup):
+    rooms = data["room_inputs"]
+    project = data["project_inputs"]
+    if setup.room_inputs is not None:
+        room_id = setup.system.room_id
+        if room_id not in {r["id"] for r in data["rooms"]}:
+            raise ValueError("填写房间数量参数前请关联实际房间")
+        rooms = {**rooms, room_id: [a.model_dump(mode="json") for a in setup.room_inputs]}
+    if setup.project_inputs is not None:
+        project = [a.model_dump(mode="json") for a in setup.project_inputs]
+    return dict(data, room_inputs=rooms, project_inputs=project)

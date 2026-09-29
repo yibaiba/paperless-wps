@@ -1,0 +1,45 @@
+✔ prospective fields share system scale but never spread software environment to hardware (3.072699ms)
+✔ blank stays unknown, existing unrelated inputs and device assignments remain untouched (0.60721ms)
+✔ a historical value is never relabelled to a new unit without explicit input (0.743948ms)
+✔ feature confirmation is explicit even when no optional features are selected (0.23795ms)
+✖ room and project quantities retain their own scope through setup (5.377239ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 4
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 214.574681
+
+✖ failing tests:
+
+test at tests/system-setup.test.mjs:49:1
+✖ room and project quantities retain their own scope through setup (5.377239ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+
+  + undefined
+  - [
+  -   {
+  -     key: 'terminals',
+  -     kind: 'quantity',
+  -     unit: '台',
+  -     value: '3'
+  -   }
+  - ]
+
+      at TestContext.<anonymous> (file:///Users/yibaiba/Code/RustProject/pi/presales-platform/frontend/tests/system-setup.test.mjs:55:9)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1306:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:897:18)
+      at Test.postRun (node:internal/test_runner/test:1447:19)
+      at Test.run (node:internal/test_runner/test:1372:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:897:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: [ { key: 'terminals', kind: 'quantity', value: '3', unit: '台' } ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }

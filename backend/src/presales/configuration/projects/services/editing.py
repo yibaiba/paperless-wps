@@ -171,6 +171,7 @@ def remove(data, operation, *, repository):
         return remove_devices(data, {identity}, demands=checked["suggestions"])
     data[collection] = [i for i in data[collection] if i["id"] != identity]
     if collection == "rooms":
+        data["room_inputs"] = {k: v for k, v in data["room_inputs"].items() if k != identity}
         data["systems"] = [
             dict(s, room_id=None) if s["room_id"] == identity else s for s in data["systems"]
         ]

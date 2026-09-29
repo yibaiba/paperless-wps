@@ -1,0 +1,107 @@
+FFF                                                                      [100%]
+=================================== FAILURES ===================================
+__________________ test_deleting_room_clears_only_its_inputs ___________________
+
+client = <starlette.testclient.TestClient object at 0x1116697f0>
+catalog = {'imported': {'source_kind': 'excel', 'id': 'c61940ef-55f4-4a30-afd3-b8288aa9c8ed', 'filename': 'test.xlsx', 'created_...80ae-4490-b8c3-c00461d39ff4', 'revision': 1, 'updated_at': '2026-09-29T16:32:56.770409+00:00', 'actor': '测试维护者', ...}]}
+
+    def test_deleting_room_clears_only_its_inputs(client, catalog):
+        draft = priced(client, catalog, amount="10")
+        inputs = [dict(key="seats", kind="quantity", value="32", unit="台")]
+        draft = write(
+            client,
+            draft,
+            [
+                dict(
+                    action="requirements_patch",
+                    rooms=[dict(id="other", name="其他房间")],
+                    room_inputs={"room": inputs, "other": inputs},
+                    project_inputs=inputs,
+                )
+            ],
+        )
+        response = client.post(
+            "/api/list-tools/list_update",
+            json=dict(
+                draft_id=draft["id"],
+                expected_revision=draft["revision"],
+                operation_id="delete-room",
+                operations=[dict(action="remove", collection="rooms", id="room")],
+            ),
+        )
+>       assert response.status_code == 200, response.text
+E       AssertionError: {"detail":"1 validation error for Configuration\n  Value error, 房间输入引用了不存在的房间 [type=value_error, input_value={'actor': '测试维护...5769-b03c-0d30521236ad'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/value_error"}
+E       assert 422 == 200
+E        +  where 422 = <Response [422 Unprocessable Content]>.status_code
+
+backend/tests/configuration/test_scoped_requirement_edits.py:32: AssertionError
+______ test_role_resource_patch_must_not_overwrite_multiple_requirements _______
+
+client = <starlette.testclient.TestClient object at 0x111676210>
+catalog = {'imported': {'source_kind': 'excel', 'id': 'f5db7fdf-7dce-4e28-bebd-dc68df3299c5', 'filename': 'test.xlsx', 'created_...4216-4a6d-b99e-e7a5d7a41f44', 'revision': 1, 'updated_at': '2026-09-29T16:32:57.250297+00:00', 'actor': '测试维护者', ...}]}
+
+    def test_role_resource_patch_must_not_overwrite_multiple_requirements(client, catalog):
+        draft = priced(client, catalog, amount="10")
+        data = read(client, draft)["configuration"]
+        first = data["requirements"][0]
+        second = dict(
+            first, id="another-terminal", resources=[dict(key="memory", amount="8", unit="GB")]
+        )
+        draft = write(client, draft, [dict(action="requirement_put", value=second)])
+        before = deepcopy(read(client, draft))
+        response = client.post(
+            "/api/list-tools/list_update",
+            json=dict(
+                draft_id=draft["id"],
+                expected_revision=draft["revision"],
+                operation_id="ambiguous-resource",
+                operations=[
+                    dict(
+                        action="requirements_patch",
+                        systems=[
+                            dict(
+                                system=data["systems"][0],
+                                features_confirmed=True,
+                                roles=[
+                                    dict(
+                                        role_id=first["role_id"],
+                                        resources=[dict(key="memory", amount="16", unit="GB")],
+                                    )
+                                ],
+                            )
+                        ],
+                    )
+                ],
+            ),
+        )
+>       assert response.status_code == 422, response.text
+E       AssertionError: {"id":"d5ec5711-701c-49d7-bc20-f7d66e0ef193","revision":5,"name":"隔离自动方案","project_id":null,"base_revision":0,"rooms":[{"id":"room","name":"会议室"}],"systems":[{"inputs":[{"key":"seats","kind":"quantity","value":"32","unit":"台"}],"definition_id":"603841fd-61b0-4dea-8b4f-dccb482d823b","knowledge_package_id":"4bb945f4-4526-4a85-bdfe-09afd8973512","features":[],"id":"system","room_id":"room","name":"隔离红盾 Windows","kind":"隔离红盾 Windows"}],"device_count":0,"requirement_count":2,"check_fingerprint":null,"calculation_fingerprint":"4afd54dcd0fc01db49cc746041206576268b8ec70368aad0f1b5c6a69d7878a8","check_current":false,"quotation_total":"0.00","known_subtotal":"0.00","knowledge_snapshot_id":"b74c9376-9a84-56b5-ad4e-8beda3914a99","definition_snapshot_id":"f149eee3-8560-5355-a379-8bc3e7337199","calculation_version":3,"catalog_snapshot_id":"37521391-e86b-52f8-9a4b-8af6ccd32cb2"}
+E       assert 200 == 422
+E        +  where 200 = <Response [200 OK]>.status_code
+
+backend/tests/configuration/test_scoped_requirement_edits.py:73: AssertionError
+______________ test_setup_preserves_room_and_project_input_scopes ______________
+
+client = <starlette.testclient.TestClient object at 0x111b7b9d0>
+catalog = {'imported': {'source_kind': 'excel', 'id': '6e1ee4e6-7761-4848-ac25-50efee7a9f14', 'filename': 'test.xlsx', 'created_...8429-491e-ae12-14b49ddab365', 'revision': 1, 'updated_at': '2026-09-29T16:32:57.605960+00:00', 'actor': '测试维护者', ...}]}
+
+    def test_setup_preserves_room_and_project_input_scopes(client, catalog):
+        draft = priced(client, catalog, amount="10")
+        data = read(client, draft)["configuration"]
+        room_inputs = [dict(key="room_count", kind="quantity", value="3", unit="台")]
+        project_inputs = [dict(key="project_count", kind="quantity", value="4", unit="台")]
+        setup = dict(system=data["systems"][0], room_inputs=room_inputs, project_inputs=project_inputs)
+        response = client.post(
+            BASE + "/system-setup-preview", json=dict(configuration=data, setup=setup)
+        )
+>       assert response.status_code == 200, response.text
+E       AssertionError: {"detail":[{"loc":["body","setup","room_inputs"],"msg":"Extra inputs are not permitted","type":"extra_forbidden"},{"loc":["body","setup","project_inputs"],"msg":"Extra inputs are not permitted","type":"extra_forbidden"}]}
+E       assert 422 == 200
+E        +  where 422 = <Response [422 Unprocessable Content]>.status_code
+
+backend/tests/configuration/test_scoped_requirement_edits.py:86: AssertionError
+=========================== short test summary info ============================
+FAILED backend/tests/configuration/test_scoped_requirement_edits.py::test_deleting_room_clears_only_its_inputs
+FAILED backend/tests/configuration/test_scoped_requirement_edits.py::test_role_resource_patch_must_not_overwrite_multiple_requirements
+FAILED backend/tests/configuration/test_scoped_requirement_edits.py::test_setup_preserves_room_and_project_input_scopes
+3 failed in 1.28s

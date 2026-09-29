@@ -37,3 +37,12 @@ test('feature-only confirmation persists as a business operation and undo clears
  assert.deepEqual(configurationOperations(after, before), [{ action: 'system_setup', system: before.systems[0], features_confirmed: false }]);
  assert.deepEqual(configurationOperations(after, after), []);
 });
+
+test('scope-only input edits persist without changing generation preferences', () => {
+ const before = { ...base, rooms: [{ id: 'r', name: '会议室' }], room_inputs: {}, project_inputs: [], generation: { features_confirmed: [], preferences: [{ requirement_id: 'keep' }] } };
+ const inputs = [{ key: 'count', kind: 'number', value: '3', unit: '' }];
+ const after = { ...before, room_inputs: { r: inputs }, project_inputs: inputs };
+ assert.deepEqual(configurationOperations(before, after), [{ action: 'requirements_patch', room_inputs: { r: inputs }, project_inputs: inputs }]);
+ assert.deepEqual(configurationOperations(after, before), [{ action: 'requirements_patch', room_inputs: {}, project_inputs: [] }]);
+ assert.deepEqual(configurationOperations(after, after), []);
+});
