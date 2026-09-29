@@ -142,8 +142,8 @@ def contribution_quantity(rule, device, requirement):
     return value, None
 
 
-def calculated_demand(data, rule, scope_id, contributions, engine, cyclic):
-    demand_id = digest([rule["id"], rule["calculation_scope"], scope_id])
+def calculated_demand(data, rule, scope_id, contributions, engine, cyclic, *, demand_id=None):
+    demand_id = demand_id or digest([rule["id"], rule["calculation_scope"], scope_id])
     evidence = [
         item
         for contribution in contributions

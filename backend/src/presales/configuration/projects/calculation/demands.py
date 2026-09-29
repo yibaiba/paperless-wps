@@ -1,8 +1,6 @@
 from collections import defaultdict
 from decimal import Decimal
 
-from presales.rules.calculation import digest
-
 from ...knowledge.evaluator import context_for, scope_matches
 from ...knowledge.package_scope import package_allows
 from ...knowledge.semantics import condition_result, evaluate_rules_v3, scope_is_reviewed
@@ -14,6 +12,7 @@ from ..accessory_demands import (
     denial_rules,
     rule_missing,
 )
+from .demand_identity import DemandIdentities
 
 
 def accessory_demands_v3(data, *, variants, catalog_variants, engine):
@@ -23,11 +22,18 @@ def accessory_demands_v3(data, *, variants, catalog_variants, engine):
         if r["kind"] == "accessory" and r["status"] != "disabled"
     ]
     owners = direct_owners(data)
+    identities = DemandIdentities(data, rules=rules)
     # Only fixed project configurations participate; later catalogue edits cannot alter history.
     cycles = scoped_cycles(data, rules, variants.values())
     while True:
         demands = collect_demands(
-            data, rules=rules, owners=owners, variants=variants, engine=engine, cycles=cycles
+            data,
+            rules=rules,
+            owners=owners,
+            variants=variants,
+            engine=engine,
+            cycles=cycles,
+            identities=identities,
         )
         expanded = expand_owners(data, owners, demands)
         if expanded == owners:
@@ -53,16 +59,17 @@ def expand_owners(data, owners, demands):
     return expanded
 
 
-def collect_demands(data, *, rules, owners, variants, engine, cycles):
+def collect_demands(data, *, rules, owners, variants, engine, cycles, identities):
     results = []
     for rule in rules:
         if rule["effect"] != "allow":
             continue
         groups = contributions(data, rule=rule, owners=owners, variants=variants)
         for scope_id, entries in groups.items():
+            identity = identities.identity(rule, scope_id)
             missing = quantity_missing(rule)
             if missing:
-                demand = incomplete_demand(rule, scope_id, entries, missing)
+                demand = incomplete_demand(rule, scope_id, entries, missing, identity=identity)
             else:
                 demand = calculated_demand(
                     data,
@@ -71,6 +78,7 @@ def collect_demands(data, *, rules, owners, variants, engine, cycles):
                     entries,
                     engine,
                     demand_has_cycle(data, rule, entries, cycles=cycles),
+                    demand_id=identity,
                 )
             demand["quantity_inputs"] = [input_evidence(rule, entry) for entry in entries]
             results.append(with_selection(data, demand))
@@ -93,8 +101,7 @@ def quantity_missing(rule):
     return missing
 
 
-def incomplete_demand(rule, scope_id, entries, missing):
-    identity = digest([rule["id"], rule.get("calculation_scope"), scope_id])
+def incomplete_demand(rule, scope_id, entries, missing, *, identity):
     consumers = list(
         dict.fromkeys(e["requirement"]["id"] for e in entries if e["requirement"].get("id"))
     )

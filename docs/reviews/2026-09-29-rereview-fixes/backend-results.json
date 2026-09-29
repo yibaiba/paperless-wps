@@ -1,0 +1,56 @@
+[
+  {
+    "files": [
+      "backend/tests/configuration/test_second_review_fixes.py",
+      "backend/tests/configuration/test_core_review_fixes.py",
+      "backend/tests/configuration/test_package_knowledge_scope.py"
+    ],
+    "code": 0,
+    "seconds": 22.28
+  },
+  {
+    "files": [
+      "backend/tests/configuration/test_catalog_updates.py",
+      "backend/tests/configuration/test_accessory_demands.py",
+      "backend/tests/configuration/test_included_content.py"
+    ],
+    "code": 0,
+    "seconds": 33.7
+  },
+  {
+    "files": [
+      "backend/tests/configuration/test_included_review.py",
+      "backend/tests/configuration/test_evolution.py",
+      "backend/tests/configuration/test_evolution_sharing.py"
+    ],
+    "code": 0,
+    "seconds": 14.96
+  },
+  {
+    "files": [
+      "backend/tests/configuration/test_evolution_versions.py",
+      "backend/tests/configuration/test_role_partial_reuse.py",
+      "backend/tests/configuration/test_proposal_generation.py"
+    ],
+    "code": 0,
+    "seconds": 22.15
+  },
+  {
+    "files": [
+      "backend/tests/configuration/test_proposal_evolution.py",
+      "backend/tests/configuration/test_proposal_review.py",
+      "backend/tests/configuration/test_web_drafts.py"
+    ],
+    "code": 0,
+    "seconds": 20.23
+  },
+  {
+    "files": [
+      "backend/tests/configuration/test_web_draft_edges.py",
+      "backend/tests/configuration/test_list_snapshots.py",
+      "backend/tests/configuration/test_review_regressions.py"
+    ],
+    "code": 0,
+    "seconds": 14.78
+  }
+]

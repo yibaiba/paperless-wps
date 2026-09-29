@@ -32,7 +32,11 @@ def technical_values(value):
 def with_revision_review(session, *, previous, incoming):
     values = incoming.model_dump(mode="json")
     if technical_values(previous) == technical_values(values):
-        return incoming
+        # Pending review is cleared by reviewed knowledge revisions, never by an
+        # editor's omitted/default field or an older copy of the review metadata.
+        reviews = [*values["review_requirements"], *previous.get("review_requirements", [])]
+        values["review_requirements"] = list({item["id"]: item for item in reviews}.values())
+        return VariantInput.model_validate(values)
     entities = Entities(session)
     product = entities.get(values["product_id"], kind="product").payload
     revised = dict(previous, **values, product=product)

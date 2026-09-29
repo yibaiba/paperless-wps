@@ -40,7 +40,13 @@ export function createSaveTransaction(io: Dependencies) {
       attempt.rejection = cause;
     }
     attempt.refreshed = await io.readWorkspace(workspace.id);
-    io.acceptWorkspace(attempt.refreshed);
+    // A read after a rejected write may belong to another editor. Only advance
+    // our baseline to a revision acknowledged by this transaction.
+    const acknowledgedRevision = attempt.saved?.revision ?? attempt.checked?.revision ?? workspace.revision;
+    const acknowledgedBase = attempt.saved?.project_revision ?? workspace.base_revision;
+    if (attempt.refreshed.revision === acknowledgedRevision && attempt.refreshed.base_revision === acknowledgedBase) {
+      io.acceptWorkspace(attempt.refreshed);
+    }
     if (attempt.rejection) { pending = undefined; throw attempt.rejection; }
   };
   const settle = () => settling ??= commit().finally(() => { settling = undefined; });
