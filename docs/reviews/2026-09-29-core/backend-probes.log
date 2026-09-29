@@ -1,0 +1,88 @@
+FFFF                                                                     [100%]
+=================================== FAILURES ===================================
+__________ test_accessory_alternatives_include_second_allowed_server ___________
+
+client = <starlette.testclient.TestClient object at 0x11117c590>
+catalog = {'imported': {'source_kind': 'excel', 'id': 'cbf70d7b-c856-4135-bbb0-09b69365c487', 'filename': 'test.xlsx', 'created_...44b1-47a7-b6c3-5414eebd60d9', 'revision': 1, 'updated_at': '2026-09-29T06:55:38.129802+00:00', 'actor': '测试维护者', ...}]}
+
+    def test_accessory_alternatives_include_second_allowed_server(client,catalog):
+        draft=accessory_stock(client,catalog,allow=True)
+        first=plan(client,draft)
+        second=plan(client,draft,proposal_id=first['proposal_id'],option_offset=1)
+        exhausted=plan(client,draft,proposal_id=first['proposal_id'],option_offset=2)
+        assert exhausted['exhausted'] and exhausted['option'] is None
+        result=read(client,apply(client,draft,second))['configuration']
+        server=next(r for r in result['requirements'] if r['role_id']=='server')
+>       assert server['device_id']=='stock-b', server
+E       AssertionError: {'allocations': [], 'role_id': 'server', 'id': '950acd72-c56e-501e-a08b-22a22a75af95', 'system_id': 'system', ...}
+E       assert '9a901547-ac9...-0b1b4573120e' == 'stock-b'
+E
+E         - stock-b
+E         + 9a901547-ac94-5d93-8a68-0b1b4573120e
+
+/tmp/presales-core-review-20260929/backend/tests/configuration/test_review_additional_probe.py:29: AssertionError
+__________ test_shared_mode_does_not_reuse_unapproved_customer_stock ___________
+
+client = <starlette.testclient.TestClient object at 0x1110c7d90>
+catalog = {'imported': {'source_kind': 'excel', 'id': '7fc911bd-0961-4291-9267-12cdc05b42fd', 'filename': 'test.xlsx', 'created_...5924-4c1f-9c19-0df36f8b0b1a', 'revision': 1, 'updated_at': '2026-09-29T06:55:38.975004+00:00', 'actor': '测试维护者', ...}]}
+
+    def test_shared_mode_does_not_reuse_unapproved_customer_stock(client,catalog):
+        draft=accessory_stock(client,catalog,allow=False)
+        proposed=plan(client,draft,deployment='shared')
+        result=read(client,apply(client,draft,proposed))['configuration']
+        server=next(r for r in result['requirements'] if r['role_id']=='server')
+>       assert server['device_id'] not in {'stock-a','stock-b'}, server
+E       AssertionError: {'allocations': [], 'role_id': 'server', 'id': '950acd72-c56e-501e-a08b-22a22a75af95', 'system_id': 'system', ...}
+E       assert 'stock-a' not in {'stock-a', 'stock-b'}
+
+/tmp/presales-core-review-20260929/backend/tests/configuration/test_review_additional_probe.py:37: AssertionError
+___ test_direct_variant_edit_requires_review_of_confirmed_matching_knowledge ___
+
+client = <starlette.testclient.TestClient object at 0x111625090>
+catalog = {'imported': {'source_kind': 'excel', 'id': '994cd549-c4db-46de-ab19-627841b61782', 'filename': 'test.xlsx', 'created_...14cf-468a-99c4-a9d33ea3f4ff', 'revision': 1, 'updated_at': '2026-09-29T06:55:39.367329+00:00', 'actor': '测试维护者', ...}]}
+
+    def test_direct_variant_edit_requires_review_of_confirmed_matching_knowledge(client,catalog):
+        from .conftest import knowledge
+        variant=catalog['variants'][0]
+        knowledge(client,variant)
+        payload={k:v for k,v in variant.items() if k not in {'id','revision','updated_at'}}
+        payload['attributes']=[dict(a,value='arm64') if a['key']=='cpu_arch' else a for a in payload['attributes']]
+        changed=client.put('/api/configuration/variants/'+variant['id'],json=dict(expected_revision=variant['revision'],payload=payload))
+        assert changed.status_code==200,changed.text
+        response=client.post('/api/configuration/candidates',json=dict(calculation_version=3,system='无纸化',role='服务端'))
+        assert response.status_code==200,response.text
+        candidate=next(c for c in response.json() if c['variant']['id']==variant['id'])
+>       assert candidate['status']=='unknown',candidate
+E       AssertionError: {'variant': {'id': 'e150ca60-d0ba-46cd-9d3d-4b924ea33fb7', 'revision': 2, 'updated_at': '2026-09-29T06:55:39.402056', ...d': 'f9523880-2397-453d-b33e-0e21c4b3d49a', 'revision': 1, 'name': '测试适用条件', 'effect': 'allow', ...}], 'ranking': None}
+E       assert 'pass' == 'unknown'
+E
+E         - unknown
+E         + pass
+
+/tmp/presales-core-review-20260929/backend/tests/configuration/test_review_additional_probe.py:51: AssertionError
+_______ test_unpublished_package_member_does_not_change_published_choice _______
+
+client = <starlette.testclient.TestClient object at 0x1178d8e90>
+catalog = {'imported': {'source_kind': 'excel', 'id': '1daf546c-9b6c-453a-b549-0a1b48be69f5', 'filename': 'test.xlsx', 'created_...fd4b-46e0-a046-56a52ccf3d7a', 'revision': 1, 'updated_at': '2026-09-29T06:55:39.622728+00:00', 'actor': '测试维护者', ...}]}
+
+    def test_unpublished_package_member_does_not_change_published_choice(client,catalog):
+        from .conftest import AUTHOR,post
+        definition,package=published(client,catalog)
+        post(client,'/knowledge',dict(name='包外新增待发布禁用关系',kind='suitability',status='confirmed',effect='deny',system_definition_id=definition['id'],role_id='terminal',selector=dict(variant_ids=[catalog['variants'][0]['id']]),**AUTHOR))
+        draft=draft_for(client,definition,package)
+        proposed=plan(client,draft)
+        data=read(client,apply(client,draft,proposed))['configuration']
+>       assert data['devices'][0]['variant_id']==catalog['variants'][0]['id'], data['devices'][0]
+E       AssertionError: {'generated_origin': {'key': 'role:729ca948-b8f1-5cd7-93ce-aa4efdf79c77', 'proposal_id': '7a6b272f-de56-4d29-9909-d04b...34379-9412-50d3-bfe4-563d7542ca36', 'name': '测试服务器 / 128GB', 'variant_id': 'c94d8044-fd4b-46e0-a046-56a52ccf3d7a', ...}
+E       assert 'c94d8044-fd4...-56a52ccf3d7a' == '316b47c7-e89...-98b1d1f4ea4e'
+E
+E         - 316b47c7-e89a-4c16-92a4-98b1d1f4ea4e
+E         + c94d8044-fd4b-46e0-a046-56a52ccf3d7a
+
+/tmp/presales-core-review-20260929/backend/tests/configuration/test_review_additional_probe.py:61: AssertionError
+=========================== short test summary info ============================
+FAILED ../../../tmp/presales-core-review-20260929/backend/tests/configuration/test_review_additional_probe.py::test_accessory_alternatives_include_second_allowed_server
+FAILED ../../../tmp/presales-core-review-20260929/backend/tests/configuration/test_review_additional_probe.py::test_shared_mode_does_not_reuse_unapproved_customer_stock
+FAILED ../../../tmp/presales-core-review-20260929/backend/tests/configuration/test_review_additional_probe.py::test_direct_variant_edit_requires_review_of_confirmed_matching_knowledge
+FAILED ../../../tmp/presales-core-review-20260929/backend/tests/configuration/test_review_additional_probe.py::test_unpublished_package_member_does_not_change_published_choice
+4 failed in 2.09s

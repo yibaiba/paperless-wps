@@ -1,0 +1,21 @@
+{
+  "commit": "06d64c2",
+  "backend": {
+    "passed": 381,
+    "failed": 0,
+    "remaining_skipped": 0,
+    "batch_timeout_seconds": 60,
+    "item_timeout_seconds": 60
+  },
+  "frontend": {
+    "passed": 56,
+    "failed": 0,
+    "typecheck": "passed",
+    "build": "passed"
+  },
+  "new_reproductions": {
+    "backend_failed": 4,
+    "frontend_fault_injection_failed": 1
+  },
+  "browser_run_this_review": false
+}

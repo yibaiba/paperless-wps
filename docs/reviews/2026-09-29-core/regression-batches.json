@@ -1,0 +1,187 @@
+[
+  {
+    "batch": 1,
+    "code": 0,
+    "seconds": 10.48,
+    "files": [
+      "backend/tests/configuration/test_accessory_demands.py",
+      "backend/tests/configuration/test_catalog.py",
+      "backend/tests/configuration/test_catalog_updates.py",
+      "backend/tests/configuration/test_check_classification.py"
+    ]
+  },
+  {
+    "batch": 2,
+    "code": 0,
+    "seconds": 8.51,
+    "files": [
+      "backend/tests/configuration/test_concurrency.py",
+      "backend/tests/configuration/test_drawing.py",
+      "backend/tests/configuration/test_evolution.py",
+      "backend/tests/configuration/test_evolution_contracts.py"
+    ]
+  },
+  {
+    "batch": 3,
+    "code": 0,
+    "seconds": 7.92,
+    "files": [
+      "backend/tests/configuration/test_evolution_sharing.py",
+      "backend/tests/configuration/test_evolution_versions.py",
+      "backend/tests/configuration/test_excel_workflow.py",
+      "backend/tests/configuration/test_extraction.py"
+    ]
+  },
+  {
+    "batch": 4,
+    "code": 0,
+    "seconds": 9.74,
+    "files": [
+      "backend/tests/configuration/test_import_merges.py",
+      "backend/tests/configuration/test_included_content.py",
+      "backend/tests/configuration/test_included_review.py",
+      "backend/tests/configuration/test_inspection_profiles.py"
+    ]
+  },
+  {
+    "batch": 5,
+    "code": 0,
+    "seconds": 8.55,
+    "files": [
+      "backend/tests/configuration/test_knowledge.py",
+      "backend/tests/configuration/test_knowledge_reconciliation.py",
+      "backend/tests/configuration/test_list_concurrency.py",
+      "backend/tests/configuration/test_list_edges.py"
+    ]
+  },
+  {
+    "batch": 6,
+    "code": 0,
+    "seconds": 13.04,
+    "files": [
+      "backend/tests/configuration/test_list_mcp.py",
+      "backend/tests/configuration/test_list_snapshots.py",
+      "backend/tests/configuration/test_maintenance_tasks.py",
+      "backend/tests/configuration/test_mcp_protocol.py"
+    ]
+  },
+  {
+    "batch": 7,
+    "code": 0,
+    "seconds": 6.58,
+    "files": [
+      "backend/tests/configuration/test_migration.py",
+      "backend/tests/configuration/test_package_changes.py",
+      "backend/tests/configuration/test_package_readiness.py",
+      "backend/tests/configuration/test_package_trials.py"
+    ]
+  },
+  {
+    "batch": 8,
+    "code": 0,
+    "seconds": 5.55,
+    "files": [
+      "backend/tests/configuration/test_price_adoption.py",
+      "backend/tests/configuration/test_price_concurrency.py",
+      "backend/tests/configuration/test_price_review_regressions.py",
+      "backend/tests/configuration/test_project_output.py"
+    ]
+  },
+  {
+    "batch": 9,
+    "code": 0,
+    "seconds": 10.78,
+    "files": [
+      "backend/tests/configuration/test_projects.py",
+      "backend/tests/configuration/test_proposal_concurrency.py",
+      "backend/tests/configuration/test_proposal_evolution.py",
+      "backend/tests/configuration/test_proposal_generation.py"
+    ]
+  },
+  {
+    "batch": 10,
+    "code": 0,
+    "seconds": 16.65,
+    "files": [
+      "backend/tests/configuration/test_proposal_prices_and_cycles.py",
+      "backend/tests/configuration/test_proposal_protection.py",
+      "backend/tests/configuration/test_proposal_protocol.py",
+      "backend/tests/configuration/test_proposal_review.py"
+    ]
+  },
+  {
+    "batch": 11,
+    "code": 0,
+    "seconds": 16.21,
+    "files": [
+      "backend/tests/configuration/test_quotation_details.py",
+      "backend/tests/configuration/test_quote_formula_scaling.py",
+      "backend/tests/configuration/test_readiness.py",
+      "backend/tests/configuration/test_requirement_setup.py"
+    ]
+  },
+  {
+    "batch": 12,
+    "code": 0,
+    "seconds": 14.2,
+    "files": [
+      "backend/tests/configuration/test_review_regressions.py",
+      "backend/tests/configuration/test_role_partial_reuse.py",
+      "backend/tests/configuration/test_search.py",
+      "backend/tests/configuration/test_sheet_edits.py"
+    ]
+  },
+  {
+    "batch": 13,
+    "code": 0,
+    "seconds": 8.22,
+    "files": [
+      "backend/tests/configuration/test_web_draft_concurrency.py",
+      "backend/tests/configuration/test_web_draft_edges.py",
+      "backend/tests/configuration/test_web_drafts.py",
+      "backend/tests/paperless/test_catalog.py"
+    ]
+  },
+  {
+    "batch": 14,
+    "code": 0,
+    "seconds": 8.96,
+    "files": [
+      "backend/tests/paperless/test_configuration.py",
+      "backend/tests/paperless/test_rules.py",
+      "backend/tests/test_attribute_concurrency.py",
+      "backend/tests/test_attributes.py"
+    ]
+  },
+  {
+    "batch": 15,
+    "code": 0,
+    "seconds": 10.75,
+    "files": [
+      "backend/tests/test_catalog.py",
+      "backend/tests/test_drawio.py",
+      "backend/tests/test_projects.py",
+      "backend/tests/test_review_concurrency.py"
+    ]
+  },
+  {
+    "batch": 16,
+    "code": 0,
+    "seconds": 9.21,
+    "files": [
+      "backend/tests/test_reviews.py",
+      "backend/tests/test_rule_validation.py",
+      "backend/tests/test_rules.py",
+      "backend/tests/test_rules_concurrency.py"
+    ]
+  },
+  {
+    "batch": 17,
+    "code": 0,
+    "seconds": 11.63,
+    "files": [
+      "backend/tests/test_topology.py",
+      "backend/tests/test_topology_concurrency.py"
+    ]
+  }
+]

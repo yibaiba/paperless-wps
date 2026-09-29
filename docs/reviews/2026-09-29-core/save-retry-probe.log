@@ -1,0 +1,34 @@
+{
+  "currentDraft": {
+    "note": "B"
+  },
+  "saveReturned": {
+    "note": "A"
+  },
+  "saveRequests": [
+    {
+      "path": "/list-tools/list_save",
+      "request": {
+        "draft_id": "draft",
+        "expected_revision": 2,
+        "operation_id": "f2232c20-6a58-486b-8cce-3c149d03258f",
+        "expected_project_revision": 0,
+        "fingerprint": "checked"
+      }
+    },
+    {
+      "path": "/list-tools/list_save",
+      "request": {
+        "draft_id": "draft",
+        "expected_revision": 2,
+        "operation_id": "f2232c20-6a58-486b-8cce-3c149d03258f",
+        "expected_project_revision": 0,
+        "fingerprint": "checked"
+      }
+    }
+  ],
+  "projectRevision": 1
+}
+A new edit must not be reported as saved using the previous save receipt
+
+'A' !== 'B'
