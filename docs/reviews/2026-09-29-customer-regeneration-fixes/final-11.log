@@ -1,0 +1,5 @@
+...................s.................s                                   [100%]
+=========================== short test summary info ============================
+SKIPPED [1] backend/tests/configuration/test_search.py:172: 需要 PostgreSQL pgvector
+SKIPPED [1] backend/tests/configuration/test_web_draft_concurrency.py:7: 并发验收需要 PostgreSQL 隔离连接
+36 passed, 2 skipped in 8.73s

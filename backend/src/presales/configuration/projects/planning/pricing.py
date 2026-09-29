@@ -65,7 +65,9 @@ def quote_plan(checked, prices):
                 )
             )
     quote["prices"] = selections
-    return with_quotation(result)
+    from ..services.issue_actions import with_issue_actions
+
+    return with_issue_actions(with_quotation(result))
 
 
 def validate_new_prices(session, *, before, proposed):

@@ -37,7 +37,8 @@ def check_questions(checked):
         kind = check.get("code") or check.get("kind", "quotation")
         recipient = (
             "customer"
-            if action.get("type")
+            if kind in {"product_constraint_conflict", "budget_exceeded"}
+            or action.get("type")
             in {
                 "edit_requirement",
                 "edit_resources",

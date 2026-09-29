@@ -1,7 +1,6 @@
 """Lazy depth-first composition. Full business checks reject downstream conflicts."""
 
 from copy import deepcopy
-from decimal import Decimal
 
 from presales.rules.calculation import digest
 
@@ -80,7 +79,7 @@ def reset_generated_allocations(data):
 
 def proposal_option(context, checked, *, questions, decisions):
     data = checked["configuration"]
-    questions = [*questions, *check_questions(checked), *preference_questions(data)]
+    questions = [*questions, *check_questions(checked)]
     for source in data["generation"]["sources"]:
         if source["kind"] == "agent_interpretation" and not source["confirmed"]:
             questions.append(
@@ -104,26 +103,6 @@ def proposal_option(context, checked, *, questions, decisions):
                 recipient="customer",
             )
         )
-    quote = checked.get("quotation_output") or {}
-    budget = data["generation"].get("budget")
-    if budget is not None:
-        if quote.get("total") is None:
-            questions.append(
-                question("budget_unknown", "project", "prices", "金额未完整，不能判断预算是否满足")
-            )
-        elif Decimal(quote["total"]) > Decimal(budget):
-            questions.append(
-                dict(
-                    question(
-                        "budget_exceeded",
-                        "project",
-                        "budget",
-                        "本分支报价超过客户预算",
-                        recipient="customer",
-                    ),
-                    status="conflict",
-                )
-            )
     from ..role_allocations import device_ids
 
     used = {identity for r in data["requirements"] for identity in device_ids(r)} | {
@@ -157,30 +136,3 @@ def proposal_option(context, checked, *, questions, decisions):
         removal_candidates=removals,
         changes=configuration_diff(context.configuration, data),
     )
-
-
-def preference_questions(data):
-    devices = {d["id"]: d for d in data["devices"]}
-    requirements = {r["id"]: r for r in data["requirements"]}
-    result = []
-    for preference in data["generation"]["preferences"]:
-        requirement = requirements[preference["requirement_id"]]
-        from ..role_allocations import device_ids
-
-        chosen = {devices[identity]["variant_id"] for identity in device_ids(requirement)}
-        if chosen & set(preference["excluded_variant_ids"]) or (
-            preference["required_variant_id"] and chosen - {preference["required_variant_id"]}
-        ):
-            result.append(
-                dict(
-                    question(
-                        "product_constraint_conflict",
-                        requirement["id"],
-                        "preferences",
-                        "保留的设备与客户明确指定或排除条件冲突",
-                        recipient="customer",
-                    ),
-                    status="conflict",
-                )
-            )
-    return result

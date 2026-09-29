@@ -1,0 +1,19 @@
+..........ssssssssssssssssss                                             [100%]
+=========================== short test summary info ============================
+SKIPPED [1] backend/tests/paperless/test_catalog.py:4: 真实资料测试需要 PAPERLESS_CATALOG_PATH 和 TEST_DATABASE_URL
+SKIPPED [1] backend/tests/paperless/test_catalog.py:19: 真实资料测试需要 PAPERLESS_CATALOG_PATH 和 TEST_DATABASE_URL
+SKIPPED [1] backend/tests/paperless/test_catalog.py:33: 真实资料测试需要 PAPERLESS_CATALOG_PATH 和 TEST_DATABASE_URL
+SKIPPED [1] backend/tests/paperless/test_catalog.py:46: 真实资料测试需要 PAPERLESS_CATALOG_PATH 和 TEST_DATABASE_URL
+SKIPPED [1] backend/tests/paperless/test_configuration.py:4: 真实资料测试需要 PAPERLESS_CATALOG_PATH 和 TEST_DATABASE_URL
+SKIPPED [1] backend/tests/paperless/test_configuration.py:37: 真实资料测试需要 PAPERLESS_CATALOG_PATH 和 TEST_DATABASE_URL
+SKIPPED [1] backend/tests/paperless/test_configuration.py:48: 真实资料测试需要 PAPERLESS_CATALOG_PATH 和 TEST_DATABASE_URL
+SKIPPED [1] backend/tests/paperless/test_configuration.py:89: 真实资料测试需要 PAPERLESS_CATALOG_PATH 和 TEST_DATABASE_URL
+SKIPPED [1] backend/tests/paperless/test_configuration.py:100: 真实资料测试需要 PAPERLESS_CATALOG_PATH 和 TEST_DATABASE_URL
+SKIPPED [1] backend/tests/paperless/test_rules.py:6: 真实资料测试需要 PAPERLESS_CATALOG_PATH 和 TEST_DATABASE_URL
+SKIPPED [1] backend/tests/paperless/test_rules.py:14: 真实资料测试需要 PAPERLESS_CATALOG_PATH 和 TEST_DATABASE_URL
+SKIPPED [1] backend/tests/paperless/test_rules.py:37: 真实资料测试需要 PAPERLESS_CATALOG_PATH 和 TEST_DATABASE_URL
+SKIPPED [3] backend/tests/paperless/test_rules.py:47: 真实资料测试需要 PAPERLESS_CATALOG_PATH 和 TEST_DATABASE_URL
+SKIPPED [1] backend/tests/paperless/test_rules.py:62: 真实资料测试需要 PAPERLESS_CATALOG_PATH 和 TEST_DATABASE_URL
+SKIPPED [1] backend/tests/paperless/test_rules.py:80: 真实资料测试需要 PAPERLESS_CATALOG_PATH 和 TEST_DATABASE_URL
+SKIPPED [1] backend/tests/paperless/test_rules.py:104: 真实资料测试需要 PAPERLESS_CATALOG_PATH 和 TEST_DATABASE_URL
+10 passed, 18 skipped in 3.15s

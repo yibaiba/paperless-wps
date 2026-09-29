@@ -24,12 +24,22 @@ class ProjectLifecycle:
         checked = record.payload
         if checked["fingerprint"] != data.fingerprint:
             raise RuleConflict("检查结果与保存版本不一致")
-        if not checked["readiness"].get("ready_for_confirmation"):
-            raise ValueError("本版本仍有冲突或待确认事项，已保留草稿")
         identity = confirmation_id(project_id, record.revision)
         previous = self.session.get(Entity, identity)
         if previous:
             return view(previous)
+        from ..calculation.customer_constraints import budget_checks, product_constraints
+
+        # Old saved checks may predate customer constraints; use their frozen
+        # configuration and prices, without rewriting the saved revision.
+        constraints = [
+            *product_constraints(checked["configuration"]),
+            *budget_checks(checked["configuration"], checked),
+        ]
+        if not checked["readiness"].get("ready_for_confirmation") or any(
+            c["status"] != "pass" for c in constraints
+        ):
+            raise ValueError("本版本仍有冲突或待确认事项，已保留草稿")
         return self.entities.save(
             "project_confirmation",
             dict(

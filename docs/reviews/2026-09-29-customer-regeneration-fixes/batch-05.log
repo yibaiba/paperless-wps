@@ -1,0 +1,4 @@
+s......................                                                  [100%]
+=========================== short test summary info ============================
+SKIPPED [1] backend/tests/configuration/test_list_concurrency.py:17: 需要 PostgreSQL 隔离测试连接
+22 passed, 1 skipped in 5.69s

@@ -34,6 +34,21 @@ def device_for(context, variant, *, key, quantity, kind, source_id=""):
         ),
         None,
     )
+    if (
+        previous
+        and previous["generated_origin"]["variant_locked"]
+        and previous["variant_id"] != variant["id"]
+    ):
+        return None, dict(
+            question(
+                "locked_variant_conflict",
+                previous["id"],
+                "variant_id",
+                "保留人工锁定型号；当前生成候选与之冲突，请明确改单",
+                recipient="customer",
+            ),
+            status="conflict",
+        )
     identity = previous["id"] if previous else stable_id(key)
     origin = dict(
         key=key, proposal_id=context.proposal_id, variant_locked=False, quantity_locked=False
@@ -69,23 +84,24 @@ def put_device(data, device, *, context):
     result["devices"] = [d for d in result["devices"] if d["id"] != device["id"]] + [device]
     previous = next((d for d in context.configuration["devices"] if d["id"] == device["id"]), None)
     allocations = [a for a in result["supply_allocations"] if a["device_id"] == device["id"]]
-    if not previous or context.configuration["generation"]["supply_source"] == "purchase":
-        # A customer-owned allocation is never converted to a new purchase by generation.
-        if not any(a["source"] == "existing" for a in allocations):
-            state = result["generation"]
-            result["supply_allocations"] = [
-                a for a in result["supply_allocations"] if a["device_id"] != device["id"]
-            ]
-            result["supply_allocations"].append(
-                dict(
-                    id=stable_id("supply:" + device["id"]),
-                    device_id=device["id"],
-                    quantity=device["quantity"],
-                    source=state["supply_source"],
-                    evidence=state["supply_evidence"] or "供货来源尚待客户确认",
-                )
-            )
+    if previous and allocations != [
+        generated_supply(previous, context.configuration["generation"])
+    ]:
+        return result
+    result["supply_allocations"] = [
+        a for a in result["supply_allocations"] if a["device_id"] != device["id"]
+    ] + [generated_supply(device, result["generation"])]
     return result
+
+
+def generated_supply(device, state):
+    return dict(
+        id=stable_id("supply:" + device["id"]),
+        device_id=device["id"],
+        quantity=device["quantity"],
+        source=state["supply_source"],
+        evidence=state["supply_evidence"] or "供货来源尚待客户确认",
+    )
 
 
 def bind_role(data, requirement_id, device_id):

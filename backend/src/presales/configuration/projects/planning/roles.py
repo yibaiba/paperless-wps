@@ -4,6 +4,7 @@ from ...definitions.requirements import active_required_roles
 from ..schemas import Requirement
 from .context import ordered_candidates
 from .devices import bind_role, stable_id
+from .locks import locked_split_branch
 from .quantities import role_quantity
 from .questions import question
 from .role_choices import candidate_branches
@@ -67,6 +68,14 @@ def role_branches(context, data, task):
     if role.get("fulfilled_by"):
         # This role is bound after its parent's accessory need has been allocated.
         yield data, [], []
+        return
+    protected = locked_split_branch(
+        data,
+        requirement,
+        reusable_ids=set(context.preference(requirement["id"]).get("reusable_device_ids", [])),
+    )
+    if protected is not None:
+        yield protected
         return
     quantity, gap, evidence = role_quantity(
         role, system, configuration=data, engine=context.repository.engine

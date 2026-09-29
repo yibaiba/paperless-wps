@@ -35,6 +35,9 @@ def configuration_diff(before, after):
         "definition_snapshot_id",
         "calculation_version",
         "quotation",
+        "room_inputs",
+        "project_inputs",
+        "generation",
     ):
         if before.get(key) != after.get(key):
             changes.append(dict(kind=key, id=key, before=before.get(key), after=after.get(key)))

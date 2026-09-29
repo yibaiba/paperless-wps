@@ -1,0 +1,4 @@
+s................................                                        [100%]
+=========================== short test summary info ============================
+SKIPPED [1] backend/tests/test_attribute_concurrency.py:15: 需要 PostgreSQL 测试连接
+32 passed, 1 skipped in 3.10s

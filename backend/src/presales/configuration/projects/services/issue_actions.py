@@ -2,10 +2,16 @@
 
 
 def with_issue_actions(checked, *, annotate_only=False):
+    if not annotate_only:
+        from ..calculation.customer_constraints import with_customer_constraints
+
+        checked = with_customer_constraints(checked)
     data = checked["configuration"]
     devices = {d["id"]: d for d in data["devices"]}
     actions = {
         "selection": "select_candidate",
+        "product_constraint": "select_candidate",
+        "budget": "edit_price",
         "role_allocation": "edit_requirement",
         "supply": "edit_supply",
         "capacity": "edit_resources",
@@ -80,6 +86,10 @@ def with_issue_actions(checked, *, annotate_only=False):
                 missing_fields=list(
                     dict.fromkeys(e["input_key"] for e in check["evidence"] if e.get("input_key"))
                 ),
+            )
+        if check["kind"] in {"product_constraint", "budget"}:
+            action["missing_fields"] = (
+                ["preferences"] if check["kind"] == "product_constraint" else ["budget", "prices"]
             )
         gap = check.get("quantity_gap")
         if gap:
