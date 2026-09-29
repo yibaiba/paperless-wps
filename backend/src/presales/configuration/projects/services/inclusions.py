@@ -1,6 +1,7 @@
 from decimal import Decimal
 
 from ..schemas import Configuration
+from .manual_edits import mark
 
 
 def edit_inclusion(data, operation, *, repository):
@@ -37,4 +38,5 @@ def edit_inclusion(data, operation, *, repository):
     quantity = Decimal(value["quantity"])
     if quantity > Decimal(offer["available"]) or quantity > Decimal(demand["missing"]):
         raise ValueError("抵扣数量超过未占用的已含数量或当前缺量")
-    return dict(checked["configuration"], included_allocations=[*allocations, value])
+    result = dict(checked["configuration"], included_allocations=[*allocations, value])
+    return mark(result, "included_allocations", value["id"])

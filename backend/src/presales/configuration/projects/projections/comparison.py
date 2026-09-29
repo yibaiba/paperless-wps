@@ -38,6 +38,7 @@ def configuration_diff(before, after):
         "room_inputs",
         "project_inputs",
         "generation",
+        "manual_edits",
     ):
         if before.get(key) != after.get(key):
             changes.append(dict(kind=key, id=key, before=before.get(key), after=after.get(key)))

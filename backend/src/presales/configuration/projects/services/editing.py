@@ -4,6 +4,7 @@ from presales.configuration.projects.drawing import project_drawing, remove_devi
 from presales.configuration.projects.schemas import Configuration, SuggestionApply
 from presales.quotation.schemas import Quotation
 
+from .manual_edits import mark, prune
 from .quotation_editing import edit_quote_device
 
 PUT_COLLECTIONS = {
@@ -32,7 +33,7 @@ def edit_configuration(configuration, operations, *, repository):
             data = apply_operation(data, operation=operation, repository=repository)
         except ValueError as error:
             raise EditError(index, operation, str(error)) from error
-    return Configuration.model_validate(data)
+    return Configuration.model_validate(prune(data))
 
 
 def replace_item(items, value, *, key="id"):
@@ -127,6 +128,12 @@ def put(data, operation):
     collection = PUT_COLLECTIONS[operation.action]
     value = operation.value.model_dump(mode="json")
     previous = next((i for i in data[collection] if i["id"] == value["id"]), None)
+    if collection == "requirements" and any(
+        (previous or {}).get(k) != value.get(k) for k in ("device_id", "allocations")
+    ):
+        data = mark(
+            data, collection, value["id"], enabled=bool(value["device_id"] or value["allocations"])
+        )
     if collection == "devices" and previous:
         if previous.get("generated_origin"):
             value["generated_origin"] = dict(

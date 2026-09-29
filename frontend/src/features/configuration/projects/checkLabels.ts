@@ -4,6 +4,7 @@ export const checkLabels: Record<string, string> = {
   project_input: "项目需求",
   product_constraint: "客户选型要求",
   budget: "客户预算",
+  interpretation: "需求理解待确认",
   inspection: "用途检查依据",
   role_allocation: "角色数量分配",
   selection: "角色选型",

@@ -55,6 +55,7 @@ def check_questions(checked):
             check.get("message") or "检查依据尚待核对",
             recipient=recipient,
             evidence=check.get("evidence", []),
+            choices=check.get("choices", []),
         )
         item.update(status=check.get("status", "unknown"), check=check)
         results.append(item)

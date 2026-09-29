@@ -29,12 +29,14 @@ class ProjectLifecycle:
         if previous:
             return view(previous)
         from ..calculation.customer_constraints import budget_checks, product_constraints
+        from ..calculation.interpretations import interpretation_checks
 
         # Old saved checks may predate customer constraints; use their frozen
         # configuration and prices, without rewriting the saved revision.
         constraints = [
             *product_constraints(checked["configuration"]),
             *budget_checks(checked["configuration"], checked),
+            *interpretation_checks(checked["configuration"]),
         ]
         if not checked["readiness"].get("ready_for_confirmation") or any(
             c["status"] != "pass" for c in constraints

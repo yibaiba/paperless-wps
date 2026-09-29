@@ -3,8 +3,9 @@
 from decimal import Decimal
 
 from ..role_allocations import device_ids
+from .interpretations import interpretation_checks
 
-CONSTRAINT_KINDS = frozenset({"product_constraint", "budget"})
+CONSTRAINT_KINDS = frozenset({"product_constraint", "budget", "interpretation"})
 
 
 def with_customer_constraints(checked):
@@ -12,7 +13,12 @@ def with_customer_constraints(checked):
     retained = [c for c in checked["checks"] if c["kind"] not in CONSTRAINT_KINDS]
     return dict(
         checked,
-        checks=[*retained, *product_constraints(data), *budget_checks(data, checked)],
+        checks=[
+            *retained,
+            *product_constraints(data),
+            *budget_checks(data, checked),
+            *interpretation_checks(data),
+        ],
     )
 
 

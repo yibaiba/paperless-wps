@@ -1,0 +1,23 @@
+[
+  "backend/src/presales/configuration/projects/calculation/customer_constraints.py",
+  "backend/src/presales/configuration/projects/planning/accessories.py",
+  "backend/src/presales/configuration/projects/planning/generator.py",
+  "backend/src/presales/configuration/projects/planning/locks.py",
+  "backend/src/presales/configuration/projects/planning/questions.py",
+  "backend/src/presales/configuration/projects/projections/comparison.py",
+  "backend/src/presales/configuration/projects/schemas.py",
+  "backend/src/presales/configuration/projects/services/editing.py",
+  "backend/src/presales/configuration/projects/services/inclusions.py",
+  "backend/src/presales/configuration/projects/services/issue_actions.py",
+  "backend/src/presales/configuration/projects/services/issue_metadata.py",
+  "backend/src/presales/configuration/projects/services/lifecycle.py",
+  "backend/src/presales/configuration/projects/services/linking.py",
+  "frontend/src/features/configuration/projects/checkLabels.ts",
+  "frontend/src/features/configuration/types.ts",
+  "backend/src/presales/configuration/projects/manual_edit_schemas.py",
+  "backend/src/presales/configuration/projects/services/manual_edits.py",
+  "backend/src/presales/configuration/projects/calculation/interpretations.py",
+  "backend/src/presales/configuration/projects/planning/fulfillment.py",
+  "backend/tests/configuration/test_manual_relationship_fixes.py",
+  "backend/tests/configuration/test_interpretation_lifecycle.py"
+]

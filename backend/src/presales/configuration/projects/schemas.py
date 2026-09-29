@@ -10,6 +10,7 @@ from ..common import Authored, Input, Text
 from ..knowledge.schemas import Resource
 from .evolution_schemas import AccessoryChoice, SupplyAllocation
 from .inclusion_schemas import IncludedAllocation
+from .manual_edit_schemas import ManualEdits
 from .planning.state import GeneratedOrigin, GenerationState
 from .role_allocations import RoleAllocation
 
@@ -74,6 +75,7 @@ class AccessoryAllocation(Input):
 
 
 class Configuration(Authored):
+    manual_edits: ManualEdits = Field(default_factory=ManualEdits)
     generation: GenerationState = Field(default_factory=GenerationState)
     room_inputs: dict[str, list[Attribute]] = Field(default_factory=dict)
     project_inputs: list[Attribute] = Field(default_factory=list)

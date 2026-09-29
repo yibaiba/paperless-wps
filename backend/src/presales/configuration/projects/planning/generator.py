@@ -6,6 +6,7 @@ from presales.rules.calculation import digest
 
 from ..projections.comparison import configuration_diff
 from ..schemas import Configuration
+from ..services.manual_edits import marked
 from .accessories import accessory_branches
 from .devices import stable_id
 from .pricing import quote_plan
@@ -64,12 +65,14 @@ def reset_generated_allocations(data):
     result["accessory_allocations"] = [
         a
         for a in data["accessory_allocations"]
-        if a["id"] != stable_id("allocation:" + a["demand_id"] + ":" + a["device_id"])
+        if marked(data, "accessory_allocations", a["id"])
+        or a["id"] != stable_id("allocation:" + a["demand_id"] + ":" + a["device_id"])
     ]
     result["included_allocations"] = [
         a
         for a in data["included_allocations"]
-        if a["id"]
+        if marked(data, "included_allocations", a["id"])
+        or a["id"]
         != stable_id(
             "included:" + a["demand_id"] + ":" + a["device_id"] + ":" + a["included_item_id"]
         )
@@ -80,19 +83,6 @@ def reset_generated_allocations(data):
 def proposal_option(context, checked, *, questions, decisions):
     data = checked["configuration"]
     questions = [*questions, *check_questions(checked)]
-    for source in data["generation"]["sources"]:
-        if source["kind"] == "agent_interpretation" and not source["confirmed"]:
-            questions.append(
-                question(
-                    "interpretation_unconfirmed",
-                    source["object_id"],
-                    source["field"],
-                    "请确认 Agent 对需求的理解：" + source["quote"],
-                    recipient="customer",
-                    evidence=[source],
-                    choices=["确认", "修正", "不采用"],
-                )
-            )
     if not data.get("quotation"):
         questions.append(
             question(

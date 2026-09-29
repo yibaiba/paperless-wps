@@ -1,6 +1,7 @@
 from decimal import Decimal
 
 from ..schemas import Configuration, SuggestionApply
+from .manual_edits import mark
 
 
 def link_accessory(data, value, *, repository):
@@ -30,4 +31,4 @@ def link_accessory(data, value, *, repository):
         value.model_dump(mode="json") if a["id"] == added[0]["id"] else a
         for a in result["accessory_allocations"]
     ]
-    return result
+    return mark(result, "accessory_allocations", value.id)

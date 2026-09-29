@@ -1,0 +1,32 @@
+FFF                                                                      [100%]
+=================================== FAILURES ===================================
+__________ test_regeneration_preserves_manual_fulfilled_role_binding ___________
+backend/tests/configuration/test_followup_review.py:19: in test_regeneration_preserves_manual_fulfilled_role_binding
+    assert actual['device_id'] == changed['device_id'], 'Manually changed server association was silently reset'
+E   AssertionError: Manually changed server association was silently reset
+E   assert '9150c372-d1f...-7889ab0799f7' == 'f6c5d479-4b9...-928c1936edee'
+E
+E     - f6c5d479-4b98-546b-9fb1-928c1936edee
+E     + 9150c372-d1fe-5563-a08e-7889ab0799f7
+______ test_pending_interpretation_survives_apply_check_and_confirmation _______
+backend/tests/configuration/test_followup_review.py:36: in test_pending_interpretation_survives_apply_check_and_confirmation
+    assert response.status_code == 422, f'Unresolved interpretation was confirmed; ready={actual["checked"]["readiness"]}, HTTP={response.status_code}'
+E   AssertionError: Unresolved interpretation was confirmed; ready={'status': 'pass', 'ready_for_draft': True, 'ready_for_confirmed_output': False, 'counts': {'rooms': 1, 'systems': 1, 'requirements': 1, 'selected_requirements': 1, 'devices': 1, 'conflicts': 0, 'unknowns': 0, 'open_accessories': 0, 'accessory_unknowns': 0, 'accessory_conflicts': 0}, 'pending_by_kind': {}, 'stages': [{'key': 'requirements', 'label': '项目需求', 'status': 'pass', 'message': '已建立 1 个角色需求'}, {'key': 'selection', 'label': '产品选型', 'status': 'pass', 'message': '全部角色已关联实际配置'}, {'key': 'accessories', 'label': '配套与缺件', 'status': 'pass', 'message': '没有待补配套'}, {'key': 'verification', 'label': '方案校验', 'status': 'pass', 'message': '已知兼容、共享和容量检查均通过'}, {'key': 'output', 'label': '清单与输出', 'status': 'pass', 'message': '已满足确认条件，请保存后确认该版本'}], 'ready_for_confirmation': True, 'known_checks': 'pass', 'coverage': 'pass'}, HTTP=200
+E   assert 200 == 422
+E    +  where 200 = <Response [200 OK]>.status_code
+____________ test_regeneration_preserves_manual_allocation_evidence ____________
+backend/tests/configuration/test_followup_review.py:49: in test_regeneration_preserves_manual_allocation_evidence
+    assert next(a for a in after['accessory_allocations'] if a['id']==allocation['id']) == changed, 'Manual allocation evidence was overwritten'
+E   AssertionError: Manual allocation evidence was overwritten
+E   assert {'id': '94982...ty': '1', ...} == {'id': '94982...': '0.5', ...}
+E
+E     Omitting 3 identical items, use -vv to show
+E     Differing items:
+E     {'evidence': '根据已确认配套依据生成，采用时整批确认'} != {'evidence': '维护者核对：本次只确认一部分分配'}
+E     {'quantity': '1'} != {'quantity': '0.5'}
+E     Use -v to get more diff
+=========================== short test summary info ============================
+FAILED backend/tests/configuration/test_followup_review.py::test_regeneration_preserves_manual_fulfilled_role_binding
+FAILED backend/tests/configuration/test_followup_review.py::test_pending_interpretation_survives_apply_check_and_confirmation
+FAILED backend/tests/configuration/test_followup_review.py::test_regeneration_preserves_manual_allocation_evidence
+3 failed in 1.98s

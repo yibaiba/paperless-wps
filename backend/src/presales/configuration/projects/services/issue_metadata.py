@@ -31,6 +31,13 @@ def annotate_issues(checks):
             item = dict(kind="requirement", id=identity)
             if item not in objects:
                 objects.append(item)
+        if check["kind"] == "interpretation":
+            objects.extend(
+                [
+                    dict(kind="requirement_source", id=check["source_id"]),
+                    dict(kind="requirement_object", id=check["object_id"]),
+                ]
+            )
         cause = dict(
             code=code,
             resource=check.get("resource"),
