@@ -52,13 +52,14 @@ def locked_accessory(context, data, demand):
     )
 
 
-def new_accessory(context, data, *, variant, demand, needed, gaps, ranking):
+def new_accessory(context, data, *, variant, demand, needed, gaps, ranking, source_id=""):
     device, source_gap = device_for(
         context,
         variant,
         key="accessory:" + demand["id"],
         quantity=needed,
         kind=demand["rule"]["output_kind"],
+        source_id=source_id,
     )
     if source_gap:
         return data, [source_gap], dict(demand_id=demand["id"], variant_id=variant["id"])
@@ -92,7 +93,7 @@ def new_accessory(context, data, *, variant, demand, needed, gaps, ranking):
 
 
 def reusable_accessory(
-    context, data, *, variant, demand, demands, allowed, gaps, ranking, batches=None
+    context, data, *, variant, demand, demands, allowed, gaps, ranking, batches=None, source_id=""
 ):
     remaining = Decimal(demand["missing"])
     result = data
@@ -100,7 +101,9 @@ def reusable_accessory(
     candidates = (
         batches
         if batches is not None
-        else reusable_batches(context, data, variant=variant, demand=demand, allowed=allowed)
+        else reusable_batches(
+            context, data, variant=variant, demand=demand, allowed=allowed, source_id=source_id
+        )
     )
     for existing in candidates:
         amount = min(remaining, available(result, existing, demand, demands))
@@ -122,6 +125,7 @@ def reusable_accessory(
             needed=remaining,
             gaps=gaps,
             ranking=ranking,
+            source_id=source_id,
         )
     return (
         result,
@@ -137,12 +141,13 @@ def reusable_accessory(
     )
 
 
-def reusable_batches(context, data, *, variant, demand, allowed):
+def reusable_batches(context, data, *, variant, demand, allowed, source_id=""):
     own_key = "accessory:" + demand["id"]
     return [
         device
         for device in data["devices"]
         if device["variant_id"] == variant["id"]
+        and (not source_id or device["source_id"] == source_id)
         and (device.get("generated_origin") or {}).get("key") != own_key
         and (
             device["id"] in allowed
@@ -157,7 +162,10 @@ def reusable_batches(context, data, *, variant, demand, allowed):
 
 def reusable_accessory_options(context, data, **options):
     batches = reusable_batches(
-        context, data, **{key: options[key] for key in ("variant", "demand", "allowed")}
+        context,
+        data,
+        **{key: options[key] for key in ("variant", "demand", "allowed")},
+        source_id=options.get("source_id", ""),
     )
     needed = Decimal(options["demand"]["missing"])
     capacities = [available(data, d, options["demand"], options["demands"]) for d in batches]

@@ -5,6 +5,7 @@ from itertools import chain
 from ..schemas import Configuration
 from ..services.manual_edits import marked
 from .accessory_choices import locked_accessory, new_accessory, reusable_accessory_options
+from .accessory_preferences import accessory_selection
 from .context import ordered_candidates
 from .cycles import dependency_cycle
 from .devices import stable_id
@@ -90,11 +91,19 @@ def accessory_options(context, data, *, demand, checked, tasks):
     if locked:
         yield locked
         return
+    selection, preference_gap = accessory_selection(context, tasks=tasks, demand=demand)
+    if preference_gap:
+        yield data, [preference_gap], dict(demand_id=demand["id"])
+        return
     candidates = [
         dict(variant=context.variants[i], status="pass", evidence=[])
         for i in demand["rule"]["target_variant_ids"]
         if i in context.variants
         and context.variants[i].get("supply_status", "available") == "available"
+        and (
+            not selection["source_id"]
+            or selection["source_id"] in context.variants[i]["source_ids"]
+        )
     ]
     choices, gap, ranking = ordered_candidates(
         context,
@@ -104,18 +113,6 @@ def accessory_options(context, data, *, demand, checked, tasks):
         need_key=demand["need_key"],
     )
     needed = Decimal(demand["missing"])
-    allowed = set(context.preference(task["requirement"]["id"]).get("reusable_device_ids", []))
-    for alias in tasks:
-        binding = alias["role"].get("fulfilled_by")
-        if (
-            binding
-            and binding["role_id"] == task["role"]["id"]
-            and binding["need_key"] == demand["need_key"]
-            and alias["system"]["id"] == task["system"]["id"]
-        ):
-            allowed.update(
-                context.preference(alias["requirement"]["id"]).get("reusable_device_ids", [])
-            )
     for choice in choices:
         variant = choice["variant"]
         yield from reusable_accessory_options(
@@ -124,7 +121,7 @@ def accessory_options(context, data, *, demand, checked, tasks):
             variant=variant,
             demand=demand,
             demands=checked["suggestions"],
-            allowed=allowed,
+            **selection,
             gaps=[gap] if gap else [],
             ranking=ranking,
         )
@@ -134,6 +131,7 @@ def accessory_options(context, data, *, demand, checked, tasks):
             variant=variant,
             demand=demand,
             needed=needed,
+            source_id=selection["source_id"],
             gaps=[gap] if gap else [],
             ranking=ranking,
         )

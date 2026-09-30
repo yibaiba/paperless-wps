@@ -1,0 +1,41 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+__________ test_fulfilled_role_source_is_used_for_generated_accessory __________
+
+client = <starlette.testclient.TestClient object at 0x10bb2de80>
+catalog = {'imported': {'source_kind': 'excel', 'id': '9ea6d424-654b-4a00-b9f9-89ec6fb621ec', 'filename': 'test.xlsx', 'created_...1782-4a83-9ced-6a8cea3511d6', 'revision': 1, 'updated_at': '2026-09-30T17:01:27.150689+00:00', 'actor': '测试维护者', ...}]}
+workbook = b'PK\x03\x04\x14\x00\x00\x00\x00\x00-\x08A]\xe3\xf5\x92]\xf6\x00\x00\x00\xf6\x00\x00\x00\x0f\x00\x00\x00xl/workbook.xm...\x01\x00\x00xl/worksheets/sheet1.xmlPK\x05\x06\x00\x00\x00\x00\x03\x00\x03\x00\xcb\x00\x00\x00\x96\x06\x00\x00\x00\x00'
+
+    def test_fulfilled_role_source_is_used_for_generated_accessory(client, catalog, workbook):
+        add_source_copy(client, catalog, workbook)
+        definition, package = published(client, catalog, accessory=True)
+        draft = draft_for(client, definition, package)
+        draft = apply(client, draft, plan(client, draft))
+        data = read(client, draft)["configuration"]
+        role = next(r for r in data["requirements"] if r["role_id"] == "server")
+        server = next(d for d in data["devices"] if d["id"] == role["device_id"])
+        chosen = next(s for s in server["variant_snapshot"]["source_ids"] if s != server["source_id"])
+        generation = dict(
+            data["generation"],
+            preferences=[
+                dict(
+                    requirement_id=role["id"],
+                    source_id=chosen,
+                    evidence="隔离指定服务器资料来源",
+                )
+            ],
+        )
+        draft = write(client, draft, [dict(action="requirements_patch", generation=generation)])
+        draft = apply(client, draft, plan(client, draft))
+        actual = read(client, draft)
+        server_after = next(d for d in actual["configuration"]["devices"] if d["id"] == server["id"])
+>       assert server_after["source_id"] == chosen
+E       AssertionError: assert '0e0b4dda-7d4...-162fc1fcced5' == '5606d324-066...-6dde47d80fd9'
+E
+E         - 5606d324-0662-4f27-a8dc-6dde47d80fd9
+E         + 0e0b4dda-7d4b-4686-b262-162fc1fcced5
+
+backend/tests/configuration/test_accessory_source_preferences.py:28: AssertionError
+=========================== short test summary info ============================
+FAILED backend/tests/configuration/test_accessory_source_preferences.py::test_fulfilled_role_source_is_used_for_generated_accessory
+1 failed in 0.79s
