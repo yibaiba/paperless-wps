@@ -56,8 +56,10 @@ export function InlineEditor() {
   const [composing, setComposing] = useState(false);
   const [placement, setPlacement] = useState<InlinePlacement>('below');
   const [anchorHeight, setAnchorHeight] = useState(context?.anchor.height ?? 32);
+  const [tabGeneration, setTabGeneration] = useState(0);
   const input = useRef<HTMLInputElement>(null);
   const requests = useRef(new LatestRequest());
+  const accepting = useRef(false);
   const prefetch = useRef(new CompletionPrefetch<Candidate[]>());
   const contextNonce = useRef(context?.nonce ?? 0);
   const windowChromeHeight = useRef(Math.max(0, window.outerHeight - window.innerHeight));
@@ -68,13 +70,24 @@ export function InlineEditor() {
 
   const refreshContext = useCallback(() => {
     const next = host.inlineContext();
-    if (!next || next.nonce === contextNonce.current) return;
+    if (!next) {
+      if (!contextNonce.current) return;
+      contextNonce.current = 0;
+      requests.current.cancel();
+      setContext(null);
+      setCandidates([]);
+      setBusy(false);
+      return;
+    }
+    if (next.nonce === contextNonce.current) return;
     contextNonce.current = next.nonce;
     setContext(next);
     setAnchorHeight(next.anchor.height);
     setQuery(next.cell.value);
     setCandidates([]);
     setSelection(EMPTY_SELECTION);
+    setTabGeneration(0);
+    accepting.current = false;
     setError('');
     window.setTimeout(() => input.current?.focus(), 0);
   }, [host]);
@@ -154,6 +167,9 @@ export function InlineEditor() {
   const listVisible = selection.expanded && candidates.length > 0;
   const ambiguous = candidateIsAmbiguous(candidates, selection.index, query);
   const needsChoice = listVisible && !selection.explicit && (ambiguous || !ghost);
+  const phase = completionPhase({
+    busy, error, candidates, selection, hasGhost: Boolean(ghost), query,
+  });
   const layout = useMemo<Omit<InlineLayoutOptions, 'anchorWidth' | 'anchorHeight'>>(() => ({
     candidateCount: candidates.length,
     listVisible,
@@ -186,11 +202,16 @@ export function InlineEditor() {
     });
   }, [api, context, host]);
 
-  const accept = useCallback((candidate: Candidate, advance = false) => {
-    if (!context || !workbookContext || 'error' in workbookContext) return;
+  const accept = useCallback((
+    candidate: Candidate,
+    advance = false,
+    operationId: string = crypto.randomUUID(),
+  ) => {
+    if (accepting.current || !context || !workbookContext || 'error' in workbookContext) return;
+    accepting.current = true;
     try {
       const feedback = completionFeedbackPayload({
-        operationId: crypto.randomUUID(),
+        operationId,
         context,
         metadata: workbookContext.value.metadata,
         productContext: workbookContext.value.product,
@@ -221,9 +242,68 @@ export function InlineEditor() {
       }
       host.hideInlineEditor();
     } catch (reason) {
+      accepting.current = false;
       setError(reason instanceof Error ? reason.message : String(reason));
     }
   }, [api, candidates, context, host, prefetchNextRow, query, workbookContext]);
+
+  const executeCompletion = useCallback((
+    key: 'Tab' | 'Enter',
+    operationId: string = crypto.randomUUID(),
+  ) => {
+    const command = completionCommand({
+      key, candidates, selection, hasGhost: Boolean(ghost), query,
+    });
+    if (command === 'expand') {
+      setSelection((current) => ({ ...current, expanded: true }));
+      setTabGeneration((current) => current + 1);
+    } else if (command === 'accept' && selectedCandidate) {
+      accept(selectedCandidate, key === 'Tab', operationId);
+    } else if (command === 'native-tab') {
+      host.hideInlineEditor();
+      host.moveSelection(0, 1);
+    }
+    return command;
+  }, [accept, candidates, ghost, host, query, selectedCandidate, selection]);
+
+  const dispatchTab = useCallback((expectedSessionId: string) => {
+    if (!context || context.session_id !== expectedSessionId) return;
+    try {
+      const operationId = host.claimTab(context.session_id);
+      if (!operationId) return;
+      executeCompletion('Tab', operationId);
+    } catch (reason) {
+      host.restoreNativeTab(context.session_id);
+      setError(reason instanceof Error ? reason.message : String(reason));
+    }
+  }, [context, executeCompletion, host]);
+
+  useEffect(() => {
+    window.PresalesInlineTab = dispatchTab;
+    return () => { delete window.PresalesInlineTab; };
+  }, [dispatchTab]);
+
+  useEffect(() => {
+    if (!context) return undefined;
+    const command = completionCommand({
+      key: 'Tab', candidates, selection, hasGhost: Boolean(ghost), query,
+    });
+    const actionable = !busy && !error && !composing
+      && (command === 'accept' || command === 'expand');
+    if (!actionable) {
+      host.restoreNativeTab(context.session_id);
+      return undefined;
+    }
+    const revision = [
+      phase, selection.index, Number(selection.expanded), Number(selection.explicit),
+      candidates[0]?.key ?? '', tabGeneration,
+    ].join(':');
+    host.interceptTab(context.session_id, revision);
+    return () => host.restoreNativeTab(context.session_id);
+  }, [
+    busy, candidates, composing, context, error, ghost, host, phase, query, selection,
+    tabGeneration,
+  ]);
 
   function updateQuery(value: string) {
     if (!context) return;
@@ -252,34 +332,17 @@ export function InlineEditor() {
       host.hideInlineEditor();
       return;
     }
-    const command = completionCommand({
-      key,
-      candidates,
-      selection,
-      hasGhost: Boolean(ghost),
-      query,
-    });
+    const command = completionCommand({ key, candidates, selection, hasGhost: Boolean(ghost), query });
     if (command === 'none') return;
     event.preventDefault();
-    if (command === 'expand') {
-      setSelection((current) => ({ ...current, expanded: true }));
-      return;
+    if (key === 'Tab' && command !== 'native-tab' && context) {
+      dispatchTab(context.session_id);
     }
-    if (command === 'accept' && selectedCandidate) {
-      accept(selectedCandidate, key === 'Tab');
-      return;
-    }
-    if (command === 'native-tab') {
-      host.hideInlineEditor();
-      host.moveSelection(0, 1);
-    }
+    else executeCompletion(key);
   }
 
   if (!context) return <main className="inline-empty">重新选择产品单元格</main>;
 
-  const phase = completionPhase({
-    busy, error, candidates, selection, hasGhost: Boolean(ghost), query,
-  });
   const choiceMessage = selectedCandidate?.completion_blocker
     ? BLOCKER_MESSAGES[selectedCandidate.completion_blocker]
     : ambiguous ? '存在同名型号或多个配置，请明确选择' : '请选择要补全的产品';

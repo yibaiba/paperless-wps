@@ -76,6 +76,7 @@ export interface ActiveCell {
 
 export interface InlineEditorContext {
   nonce: number;
+  session_id: string;
   profile: TemplateProfile;
   cell: ActiveCell;
   anchor: { width: number; height: number };

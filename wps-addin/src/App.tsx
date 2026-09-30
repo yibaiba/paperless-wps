@@ -38,6 +38,7 @@ export function App() {
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const requests = useRef(new LatestRequest());
   const attemptedFeedback = useRef(new Set<string>());
+  const capabilityIssues = useMemo(() => host.inlineCapabilityIssues(), [host]);
 
   const loadProfiles = useCallback(async () => {
     if (!token) return;
@@ -74,7 +75,7 @@ export function App() {
   }, [api, host, metadata, token]);
 
   const queryCell = useCallback((showEditor: boolean) => {
-    if (!profile) return;
+    if (!profile || capabilityIssues.length) return;
     let current: ActiveCell;
     try { current = host.activeCell(); } catch (reason) { setError(String(reason)); return; }
     const suggestionFields: TemplateField[] = ['model', 'name', 'description'];
@@ -124,18 +125,21 @@ export function App() {
         }
       } finally { if (request.isCurrent()) setBusy(false); }
     }, SUGGESTION_DEBOUNCE_MS);
-  }, [api, host, metadata, profile]);
+  }, [api, capabilityIssues, host, metadata, profile]);
 
   useEffect(() => {
-    if (!profile) return undefined;
+    if (!profile || capabilityIssues.length) return undefined;
     const removeChange = host.onSheetChange(() => queryCell(false));
     const removeSelection = host.onSelectionChange(() => queryCell(true));
+    const removeSheetActivate = host.onSheetActivate(() => host.hideInlineEditor());
+    const removeWorkbookClose = host.onWorkbookBeforeClose(() => host.hideInlineEditor());
     queryCell(true);
     return () => {
-      removeChange(); removeSelection(); requests.current.cancel(); clearTimeout(timer.current);
+      removeChange(); removeSelection(); removeSheetActivate(); removeWorkbookClose();
+      requests.current.cancel(); clearTimeout(timer.current);
       host.hideInlineEditor();
     };
-  }, [host, profile, queryCell]);
+  }, [capabilityIssues, host, profile, queryCell]);
 
   const accept = useCallback((candidate: Candidate) => {
     if (!profile || !cell) return;
@@ -238,6 +242,10 @@ export function App() {
   }
 
   if (!host.ready()) return <main className="fatal"><h1>售前产品助手</h1><div className="error">请在 WPS 表格中打开工作簿后重试。</div></main>;
+  if (capabilityIssues.length) return <main className="fatal"><h1>售前产品助手</h1>
+    <div className="error">当前 WPS 版本不支持完整的内联 Tab 补全：
+      {capabilityIssues.join('、')}。请使用已通过验证的 WPS 构建。</div>
+  </main>;
   if (!token) return <main className="login">
     <div className="brand"><AppstoreOutlined /><div><h1>售前产品助手</h1><p>未连接</p></div></div>
     <label>一次性配对码<input autoFocus value={pairing} onChange={(event) => setPairing(event.target.value)} /></label>

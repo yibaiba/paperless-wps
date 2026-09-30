@@ -44,8 +44,7 @@ export class InlineDialogManager {
     catch { throw new Error('单元格联想上下文损坏，请重新选择单元格'); }
   }
 
-  show(context: Omit<InlineEditorContext, 'nonce' | 'anchor'>) {
-    this.closeDialog();
+  show(context: Omit<InlineEditorContext, 'nonce' | 'session_id' | 'anchor'>) {
     const anchor = this.anchor();
     const previous = Number(this.config.get(CONTEXT_NONCE_KEY) || 0);
     const nonce = Math.max(Date.now(), previous + 1);
@@ -53,6 +52,7 @@ export class InlineDialogManager {
     this.config.set(CONTEXT_KEY, JSON.stringify({
       ...context,
       nonce,
+      session_id: crypto.randomUUID(),
       anchor: { width: anchor.width, height: anchor.height },
     }));
     const size = inlineDialogSize({
@@ -73,8 +73,11 @@ export class InlineDialogManager {
 
   hide() {
     this.config.set(CONTEXT_KEY, '');
-    this.closeDialog();
+    const dialog = this.dialog(false);
+    if (dialog) dialog.Visible = false;
   }
+
+  dispose() { this.closeDialog(); }
 
   layout(options: Omit<InlineLayoutOptions, 'anchorWidth' | 'anchorHeight'>): InlineLayoutResult {
     const dialog = this.dialog(false);

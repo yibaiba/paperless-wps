@@ -5,6 +5,7 @@ import type {
 import { enqueueFeedback, parseFeedbackOutbox, removeFeedback } from './feedbackOutbox.ts';
 import { InlineDialogManager } from './inlineDialog.ts';
 import type { InlineLayoutOptions, InlineLayoutResult } from './inlineLayout.ts';
+import { WpsTabCoordinator } from './tabCoordinator.ts';
 import { assertWritableTargets } from './workbook.ts';
 
 declare global {
@@ -12,6 +13,7 @@ declare global {
     Application?: any;
     wps?: { EtApplication?: () => any };
     PresalesInlineRefresh?: () => void;
+    PresalesInlineTab?: (sessionId: string) => void;
   }
 }
 
@@ -46,6 +48,10 @@ export interface HostAdapter {
   inlineContext(): InlineEditorContext | null;
   showInlineEditor(profile: TemplateProfile, cell: ActiveCell): void;
   hideInlineEditor(): void;
+  inlineCapabilityIssues(): string[];
+  interceptTab(sessionId: string, revision: string): void;
+  claimTab(sessionId: string): string | null;
+  restoreNativeTab(sessionId?: string): void;
   layoutInlineEditor(
     options: Omit<InlineLayoutOptions, 'anchorWidth' | 'anchorHeight'>,
   ): InlineLayoutResult;
@@ -61,6 +67,8 @@ export interface HostAdapter {
   moveSelection(rowOffset: number, columnOffset: number): void;
   onSheetChange(callback: () => void): () => void;
   onSelectionChange(callback: () => void): () => void;
+  onSheetActivate(callback: () => void): () => void;
+  onWorkbookBeforeClose(callback: () => void): () => void;
 }
 
 function text(value: unknown) { return value == null ? '' : String(value); }
@@ -68,6 +76,7 @@ function text(value: unknown) { return value == null ? '' : String(value); }
 export class WpsHostAdapter implements HostAdapter {
   private readonly app: any;
   private readonly inlineDialog: InlineDialogManager;
+  private readonly tabCoordinator: WpsTabCoordinator;
 
   constructor() {
     this.app = window.Application ?? window.wps?.EtApplication?.();
@@ -75,6 +84,11 @@ export class WpsHostAdapter implements HostAdapter {
       app: this.app,
       href: window.location?.href ?? 'http://127.0.0.1/',
       screen: window.screen,
+      get: (key) => this.storeGet(key),
+      set: (key, value) => this.storeSet(key, value),
+    });
+    this.tabCoordinator = new WpsTabCoordinator({
+      app: this.app,
       get: (key) => this.storeGet(key),
       set: (key, value) => this.storeSet(key, value),
     });
@@ -220,10 +234,34 @@ export class WpsHostAdapter implements HostAdapter {
 
   showInlineEditor(profile: TemplateProfile, cell: ActiveCell) {
     if (cell.formula || cell.merged) return this.hideInlineEditor();
+    const issues = this.inlineCapabilityIssues();
+    if (issues.length) throw new Error(`当前 WPS 缺少内联补全能力：${issues.join('、')}`);
     this.inlineDialog.show({ profile, cell });
   }
 
-  hideInlineEditor() { this.inlineDialog.hide(); }
+  hideInlineEditor() {
+    this.tabCoordinator.restore();
+    this.inlineDialog.hide();
+  }
+
+  inlineCapabilityIssues() {
+    const issues = this.tabCoordinator.capabilityIssues();
+    if (typeof this.app?.CreateWebDialog !== 'function') issues.push('CreateWebDialog');
+    if (typeof this.app?.GetWebDialog !== 'function') issues.push('GetWebDialog');
+    if (typeof this.app?.ApiEvent?.AddApiEventListener !== 'function'
+      || typeof this.app?.ApiEvent?.RemoveApiEventListener !== 'function') {
+      issues.push('ApiEvent');
+    }
+    return issues;
+  }
+
+  interceptTab(sessionId: string, revision: string) {
+    this.tabCoordinator.activate(sessionId, revision);
+  }
+
+  claimTab(sessionId: string) { return this.tabCoordinator.claim(sessionId); }
+
+  restoreNativeTab(sessionId?: string) { this.tabCoordinator.restore(sessionId); }
 
   layoutInlineEditor(options: Omit<InlineLayoutOptions, 'anchorWidth' | 'anchorHeight'>) {
     return this.inlineDialog.layout(options);
@@ -273,6 +311,12 @@ export class WpsHostAdapter implements HostAdapter {
   onSheetChange(callback: () => void) { return this.event('SheetChange', callback); }
 
   onSelectionChange(callback: () => void) { return this.event('SheetSelectionChange', callback); }
+
+  onSheetActivate(callback: () => void) { return this.event('SheetActivate', callback); }
+
+  onWorkbookBeforeClose(callback: () => void) {
+    return this.event('WorkbookBeforeClose', callback);
+  }
 
   private event(name: string, callback: () => void) {
     const handler = () => callback();

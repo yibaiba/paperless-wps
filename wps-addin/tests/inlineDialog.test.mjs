@@ -55,8 +55,11 @@ test('inline dialog keeps a monotonic context nonce and follows the selected cel
   manager.layout({ candidateCount: 1, listVisible: true, showStatus: false });
   assert.deepEqual(moves.at(-1), [640, 200]);
   manager.hide();
+  const firstSession = manager.context();
+  assert.equal(firstSession, null);
   manager.show(value);
   assert.ok(manager.context().nonce > firstNonce);
-  assert.equal(createArguments.length, 2);
-  assert.equal(executedScripts.filter((script) => script === 'window.close()').length, 1);
+  assert.equal(createArguments.length, 1);
+  assert.equal(executedScripts.filter((script) => script === 'window.close()').length, 0);
+  assert.equal(dialog.Visible, true);
 });
