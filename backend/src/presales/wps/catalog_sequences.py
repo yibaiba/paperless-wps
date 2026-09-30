@@ -79,11 +79,10 @@ def _contiguous_source_triple(first, second, third):
 
 
 def _variant_sequence_keys(variant):
-    keys = {f"series:{value.casefold().strip()}" for value in variant.get("series", []) if value}
     family = model_family(_variant_model(variant))
     if family:
-        keys.add(f"family:{family.casefold()}")
-    return keys
+        return {f"family:{family.casefold()}"}
+    return {f"series:{value.casefold().strip()}" for value in variant.get("series", []) if value}
 
 
 def _variant_model(variant):

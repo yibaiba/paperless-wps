@@ -42,7 +42,10 @@ test('global WPS Tab callback forwards the active completion session to the inli
 test('stale global Tab registration restores and replays native Tab', async () => {
   const context = await addinMain();
 
-  assert.equal(context.window.PresalesTab(), false);
+  for (let index = 0; index < 100; index += 1) {
+    assert.equal(context.window.PresalesTab(), false);
+  }
   assert.deepEqual(context.onKey.at(-1), ['{TAB}']);
-  assert.deepEqual(context.sent, ['{TAB}']);
+  assert.equal(context.sent.length, 100);
+  assert.ok(context.sent.every((key) => key === '{TAB}'));
 });

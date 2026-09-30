@@ -54,3 +54,17 @@ test('missing WPS key or shared-storage APIs are reported explicitly', () => {
   });
   assert.deepEqual(coordinator.capabilityIssues(), ['Application.OnKey', 'PluginStorage']);
 });
+
+test('twenty consecutive completion sessions are claimed exactly once', () => {
+  const { coordinator } = setup();
+  const accepted = [];
+  for (let row = 1; row <= 20; row += 1) {
+    const session = `row-${row}`;
+    coordinator.activate(session, `ghost:${row}`);
+    accepted.push(coordinator.claim(session));
+    assert.equal(coordinator.claim(session), null);
+    coordinator.restore(session);
+  }
+  assert.equal(accepted.length, 20);
+  assert.ok(accepted.every((operation) => operation === 'operation-1'));
+});

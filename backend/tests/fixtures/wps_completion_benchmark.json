@@ -1,0 +1,29 @@
+{
+  "sequences": [
+    {
+      "import_id": "catalog-collaboration",
+      "sheet": "会议预约与信发系统",
+      "models": [
+        "CRIR-D-EM", "CRIR-D-IN", "CRIR-D-SM", "CRIR-D-WE",
+        "CRIR-D-DD", "CRIR-D-OA", "CRIR-D-CC", "CRIR-D-EG"
+      ]
+    },
+    {
+      "import_id": "catalog-red-shield",
+      "sheet": "红盾无纸化会议系统",
+      "models": [
+        "RS-MSC100C-H", "RS-MSC100C-W", "RS-MSC100C-K", "RS-MSC100C-U",
+        "RS-MSC100C-WaitAlert", "RS-MSC100C-Cast", "RS-MSC100C-Cast-K",
+        "RS-MSC100C-Vote", "RS-MSC100C-Vote-K", "RS-MSC100C-Meet"
+      ]
+    },
+    {
+      "import_id": "catalog-red-shield",
+      "sheet": "红盾无纸化会议系统华为版本",
+      "models": [
+        "RS-MSC100C-H", "RS-MSC100C-Cast", "RS-MSC100C-Cast-K",
+        "RS-MSC100C-Vote", "RS-MSC100C-Vote-K", "RS-MSC100C-WaitAlert"
+      ]
+    }
+  ]
+}

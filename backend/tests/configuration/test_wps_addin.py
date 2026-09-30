@@ -1,4 +1,5 @@
 from datetime import UTC, datetime, timedelta
+from time import perf_counter
 from uuid import uuid4
 
 from sqlalchemy import select
@@ -287,6 +288,28 @@ def test_suggestion_index_invalidates_on_catalog_revision(client, catalog):
         if item["variant_id"] == catalog["variants"][0]["id"]
     )
     assert refreshed_item["variant_name"] == "64GB 已更新"
+
+
+def test_warm_suggestion_latency_stays_below_pilot_threshold(client, catalog):
+    token, _ = paired(client)
+    headers = authorized(token)
+    profile = template(client, headers, catalog)
+    request = {
+        "query": "SERVER-X",
+        "template_profile_id": profile["id"],
+        "template_profile_revision": profile["revision"],
+    }
+    warmup = client.post("/api/wps/suggestions", headers=headers, json=request)
+    assert warmup.status_code == 200, warmup.text
+
+    durations = []
+    for _ in range(25):
+        started = perf_counter()
+        response = client.post("/api/wps/suggestions", headers=headers, json=request)
+        durations.append((perf_counter() - started) * 1000)
+        assert response.status_code == 200, response.text
+    p95 = sorted(durations)[int(len(durations) * 0.95) - 1]
+    assert p95 <= 500
 
 
 def test_suggestions_use_previous_product_series_and_current_system(client, catalog):
