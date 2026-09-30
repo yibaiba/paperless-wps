@@ -465,6 +465,42 @@ def test_confirmed_software_pair_recommends_its_hardware_in_reverse(client, cata
     assert top["completion_ready"] is True
 
 
+def test_compact_product_name_keywords_recall_catalog_candidates(client, catalog):
+    product = client.post(
+        "/api/configuration/products",
+        json={
+            "name": "无纸化会议系统客户端软件",
+            "model": "RS-MSC100C-W",
+            "category": "客户端软件",
+            "actor": "测试维护者",
+            "evidence": "隔离测试资料，不是业务确认",
+        },
+    )
+    assert product.status_code == 200, product.text
+    software = update_variant_context(
+        client,
+        catalog["variants"][0],
+        series=["无纸化终端"],
+        systems=["红盾无纸化会议系统"],
+        product_id=product.json()["id"],
+        name="Windows 客户端",
+    )
+    token, _ = paired(client)
+
+    response = client.post(
+        "/api/wps/suggestions",
+        headers=authorized(token),
+        json={"query": "红盾软件", "limit": 10},
+    )
+
+    assert response.status_code == 200, response.text
+    items = response.json()["items"]
+    assert items
+    assert items[0]["variant_id"] == software["id"]
+    assert items[0]["group"] == "direct"
+    assert items[0]["completion_ready"] is False
+
+
 def test_confirmed_line_source_scopes_contextual_completion_for_v1_template(client, catalog):
     second_product = client.post(
         "/api/configuration/products",

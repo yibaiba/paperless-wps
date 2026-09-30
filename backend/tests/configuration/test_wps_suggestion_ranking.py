@@ -254,6 +254,25 @@ def test_unique_confirmed_pair_can_tab_despite_a_generic_close_competitor():
     assert result[0]["completion_blocker"] is None
 
 
+def test_typed_unrelated_text_cannot_auto_accept_a_contextual_relation():
+    items = [{
+        **candidate("paired", group="accessory"),
+        "confidence": "high",
+        "_ranking_score": 500,
+        "_query_match_score": 0,
+        "_scope_confirmed": True,
+        "_source_scope_match": True,
+        "_strong_completion_evidence": True,
+        "_confirmed_relation_decisive": True,
+    }]
+
+    result = finalize_completion_readiness(items, "摄像头")
+
+    assert result[0]["completion_ready"] is False
+    assert result[0]["completion_blocker"] == "insufficient_evidence"
+    assert "_query_match_score" not in result[0]
+
+
 def test_unconfirmed_template_source_never_tabs_contextual_suggestion():
     items = [
         {

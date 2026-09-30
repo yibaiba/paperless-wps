@@ -1,3 +1,5 @@
+from presales.lists.search_matching import query_match_score
+
 from .catalog_sequences import build_catalog_transitions, model_family
 
 __all__ = ["build_catalog_transitions", "model_family", "rank_candidates"]
@@ -60,7 +62,7 @@ def rank_candidates(
         )
         relation_score = item.get("_confirmed_relation_score", 0)
         relation_reason = item.get("_confirmed_relation_reason", "")
-        query_score = _query_score(variant, request.query)
+        query_score = query_match_score(variant, request.query)
         source_score, source_match, scope_match = _source_context_score(
             item, request, catalog_scope
         )
@@ -86,6 +88,7 @@ def rank_candidates(
             "_source_context_match": source_match,
             "_source_scope_match": scope_match,
             "_scope_confirmed": bool(catalog_scope),
+            "_query_match_score": query_score,
             "_strong_completion_evidence": bool(
                 scope_match
                 or source_match
@@ -266,19 +269,6 @@ def _variant_model(variant):
 
 def _variant_model_label(variant):
     return variant["product"].get("model", "").strip()
-
-
-def _query_score(variant, query):
-    value = query.casefold().strip()
-    if not value:
-        return 0
-    fields = [variant["product"].get("model", ""), variant["product"].get("name", "")]
-    normalized = [field.casefold() for field in fields]
-    if value in normalized:
-        return 120
-    if any(field.startswith(value) for field in normalized):
-        return 80
-    return 40
 
 
 def _source_context_score(item, request, catalog_scope=None):

@@ -11,6 +11,7 @@ from presales.configuration.projects.schemas import CandidateRequest
 from presales.storage import ProductRecord, Project
 
 from .catalog_snapshot import DraftCatalog
+from .search_matching import matches_query
 
 
 def page(items, request):
@@ -105,7 +106,7 @@ def search_catalog(session, request):
             dict(variant=v, status="unassessed", evidence=[])
             for v in CatalogService(session).variants()
         ]
-    filtered = [r for r in results if matches(r["variant"], request.query)]
+    filtered = [r for r in results if matches_query(r["variant"], request.query)]
     summaries = [
         dict(
             variant_id=r["variant"]["id"],
@@ -125,8 +126,7 @@ def search_catalog(session, request):
 
 
 def matches(variant, query):
-    text = " ".join(str(v) for v in (variant["name"], variant["product"], variant["attributes"]))
-    return all(term.casefold() in text.casefold() for term in query.split())
+    return matches_query(variant, query)
 
 
 def catalog_detail(session, *, variant_id, draft_id=None, on_date=None):

@@ -272,6 +272,7 @@ def finalize_completion_readiness(items, query):
         "_confirmed_relation_score",
         "_confirmed_relation_seed_id",
         "_ranking_score",
+        "_query_match_score",
         "_scope_confirmed",
         "_source_context_match",
         "_source_scope_match",
@@ -302,6 +303,8 @@ def _completion_decision(items, query):
     if len(concrete) > 1:
         return False, "source_ambiguous"
     exact = _is_unique_exact_match(items, query, _logical_product(top))
+    if query.strip() and not exact and not top.get("_query_match_score"):
+        return False, "insufficient_evidence"
     if top["confidence"] != "high" or not (exact or top.get("_strong_completion_evidence")):
         return False, "insufficient_evidence"
     if top.get("_confirmed_relation_decisive"):
