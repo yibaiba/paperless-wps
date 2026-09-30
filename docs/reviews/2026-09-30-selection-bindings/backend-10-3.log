@@ -1,0 +1,20 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.6, pytest-9.1.1, pluggy-1.6.0 -- /Users/yibaiba/Code/RustProject/pi/presales-platform/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /private/var/folders/vv/2pbkx3_s66n0ybf417p97q_r0000gn/T/presales-selection-review-o4btzhbk/backend
+configfile: pyproject.toml
+plugins: timeout-2.4.0, anyio-4.15.1
+timeout: 60.0s
+timeout method: signal
+timeout func_only: False
+collecting ... collected 7 items
+
+backend/tests/configuration/test_proposal_review.py::test_alternative_reuse_has_unique_identity_and_applies_selected_device PASSED [ 14%]
+backend/tests/configuration/test_proposal_review.py::test_remove_requirement_owner_cleans_generation_preferences[requirements] PASSED [ 28%]
+backend/tests/configuration/test_proposal_review.py::test_remove_requirement_owner_cleans_generation_preferences[systems] PASSED [ 42%]
+backend/tests/configuration/test_proposal_review.py::test_remove_reusable_device_preserves_other_preferences_and_allows_requirements_edit PASSED [ 57%]
+backend/tests/configuration/test_proposal_review.py::test_unconfirmed_room_and_project_values_cannot_change_effective_requirements[project-generation.budget-changes0] PASSED [ 71%]
+backend/tests/configuration/test_proposal_review.py::test_unconfirmed_room_and_project_values_cannot_change_effective_requirements[room-inputs.seats-changes1] PASSED [ 85%]
+backend/tests/configuration/test_proposal_review.py::test_unconfirmed_room_and_project_values_cannot_change_effective_requirements[project-project_inputs.seats-changes2] PASSED [100%]
+
+============================== 7 passed in 2.89s ===============================

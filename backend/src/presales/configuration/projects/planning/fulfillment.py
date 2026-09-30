@@ -6,30 +6,37 @@ from .devices import bind_role
 from .questions import question
 
 
+def fulfillment_devices(data, *, task, demands):
+    binding = task["role"]["fulfilled_by"]
+    parents = {
+        r["id"]
+        for r in data["requirements"]
+        if r["system_id"] == task["system"]["id"] and r["role_id"] == binding["role_id"]
+    }
+    matching = {
+        d["id"]
+        for d in demands
+        if d["need_key"] == binding["need_key"]
+        and parents.intersection(d["consumer_requirement_ids"])
+    }
+    return {a["device_id"] for a in data["accessory_allocations"] if a["demand_id"] in matching}
+
+
+def protected_binding(data, requirement):
+    identities = set(device_ids(requirement))
+    return marked(data, "requirements", requirement["id"]) or any(
+        d["id"] in identities and not d.get("generated_origin") for d in data["devices"]
+    )
+
+
 def bind_fulfilled_roles(data, *, tasks, demands):
     gaps = []
     for task in tasks:
         binding = task["role"].get("fulfilled_by")
         if not binding:
             continue
-        parent = next(
-            (
-                r
-                for r in data["requirements"]
-                if r["system_id"] == task["system"]["id"] and r["role_id"] == binding["role_id"]
-            ),
-            None,
-        )
-        matching = {
-            d["id"]
-            for d in demands
-            if d["need_key"] == binding["need_key"]
-            and parent
-            and parent["id"] in d["consumer_requirement_ids"]
-        }
-        devices = {
-            a["device_id"] for a in data["accessory_allocations"] if a["demand_id"] in matching
-        }
+        devices = fulfillment_devices(data, task=task, demands=demands)
+        current = next(r for r in data["requirements"] if r["id"] == task["requirement"]["id"])
         if binding["status"] != "confirmed" or len(devices) != 1:
             gaps.append(
                 question(
@@ -40,14 +47,12 @@ def bind_fulfilled_roles(data, *, tasks, demands):
                     evidence=[binding],
                 )
             )
+            if not protected_binding(data, current):
+                data = bind_role(data, current["id"], None)
             continue
         identity = next(iter(devices))
-        current = next(r for r in data["requirements"] if r["id"] == task["requirement"]["id"])
-        old_device = next((d for d in data["devices"] if d["id"] == current["device_id"]), None)
         manual = marked(data, "requirements", current["id"])
-        if set(device_ids(current)) != {identity} and (
-            manual or (old_device and not old_device.get("generated_origin"))
-        ):
+        if set(device_ids(current)) != {identity} and protected_binding(data, current):
             gaps.append(
                 dict(
                     question(

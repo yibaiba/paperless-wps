@@ -1,0 +1,111 @@
+FF                                                                       [100%]
+=================================== FAILURES ===================================
+_______________ test_manual_role_source_disagreement_cannot_pass _______________
+
+client = <starlette.testclient.TestClient object at 0x114f3d7f0>
+catalog = {'imported': {'source_kind': 'excel', 'id': '2caaa4fd-ef70-41c8-8a58-d6ab3378bc24', 'filename': 'test.xlsx', 'created_...0e5e-4a37-975b-4da665d7f5d3', 'revision': 1, 'updated_at': '2026-09-30T01:18:34.223091+00:00', 'actor': '测试维护者', ...}]}
+workbook = b'PK\x03\x04\x14\x00\x00\x00\x00\x00QJ>]\xe3\xf5\x92]\xf6\x00\x00\x00\xf6\x00\x00\x00\x0f\x00\x00\x00xl/workbook.xml<w...\x01\x00\x00xl/worksheets/sheet1.xmlPK\x05\x06\x00\x00\x00\x00\x03\x00\x03\x00\xcb\x00\x00\x00\x96\x06\x00\x00\x00\x00'
+
+    def test_manual_role_source_disagreement_cannot_pass(client, catalog, workbook):
+        stream = BytesIO(workbook)
+        with ZipFile(stream, "a") as archive:
+            archive.comment = b"Independent source copy for isolated test"
+        imported = client.post(
+            "/api/imports", files={"file": ("additional.xlsx", stream.getvalue())}
+        ).json()
+        sources = client.get("/api/products", params={"import_id": imported["id"]}).json()
+        sources = [client.get("/api/products/"+s["id"]).json() for s in sources]
+        source = next(s for s in sources if s["specification"] == "64GB")
+        post(
+            client,
+            "/source-links",
+            dict(
+                variant_id=catalog["variants"][0]["id"],
+                items=[dict(source_id=source["id"], expected_revision=0)],
+                **AUTHOR,
+            ),
+        )
+        draft = priced(client, catalog, amount="10")
+        draft = apply(client, draft, plan(client, draft))
+        data = read(client, draft)["configuration"]
+        device = data["devices"][0]
+        requirement = data["requirements"][0]
+        # Same configuration, two valid sources; explicitly choose the other source.
+        alternate = next(
+            s for s in device["variant_snapshot"]["source_ids"] if s != device["source_id"]
+        )
+        generation = dict(
+            data["generation"],
+            preferences=[
+                dict(
+                    requirement_id=requirement["id"],
+                    source_id=alternate,
+                    evidence="隔离客户明确资料版本",
+                )
+            ],
+        )
+        draft = write(client, draft, [dict(action="requirements_patch", generation=generation)])
+        checked = read(client, draft)["checked"]
+>       assert any(
+            c["kind"] == "product_constraint" and c["status"] == "conflict" for c in checked["checks"]
+        ), checked["readiness"]
+E       AssertionError: {'status': 'pass', 'ready_for_draft': True, 'ready_for_confirmed_output': False, 'counts': {'rooms': 1, 'systems': 1, 'requirements': 1, 'selected_requirements': 1, ...}, ...}
+E       assert False
+E        +  where False = any(<generator object test_manual_role_source_disagreement_cannot_pass.<locals>.<genexpr> at 0x11543c520>)
+
+backend/tests/configuration/test_selection_binding_review.py:49: AssertionError
+___________ test_fulfilled_role_does_not_choose_first_parent_device ____________
+
+client = <starlette.testclient.TestClient object at 0x114f03390>
+catalog = {'imported': {'source_kind': 'excel', 'id': '568f027a-1fb5-4f42-9daa-210891b78e55', 'filename': 'test.xlsx', 'created_...e332-4af1-bfeb-5731079ee81f', 'revision': 1, 'updated_at': '2026-09-30T01:18:34.926705+00:00', 'actor': '测试维护者', ...}]}
+
+    def test_fulfilled_role_does_not_choose_first_parent_device(client, catalog):
+        definition, package = published(client, catalog, accessory=True)
+        # Separate device-scoped accessory demands need distinct servers.
+        rule = next(
+            r for r in client.get("/api/configuration/knowledge").json() if r["kind"] == "accessory"
+        )
+        from presales.configuration.definitions.schemas import KnowledgePackage
+        from presales.configuration.knowledge.schemas import KnowledgeInput
+
+        from .test_evolution_versions import editable
+
+        payload = editable(KnowledgeInput, rule)
+        payload["calculation_scope"] = "device"
+        response = client.put(
+            "/api/configuration/knowledge/" + rule["id"],
+            json=dict(expected_revision=rule["revision"], payload=payload),
+        )
+        assert response.status_code == 200, response.text
+        rule = response.json()
+        payload = editable(KnowledgePackage, package)
+        payload["members"] = [
+            dict(m, revision=rule["revision"]) if m["id"] == rule["id"] else m
+            for m in payload["members"]
+        ]
+        response = client.put(
+            "/api/configuration/knowledge-packages/" + package["id"],
+            json=dict(expected_revision=package["revision"], payload=payload),
+        )
+        assert response.status_code == 200, response.text
+        draft = draft_for(client, definition, response.json())
+        data = read(client, draft)["configuration"]
+        terminal = next(r for r in data["requirements"] if r["role_id"] == "terminal")
+        draft = write(
+            client, draft, [dict(action="requirement_put", value=dict(terminal, id="second-terminal"))]
+        )
+        proposal = plan(client, draft)
+        draft = apply(client, draft, proposal)
+        actual = read(client, draft)["configuration"]
+        servers = {a["device_id"] for a in actual["accessory_allocations"]}
+        assert len(servers) == 2
+        alias = next(r for r in actual["requirements"] if r["role_id"] == "server")
+>       assert alias["device_id"] is None, "Ambiguous parent demands silently chose one server"
+E       AssertionError: Ambiguous parent demands silently chose one server
+E       assert 'a217586c-f95e-5fb9-b050-3bb1d3df6cc2' is None
+
+backend/tests/configuration/test_selection_binding_review.py:95: AssertionError
+=========================== short test summary info ============================
+FAILED backend/tests/configuration/test_selection_binding_review.py::test_manual_role_source_disagreement_cannot_pass
+FAILED backend/tests/configuration/test_selection_binding_review.py::test_fulfilled_role_does_not_choose_first_parent_device
+2 failed in 1.26s

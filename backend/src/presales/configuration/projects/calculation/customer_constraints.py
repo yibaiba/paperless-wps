@@ -30,12 +30,16 @@ def product_constraints(data):
         requirement = requirements.get(preference["requirement_id"])
         if requirement is None:
             raise ValueError("客户选型要求引用的角色不存在，请重新关联需求")
-        chosen = {devices[identity]["variant_id"] for identity in device_ids(requirement)}
+        selected = [devices[identity] for identity in device_ids(requirement)]
+        chosen = {device["variant_id"] for device in selected}
         excluded = chosen & set(preference["excluded_variant_ids"])
         mismatch = preference["required_variant_id"] and chosen - {
             preference["required_variant_id"]
         }
-        if excluded or mismatch:
+        source_mismatch = preference.get("source_id") and any(
+            device["source_id"] != preference["source_id"] for device in selected
+        )
+        if excluded or mismatch or source_mismatch:
             checks.append(
                 dict(
                     kind="product_constraint",
@@ -44,7 +48,9 @@ def product_constraints(data):
                     requirement_id=requirement["id"],
                     system_id=requirement["system_id"],
                     role_id=requirement.get("role_id"),
-                    message="所选设备与客户明确指定或排除条件冲突，请核对选型或客户需求",
+                    message="所选设备资料来源与明确指定的来源不一致，请核对设备来源或客户需求"
+                    if source_mismatch
+                    else "所选设备与客户明确指定或排除条件冲突，请核对选型或客户需求",
                     evidence=[dict(preference)],
                 )
             )

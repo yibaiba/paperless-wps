@@ -64,6 +64,9 @@ def ordered_candidates(context, items, *, requirement, system, need_key=""):
     specified = preference.get("required_variant_id")
     if specified:
         items = [i for i in items if i["variant"]["id"] == specified]
+    source_id = preference.get("source_id")
+    if source_id:
+        items = [i for i in items if source_id in i["variant"]["source_ids"]]
     orders, evidence = [], []
     package = context.packages.get(system["knowledge_package_id"], {})
     for rule in package.get("recommendations", []):
