@@ -37,14 +37,36 @@ npm run build
 npm audit --audit-level=high
 ```
 
+后端 WPS 回归与 40 例准确率基准使用 60 秒硬超时：
+
+```sh
+cd ..
+.venv/bin/pytest -q \
+  backend/tests/configuration/test_wps_addin.py \
+  backend/tests/configuration/test_wps_suggestion_ranking.py \
+  backend/tests/configuration/test_wps_completion_benchmark.py \
+  --timeout=60
+```
+
 `dist/` 必须与 `/api/wps` 通过同一个内网 HTTPS 域名提供。WPS 发布清单使用 `dist/manifest.xml`、`dist/ribbon.xml` 和 `dist/main.js`；生产注册地址通过官方命令生成：
 
 ```sh
 npx wpsjs publish --serverUrl https://presales.example.internal/wps/
 ```
 
-插件令牌保存在 WPS `PluginStorage`，工作簿隐藏页只保存模板、项目、草稿和产品行绑定，不保存令牌。服务器数据库只保存令牌摘要。
+插件令牌持久化在加载项同源 `localStorage`，并在启动时镜像到 WPS `PluginStorage`，供任务窗格和内联窗口共享。工作簿隐藏页只保存模板、项目、草稿和产品行绑定，不保存令牌；服务器数据库只保存令牌摘要。
+
+模板首次映射还必须明确选择一次产品目录批次与来源工作表。来源选择属于模板修订；修改来源会创建新修订，旧工作簿继续引用旧修订。未确认来源的历史模板可以查询候选，但空白行上下文不会直接 Tab 写入。
+
+诊断事件只包含匿名安装/会话 ID、WPS 版本、补全状态、候选数量、耗时和错误码，不上传输入文字、客户名称、工作表内容或备注。服务端写入时自动删除超过 30 天的事件；长期无请求环境可执行：
+
+```sh
+cd ..
+.venv/bin/presales-wps-purge-diagnostics
+```
 
 ## 兼容性验收
 
-发布前必须分别验证 macOS WPS `12.1.28496` 和售前实际 Windows WPS 构建：Ribbon、任务窗格、`SheetChange`、`SheetSelectionChange`、`Application.OnKey("{TAB}")`、隐藏页、另存副本与卸载。自动化测试不能替代这些宿主级检查。
+加载项启动时会检查 `OnKey`、WebDialog、`ExecuteJavaScript` 所需入口、工作表事件、`PluginStorage` 和 `localStorage`。缺少关键能力时明确阻止运行，不切换到行为不同的降级模式。
+
+发布前必须分别验证 macOS WPS `12.1.28496` 和售前实际 Windows WPS 构建：Ribbon、任务窗格、`SheetChange`、`SheetSelectionChange`、`Application.OnKey("{TAB}")`、隐藏页、另存副本与卸载。自动化测试不能替代这些宿主级检查，完整步骤见 [试点运行手册](../docs/wps-pilot-runbook.md)。
