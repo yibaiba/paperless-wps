@@ -76,3 +76,12 @@ def test_recommended_relation_never_becomes_a_decisive_tab_step():
     [plan] = plan_relations(hardware, [relation], {"hardware"})
 
     assert plan.decisive is False
+
+
+def test_full_sheet_selection_satisfies_a_relation_outside_the_local_window():
+    hardware = variant("hardware")
+    relation = rule(selectors=["hardware"], targets=["software"])
+
+    plans = plan_relations(hardware, [relation], {"hardware", "software"})
+
+    assert plans == []

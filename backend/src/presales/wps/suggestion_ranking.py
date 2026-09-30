@@ -102,12 +102,7 @@ def rank_candidates(
     return [item for _, _, _, item in ranked]
 
 
-def exclude_context_models(items, request, by_id):
-    identities = [
-        request.context.selected_variant_id,
-        *request.context.previous_variant_ids,
-        *request.context.next_variant_ids,
-    ]
+def exclude_selected_models(items, identities, by_id):
     models = {
         item["product"].get("model", "").casefold().strip()
         for item in context_variants(identities, by_id)

@@ -3,7 +3,7 @@ from types import SimpleNamespace
 from presales.wps.feedback import CompletionFeedback, context_hash
 from presales.wps.schemas import SuggestionRequest
 from presales.wps.suggestion_ranking import build_catalog_transitions, rank_candidates
-from presales.wps.suggestions import finalize_completion_readiness
+from presales.wps.suggestions import Suggestions, finalize_completion_readiness
 
 
 def variant(identity, model, *, category="终端", series=()):
@@ -433,3 +433,16 @@ def test_workbook_learning_distinguishes_short_sequence_branches():
     assert exact_score > branch_score
     assert exact_reason == "采用当前工作簿上下文顺序"
     assert branch_reason == "参考当前工作簿历史顺序"
+
+
+def test_completion_planning_keeps_full_sheet_selection_beyond_nearby_rows():
+    request = SuggestionRequest(
+        context={
+            "previous_variant_ids": ["nearest"],
+            "sheet_variant_ids": ["nearest", "far-earlier"],
+        }
+    )
+
+    selected = Suggestions._selected_variant_ids(request)
+
+    assert selected == {"nearest", "far-earlier"}

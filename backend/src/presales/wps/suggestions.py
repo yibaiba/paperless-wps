@@ -16,7 +16,7 @@ from .schemas import SuggestionRequest
 from .suggestion_ranking import (
     build_catalog_transitions,
     context_variants,
-    exclude_context_models,
+    exclude_selected_models,
     model_family,
     rank_candidates,
 )
@@ -77,7 +77,7 @@ class Suggestions:
         knowledge = Entities(self.session).list("knowledge")
         related = self._related(seeds, variants, by_id, selected_ids, knowledge)
         if not request.query.strip():
-            related = exclude_context_models(related, request, by_id)
+            related = exclude_selected_models(related, selected_ids, by_id)
             suppressed = fulfilled_alternative_ids(selected_variants, knowledge)
             related = [item for item in related if item["variant_id"] not in suppressed]
         direct = rank_candidates(
@@ -194,6 +194,7 @@ class Suggestions:
                 request.context.selected_variant_id,
                 *request.context.previous_variant_ids,
                 *request.context.next_variant_ids,
+                *request.context.sheet_variant_ids,
             ]
             if identity
         }

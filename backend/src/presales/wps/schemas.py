@@ -97,6 +97,8 @@ class SuggestionContext(Input):
     previous_source_ids: list[str] = Field(default_factory=list, max_length=8)
     next_variant_ids: list[str] = Field(default_factory=list, max_length=3)
     next_source_ids: list[str] = Field(default_factory=list, max_length=3)
+    sheet_variant_ids: list[str] = Field(default_factory=list, max_length=200)
+    sheet_source_ids: list[str] = Field(default_factory=list, max_length=200)
 
 
 class SuggestionRequest(Input):

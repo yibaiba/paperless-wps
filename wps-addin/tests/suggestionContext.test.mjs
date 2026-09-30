@@ -19,6 +19,10 @@ test('suggestion context follows the nearest confirmed products above the active
   assert.deepEqual(context.previous_source_ids, ['nearest-source', 'older-source']);
   assert.deepEqual(context.next_variant_ids, ['below']);
   assert.deepEqual(context.next_source_ids, ['below-source']);
+  assert.deepEqual(context.sheet_variant_ids, ['nearest', 'below', 'older']);
+  assert.deepEqual(context.sheet_source_ids, [
+    'nearest-source', 'below-source', 'older-source',
+  ]);
   assert.equal(context.system, '无纸化系统');
 });
 
@@ -49,4 +53,21 @@ test('suggestion context does not mutate workbook binding order', () => {
     metadata: { line_bindings: bindings },
   });
   assert.deepEqual(bindings.map((item) => item.variant_id), ['first', 'second']);
+});
+
+test('sheet context remembers products beyond the local sequence window', () => {
+  const line_bindings = Array.from({ length: 12 }, (_, index) => ({
+    sheet: '报价表', row: index + 2,
+    variant_id: `variant-${index}`, source_id: `source-${index}`,
+  }));
+
+  const context = suggestionContext({
+    cell: { sheet: '报价表', row: 20 },
+    row: { values: {} },
+    metadata: { line_bindings },
+  });
+
+  assert.equal(context.previous_variant_ids.length, 8);
+  assert.equal(context.sheet_variant_ids.length, 12);
+  assert.ok(context.sheet_variant_ids.includes('variant-0'));
 });
