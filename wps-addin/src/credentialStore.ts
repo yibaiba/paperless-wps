@@ -30,8 +30,8 @@ export class CredentialStore {
     for (const key of [TOKEN_KEY, ACCOUNT_KEY]) {
       const shared = this.options.shared!.getItem(key);
       const persistent = this.options.persistent!.getItem(key);
-      if (shared) this.options.persistent!.setItem(key, shared);
-      else if (persistent) this.options.shared!.setItem(key, persistent);
+      if (persistent) this.options.shared!.setItem(key, persistent);
+      else if (shared) this.options.persistent!.setItem(key, shared);
     }
   }
 
@@ -53,11 +53,11 @@ export class CredentialStore {
   }
 
   private read(key: string) {
-    const shared = this.options.shared?.getItem(key);
-    if (shared) return shared;
     const persistent = this.options.persistent?.getItem(key) ?? null;
-    if (persistent && this.options.shared) this.options.shared.setItem(key, persistent);
-    return persistent;
+    if (persistent) return persistent;
+    const shared = this.options.shared?.getItem(key) ?? null;
+    if (shared && this.options.persistent) this.options.persistent.setItem(key, shared);
+    return shared;
   }
 
   private write(key: string, value: string) {

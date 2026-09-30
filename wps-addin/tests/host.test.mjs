@@ -3,6 +3,7 @@ import { test } from 'node:test';
 
 test('WPS adapter addresses cells through the collection Item method', async () => {
   const storage = new Map();
+  let selectionMoved = false;
   const values = new Map([
     ['1:1', { Text: '产品型号', Formula: '', MergeCells: false }],
     ['2:1', { Text: 'OLD', Formula: '', MergeCells: false, Value2: 'OLD' }],
@@ -13,12 +14,21 @@ test('WPS adapter addresses cells through the collection Item method', async () 
     Cells: { Item: (row, column) => values.get(`${row}:${column}`) },
   };
   globalThis.window = {
+    localStorage: {
+      getItem: (key) => storage.get(`local:${key}`),
+      setItem: (key, value) => storage.set(`local:${key}`, String(value)),
+    },
     Application: {
       ActiveWorkbook: { Worksheets: { Count: 1, Item: () => sheet } },
       ActiveSheet: sheet,
       PluginStorage: {
         getItem: (key) => storage.get(key),
         setItem: (key, value) => storage.set(key, String(value)),
+      },
+      Selection: {
+        Offset: (row, column) => ({
+          Select: () => { selectionMoved = row === 1 && column === 0; },
+        }),
       },
     },
   };
@@ -29,7 +39,6 @@ test('WPS adapter addresses cells through the collection Item method', async () 
     sheet_selector: '报价表', managed_fields: ['model'], field_columns: { model: 1 },
   }, 2, { model: 'NEW' });
   assert.equal(values.get('2:1').Value2, 'NEW');
-  host.requestInlineAdvance();
-  assert.equal(host.consumeInlineAdvance(), true);
-  assert.equal(host.consumeInlineAdvance(), false);
+  host.moveSelection(1, 0);
+  assert.equal(selectionMoved, true);
 });

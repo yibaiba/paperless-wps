@@ -43,6 +43,17 @@ test('new credentials update persistent and shared stores together', () => {
   assert.equal(credentials.installationId(), 'installation-1');
 });
 
+test('persistent credentials stay authoritative over a stale shared mirror', () => {
+  const shared = storage([['presales_access_token', 'stale-token']]);
+  const persistent = storage([['presales_access_token', 'current-token']]);
+  const credentials = new CredentialStore({ shared, persistent });
+
+  credentials.restore();
+
+  assert.equal(credentials.token(), 'current-token');
+  assert.equal(shared.items.get('presales_access_token'), 'current-token');
+});
+
 test('missing persistent storage is an explicit compatibility issue', () => {
   const credentials = new CredentialStore({ shared: storage() });
   assert.deepEqual(credentials.capabilityIssues(), ['localStorage']);

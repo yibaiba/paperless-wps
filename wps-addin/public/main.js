@@ -11,13 +11,18 @@
     return window.Application && window.Application.PluginStorage;
   }
 
+  function stateStorage() {
+    if (!window.localStorage) throw new Error('当前 WPS 缺少加载项本地状态存储能力');
+    return window.localStorage;
+  }
+
   function baseUrl() {
     return window.location.href.replace(/(?:index\.html)?(?:[?#].*)?$/, '');
   }
 
   function showPane(action) {
     var store = storage();
-    if (store) store.setItem('presales_requested_action', action || 'open');
+    stateStorage().setItem('presales_requested_action', action || 'open');
     var id = paneId || (store && store.getItem('presales_taskpane_id'));
     var pane = null;
     if (id) {
@@ -79,9 +84,8 @@
     if (typeof window.Application.ribbonUI !== 'object') {
       window.Application.ribbonUI = ribbonUI;
     }
-    var store = storage();
-    if (store && window.crypto && typeof window.crypto.randomUUID === 'function') {
-      store.setItem(diagnosticSessionKey, window.crypto.randomUUID());
+    if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+      stateStorage().setItem(diagnosticSessionKey, window.crypto.randomUUID());
     }
     restoreNativeTab('', false);
     return true;

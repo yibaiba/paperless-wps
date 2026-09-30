@@ -20,6 +20,7 @@ import type {
 } from './types';
 
 type View = 'account' | 'suggestions' | 'mapping' | 'binding' | 'sync';
+const HOST_STATE_POLL_MS = 250;
 
 export function App() {
   const host = useMemo(() => new WpsHostAdapter(), []);
@@ -151,22 +152,17 @@ export function App() {
   }, [cell, host, metadata, profile]);
 
   useEffect(() => {
-    let nonce = host.metadataNonce();
-    const poll = window.setInterval(() => {
-      const next = host.metadataNonce();
-      if (next === nonce) return;
-      nonce = next;
-      setMetadata(host.readMetadata());
-    }, 200);
-    return () => window.clearInterval(poll);
-  }, [host]);
-
-  useEffect(() => {
+    if (capabilityIssues.length) return undefined;
+    let metadataNonce = host.metadataNonce();
     const views: Record<string, View> = {
       connect: 'account', mapping: 'mapping', binding: 'binding', sync: 'sync', open: 'suggestions',
     };
     const poll = window.setInterval(() => {
-      if (host.consumeInlineAdvance()) host.moveSelection(1, 0);
+      const nextNonce = host.metadataNonce();
+      if (nextNonce !== metadataNonce) {
+        metadataNonce = nextNonce;
+        setMetadata(host.readMetadata());
+      }
       const backgroundError = host.backgroundError();
       if (backgroundError) {
         setError(backgroundError);
@@ -181,9 +177,9 @@ export function App() {
           reason instanceof Error ? reason.message : String(reason),
         ));
       }
-    }, 200);
+    }, HOST_STATE_POLL_MS);
     return () => window.clearInterval(poll);
-  }, [host, loadProfiles]);
+  }, [capabilityIssues.length, host, loadProfiles]);
 
   useEffect(() => {
     if (!token) return undefined;

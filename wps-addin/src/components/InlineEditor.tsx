@@ -29,8 +29,7 @@ import {
 import { LatestRequest } from '../latestRequest';
 import type { Candidate, DiagnosticEventInput, InlineEditorContext } from '../types';
 
-const CONTEXT_POLL_MS = 80;
-const POSITION_POLL_MS = 160;
+const POSITION_POLL_MS = 300;
 const CANDIDATE_LIST_ID = 'product-candidates';
 
 const GROUP_LABELS: Record<Candidate['group'], string> = {
@@ -108,9 +107,7 @@ export function InlineEditor() {
   useEffect(() => {
     window.PresalesInlineRefresh = refreshContext;
     window.addEventListener('focus', refreshContext);
-    const poll = window.setInterval(refreshContext, CONTEXT_POLL_MS);
     return () => {
-      window.clearInterval(poll);
       window.removeEventListener('focus', refreshContext);
       delete window.PresalesInlineRefresh;
     };
@@ -294,7 +291,6 @@ export function InlineEditor() {
       }
       if (advance) {
         prefetchNextRow(metadata);
-        host.requestInlineAdvance();
       }
       diagnose({
         event_type: 'accept_success',
@@ -304,6 +300,13 @@ export function InlineEditor() {
         template_profile_revision: context.profile.revision,
       });
       host.hideInlineEditor();
+      if (advance) {
+        try { host.moveSelection(1, 0); }
+        catch (reason) {
+          const message = reason instanceof Error ? reason.message : String(reason);
+          host.reportBackgroundError(`移动到下一产品行失败：${message}`);
+        }
+      }
     } catch (reason) {
       accepting.current = false;
       diagnose({

@@ -32,8 +32,18 @@ interface DialogConfig {
   set: (key: string, value: string | number) => void;
 }
 
+interface DialogGeometry {
+  dialogId: number;
+  width: number;
+  height: number;
+  x: number;
+  y: number;
+}
+
 export class InlineDialogManager {
   private readonly config: DialogConfig;
+  private dialogRef?: any;
+  private geometry?: DialogGeometry;
 
   constructor(config: DialogConfig) { this.config = config; }
 
@@ -103,14 +113,20 @@ export class InlineDialogManager {
     }
     dialog.ExecuteJavaScript(CLOSE_INLINE_EDITOR_SCRIPT);
     this.config.set(DIALOG_KEY, '');
+    this.dialogRef = undefined;
+    this.geometry = undefined;
   }
 
   private dialog(create: boolean, size?: InlineDialogSize) {
+    if (this.dialogRef) return this.dialogRef;
     const id = Number(this.config.get(DIALOG_KEY) || 0);
     if (id) {
       try {
         const existing = this.config.app.GetWebDialog(id);
-        if (existing) return existing;
+        if (existing) {
+          this.dialogRef = existing;
+          return existing;
+        }
       } catch { /* A stale dialog id is replaced below. */ }
     }
     if (!create) return null;
@@ -130,6 +146,7 @@ export class InlineDialogManager {
       true,
     );
     if (dialog?.ID) this.config.set(DIALOG_KEY, dialog.ID);
+    this.dialogRef = dialog;
     return dialog;
   }
 
@@ -161,8 +178,18 @@ export class InlineDialogManager {
       ? 'below' : 'above';
     const y = placement === 'below'
       ? anchor.y : Math.max(availableTop, anchor.bottom - size.height - DIALOG_GAP);
-    dialog.Resize(size.width, size.height);
-    dialog.Move(x, y);
+    const next = {
+      dialogId: Number(dialog.ID || 0), width: size.width, height: size.height, x, y,
+    };
+    if (!this.geometry || this.geometry.dialogId !== next.dialogId
+      || this.geometry.width !== next.width || this.geometry.height !== next.height) {
+      dialog.Resize(size.width, size.height);
+    }
+    if (!this.geometry || this.geometry.dialogId !== next.dialogId
+      || this.geometry.x !== next.x || this.geometry.y !== next.y) {
+      dialog.Move(x, y);
+    }
+    this.geometry = next;
     return placement;
   }
 }

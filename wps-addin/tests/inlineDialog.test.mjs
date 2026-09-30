@@ -8,6 +8,7 @@ test('inline dialog keeps a monotonic context nonce and follows the selected cel
   const moves = [];
   const sizes = [];
   const createArguments = [];
+  let getDialogCalls = 0;
   const executedScripts = [];
   const dialog = {
     ID: 7,
@@ -26,7 +27,7 @@ test('inline dialog keeps a monotonic context nonce and follows the selected cel
       createArguments.push(args);
       return dialog;
     },
-    GetWebDialog: () => dialog,
+    GetWebDialog: () => { getDialogCalls += 1; return dialog; },
   };
   const manager = new InlineDialogManager({
     app, href: 'http://127.0.0.1:3889/taskpane.html',
@@ -51,6 +52,12 @@ test('inline dialog keeps a monotonic context nonce and follows the selected cel
   }).placement, 'above');
   assert.deepEqual(sizes.at(-1), [360, 224]);
   assert.deepEqual(moves.at(-1), [100, 0]);
+  const stableSizeCount = sizes.length;
+  const stableMoveCount = moves.length;
+  manager.layout({ candidateCount: 8, listVisible: true, showStatus: false });
+  assert.equal(sizes.length, stableSizeCount);
+  assert.equal(moves.length, stableMoveCount);
+  assert.equal(getDialogCalls, 0);
   app.Selection.Left = 900;
   manager.layout({ candidateCount: 1, listVisible: true, showStatus: false });
   assert.deepEqual(moves.at(-1), [640, 200]);

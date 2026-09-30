@@ -21,7 +21,6 @@ declare global {
 
 const META_SHEET = '__PRESALES_META';
 const META_CELL = 'A1';
-const INLINE_ADVANCE_KEY = 'presales_inline_advance';
 const BACKGROUND_ERROR_KEY = 'presales_background_error';
 const FEEDBACK_OUTBOX_KEY = 'presales_feedback_outbox';
 const CONTEXT_LOOKBACK_ROWS = 100;
@@ -60,8 +59,6 @@ export interface HostAdapter {
   layoutInlineEditor(
     options: Omit<InlineLayoutOptions, 'anchorWidth' | 'anchorHeight'>,
   ): InlineLayoutResult;
-  requestInlineAdvance(): void;
-  consumeInlineAdvance(): boolean;
   backgroundError(): string | null;
   reportBackgroundError(message: string): void;
   clearBackgroundError(): void;
@@ -80,6 +77,7 @@ function text(value: unknown) { return value == null ? '' : String(value); }
 
 export class WpsHostAdapter implements HostAdapter {
   private readonly app: any;
+  private readonly stateStorage?: Storage;
   private readonly credentials: CredentialStore;
   private readonly diagnostics: DiagnosticRecorder;
   private readonly inlineDialog: InlineDialogManager;
@@ -87,9 +85,11 @@ export class WpsHostAdapter implements HostAdapter {
 
   constructor() {
     this.app = window.Application ?? window.wps?.EtApplication?.();
+    const persistent = persistentStorage();
+    this.stateStorage = persistent;
     this.credentials = new CredentialStore({
       shared: this.app?.PluginStorage,
-      persistent: persistentStorage(),
+      persistent,
     });
     if (!this.credentials.capabilityIssues().length) this.credentials.restore();
     this.inlineDialog = new InlineDialogManager({
@@ -105,8 +105,11 @@ export class WpsHostAdapter implements HostAdapter {
       set: (key, value) => this.storeSet(key, value),
     });
     this.diagnostics = new DiagnosticRecorder({
-      get: (key) => this.storeGet(key),
-      set: (key, value) => this.storeSet(key, value),
+      get: (key) => persistent?.getItem(key) ?? null,
+      set: (key, value) => {
+        if (!persistent) throw new Error('当前 WPS 缺少诊断本地存储能力');
+        persistent.setItem(key, value);
+      },
       installationId: () => this.credentials.installationId(),
       hostOs: () => String(window.navigator?.platform ?? 'unknown'),
       hostVersion: () => text(this.app?.Build ?? this.app?.Version) || 'unknown',
@@ -123,9 +126,9 @@ export class WpsHostAdapter implements HostAdapter {
 
   saveAccount(value: string) { this.credentials.saveAccount(value); }
 
-  requestedAction() { return this.storeGet('presales_requested_action'); }
+  requestedAction() { return this.stateGet('presales_requested_action'); }
 
-  clearRequestedAction() { this.storeSet('presales_requested_action', ''); }
+  clearRequestedAction() { this.stateSet('presales_requested_action', ''); }
 
   activeCell(): ActiveCell {
     this.requireWorkbook();
@@ -244,10 +247,10 @@ export class WpsHostAdapter implements HostAdapter {
     sheet.Range(META_CELL).Value2 = JSON.stringify(value);
     sheet.Visible = 2;
     if (active && active.Name !== META_SHEET) active.Activate();
-    this.storeSet('presales_metadata_nonce', this.metadataNonce() + 1);
+    this.stateSet('presales_metadata_nonce', this.metadataNonce() + 1);
   }
 
-  metadataNonce() { return Number(this.storeGet('presales_metadata_nonce') || 0); }
+  metadataNonce() { return Number(this.stateGet('presales_metadata_nonce') || 0); }
 
   inlineContext(): InlineEditorContext | null { return this.inlineDialog.context(); }
 
@@ -295,32 +298,24 @@ export class WpsHostAdapter implements HostAdapter {
     return this.inlineDialog.layout(options);
   }
 
-  requestInlineAdvance() { this.storeSet(INLINE_ADVANCE_KEY, Date.now()); }
+  backgroundError() { return this.stateGet(BACKGROUND_ERROR_KEY); }
 
-  consumeInlineAdvance() {
-    if (!this.storeGet(INLINE_ADVANCE_KEY)) return false;
-    this.storeSet(INLINE_ADVANCE_KEY, '');
-    return true;
-  }
+  reportBackgroundError(message: string) { this.stateSet(BACKGROUND_ERROR_KEY, message); }
 
-  backgroundError() { return this.storeGet(BACKGROUND_ERROR_KEY); }
-
-  reportBackgroundError(message: string) { this.storeSet(BACKGROUND_ERROR_KEY, message); }
-
-  clearBackgroundError() { this.storeSet(BACKGROUND_ERROR_KEY, ''); }
+  clearBackgroundError() { this.stateSet(BACKGROUND_ERROR_KEY, ''); }
 
   pendingSuggestionFeedback() {
-    return parseFeedbackOutbox(this.storeGet(FEEDBACK_OUTBOX_KEY));
+    return parseFeedbackOutbox(this.stateGet(FEEDBACK_OUTBOX_KEY));
   }
 
   enqueueSuggestionFeedback(value: SuggestionFeedbackPayload) {
-    this.storeSet(FEEDBACK_OUTBOX_KEY, enqueueFeedback(this.storeGet(FEEDBACK_OUTBOX_KEY), value));
+    this.stateSet(FEEDBACK_OUTBOX_KEY, enqueueFeedback(this.stateGet(FEEDBACK_OUTBOX_KEY), value));
   }
 
   removeSuggestionFeedback(operationId: string) {
-    this.storeSet(
+    this.stateSet(
       FEEDBACK_OUTBOX_KEY,
-      removeFeedback(this.storeGet(FEEDBACK_OUTBOX_KEY), operationId),
+      removeFeedback(this.stateGet(FEEDBACK_OUTBOX_KEY), operationId),
     );
   }
 
@@ -398,6 +393,16 @@ export class WpsHostAdapter implements HostAdapter {
   private storeSet(key: string, value: string | number) {
     try { this.app?.PluginStorage?.setItem(key, value); }
     catch { localStorage.setItem(key, String(value)); }
+  }
+
+  private stateGet(key: string) {
+    if (!this.stateStorage) throw new Error('当前 WPS 缺少加载项本地状态存储能力');
+    return this.stateStorage.getItem(key);
+  }
+
+  private stateSet(key: string, value: string | number) {
+    if (!this.stateStorage) throw new Error('当前 WPS 缺少加载项本地状态存储能力');
+    this.stateStorage.setItem(key, String(value));
   }
 
   private address(row: number, column: number) {

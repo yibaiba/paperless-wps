@@ -5,6 +5,7 @@ import vm from 'node:vm';
 
 async function addinMain() {
   const values = new Map();
+  const localValues = new Map();
   const onKey = [];
   const sent = [];
   const executed = [];
@@ -21,10 +22,14 @@ async function addinMain() {
         ExecuteJavaScript: (script) => executed.push(script),
       }),
     },
+    localStorage: {
+      getItem: (key) => localValues.get(key),
+      setItem: (key, value) => localValues.set(key, String(value)),
+    },
   };
   const source = await readFile(new URL('../public/main.js', import.meta.url), 'utf8');
   vm.runInNewContext(source, { window, alert: () => {} });
-  return { executed, onKey, sent, values, window };
+  return { executed, localValues, onKey, sent, values, window };
 }
 
 test('global WPS Tab callback forwards the active completion session to the inline dialog', async () => {
