@@ -1,0 +1,304 @@
+FFFFFF                                                                   [100%]
+=================================== FAILURES ===================================
+_ test_source_constraint_reuses_matching_stock_and_buys_only_shortfall[False-0-16] _
+
+client = <starlette.testclient.TestClient object at 0x10d8aa3c0>
+catalog = {'imported': {'source_kind': 'excel', 'id': '461d6458-7c24-40d0-a676-0988f7fca186', 'filename': 'test.xlsx', 'created_...d7b3-49c1-83a7-d077daf7e574', 'revision': 1, 'updated_at': '2026-09-30T10:37:26.544263+00:00', 'actor': '测试维护者', ...}]}
+workbook = b'PK\x03\x04\x14\x00\x00\x00\x00\x00\xad\x94>]\xe3\xf5\x92]\xf6\x00\x00\x00\xf6\x00\x00\x00\x0f\x00\x00\x00xl/workbook...\x01\x00\x00xl/worksheets/sheet1.xmlPK\x05\x06\x00\x00\x00\x00\x03\x00\x03\x00\xcb\x00\x00\x00\x96\x06\x00\x00\x00\x00'
+good_index = 0, amount = '16', already_generated = False
+
+    @pytest.mark.parametrize("good_index,amount", [(0, "16"), (1, "16"), (0, "16.5")])
+    @pytest.mark.parametrize("already_generated", [False, True])
+    def test_source_constraint_reuses_matching_stock_and_buys_only_shortfall(
+        client, catalog, workbook, good_index, amount, already_generated
+    ):
+        add_source_copy(client, catalog, workbook)
+        draft = existing_draft(client, catalog, quantities=(amount, amount))
+        data = read(client, draft)["configuration"]
+        good, other = data["devices"][good_index], data["devices"][1 - good_index]
+        alternate = next(s for s in other["variant_snapshot"]["source_ids"] if s != good["source_id"])
+        value = {k: other[k] for k in ["id", "name", "kind", "quantity", "variant_id"]}
+        value["source_id"] = alternate
+        draft = write(client, draft, [dict(action="device_put", value=value)])
+        if already_generated:
+            draft = apply(client, draft, plan(client, draft))
+        data = read(client, draft)["configuration"]
+        generation = dict(
+            data["generation"],
+            preferences=[
+                dict(
+                    data["generation"]["preferences"][0],
+                    source_id=good["source_id"],
+                )
+            ],
+        )
+        draft = write(client, draft, [dict(action="requirements_patch", generation=generation)])
+        draft = apply(client, draft, plan(client, draft))
+        result = read(client, draft)
+        data = result["configuration"]
+        bought = sum(
+            (Decimal(a["quantity"]) for a in data["supply_allocations"] if a["source"] == "purchase"),
+            Decimal(0),
+        )
+>       assert bought == Decimal(32) - Decimal(amount), (
+            "Matching stock was abandoned and a full batch purchased"
+        )
+E       AssertionError: Matching stock was abandoned and a full batch purchased
+E       assert Decimal('32') == (Decimal('32') - Decimal('16'))
+E        +  where Decimal('32') = Decimal(32)
+E        +  and   Decimal('16') = Decimal('16')
+
+backend/tests/configuration/test_source_partial_reuse.py:43: AssertionError
+_ test_source_constraint_reuses_matching_stock_and_buys_only_shortfall[False-1-16] _
+
+client = <starlette.testclient.TestClient object at 0x10d912990>
+catalog = {'imported': {'source_kind': 'excel', 'id': '3609f935-d62d-470b-9ee1-5fe236d9b205', 'filename': 'test.xlsx', 'created_...2986-4176-9aff-b61a09389750', 'revision': 1, 'updated_at': '2026-09-30T10:37:27.282924+00:00', 'actor': '测试维护者', ...}]}
+workbook = b'PK\x03\x04\x14\x00\x00\x00\x00\x00\xad\x94>]\xe3\xf5\x92]\xf6\x00\x00\x00\xf6\x00\x00\x00\x0f\x00\x00\x00xl/workbook...\x01\x00\x00xl/worksheets/sheet1.xmlPK\x05\x06\x00\x00\x00\x00\x03\x00\x03\x00\xcb\x00\x00\x00\x96\x06\x00\x00\x00\x00'
+good_index = 1, amount = '16', already_generated = False
+
+    @pytest.mark.parametrize("good_index,amount", [(0, "16"), (1, "16"), (0, "16.5")])
+    @pytest.mark.parametrize("already_generated", [False, True])
+    def test_source_constraint_reuses_matching_stock_and_buys_only_shortfall(
+        client, catalog, workbook, good_index, amount, already_generated
+    ):
+        add_source_copy(client, catalog, workbook)
+        draft = existing_draft(client, catalog, quantities=(amount, amount))
+        data = read(client, draft)["configuration"]
+        good, other = data["devices"][good_index], data["devices"][1 - good_index]
+        alternate = next(s for s in other["variant_snapshot"]["source_ids"] if s != good["source_id"])
+        value = {k: other[k] for k in ["id", "name", "kind", "quantity", "variant_id"]}
+        value["source_id"] = alternate
+        draft = write(client, draft, [dict(action="device_put", value=value)])
+        if already_generated:
+            draft = apply(client, draft, plan(client, draft))
+        data = read(client, draft)["configuration"]
+        generation = dict(
+            data["generation"],
+            preferences=[
+                dict(
+                    data["generation"]["preferences"][0],
+                    source_id=good["source_id"],
+                )
+            ],
+        )
+        draft = write(client, draft, [dict(action="requirements_patch", generation=generation)])
+        draft = apply(client, draft, plan(client, draft))
+        result = read(client, draft)
+        data = result["configuration"]
+        bought = sum(
+            (Decimal(a["quantity"]) for a in data["supply_allocations"] if a["source"] == "purchase"),
+            Decimal(0),
+        )
+>       assert bought == Decimal(32) - Decimal(amount), (
+            "Matching stock was abandoned and a full batch purchased"
+        )
+E       AssertionError: Matching stock was abandoned and a full batch purchased
+E       assert Decimal('32') == (Decimal('32') - Decimal('16'))
+E        +  where Decimal('32') = Decimal(32)
+E        +  and   Decimal('16') = Decimal('16')
+
+backend/tests/configuration/test_source_partial_reuse.py:43: AssertionError
+_ test_source_constraint_reuses_matching_stock_and_buys_only_shortfall[False-0-16.5] _
+
+client = <starlette.testclient.TestClient object at 0x10de942d0>
+catalog = {'imported': {'source_kind': 'excel', 'id': 'beaf499e-ff9c-45e1-a8c8-65d52d38eec1', 'filename': 'test.xlsx', 'created_...b07e-4054-87ad-8e9e629bd1e7', 'revision': 1, 'updated_at': '2026-09-30T10:37:27.863519+00:00', 'actor': '测试维护者', ...}]}
+workbook = b'PK\x03\x04\x14\x00\x00\x00\x00\x00\xad\x94>]\xe3\xf5\x92]\xf6\x00\x00\x00\xf6\x00\x00\x00\x0f\x00\x00\x00xl/workbook...\x01\x00\x00xl/worksheets/sheet1.xmlPK\x05\x06\x00\x00\x00\x00\x03\x00\x03\x00\xcb\x00\x00\x00\x96\x06\x00\x00\x00\x00'
+good_index = 0, amount = '16.5', already_generated = False
+
+    @pytest.mark.parametrize("good_index,amount", [(0, "16"), (1, "16"), (0, "16.5")])
+    @pytest.mark.parametrize("already_generated", [False, True])
+    def test_source_constraint_reuses_matching_stock_and_buys_only_shortfall(
+        client, catalog, workbook, good_index, amount, already_generated
+    ):
+        add_source_copy(client, catalog, workbook)
+        draft = existing_draft(client, catalog, quantities=(amount, amount))
+        data = read(client, draft)["configuration"]
+        good, other = data["devices"][good_index], data["devices"][1 - good_index]
+        alternate = next(s for s in other["variant_snapshot"]["source_ids"] if s != good["source_id"])
+        value = {k: other[k] for k in ["id", "name", "kind", "quantity", "variant_id"]}
+        value["source_id"] = alternate
+        draft = write(client, draft, [dict(action="device_put", value=value)])
+        if already_generated:
+            draft = apply(client, draft, plan(client, draft))
+        data = read(client, draft)["configuration"]
+        generation = dict(
+            data["generation"],
+            preferences=[
+                dict(
+                    data["generation"]["preferences"][0],
+                    source_id=good["source_id"],
+                )
+            ],
+        )
+        draft = write(client, draft, [dict(action="requirements_patch", generation=generation)])
+        draft = apply(client, draft, plan(client, draft))
+        result = read(client, draft)
+        data = result["configuration"]
+        bought = sum(
+            (Decimal(a["quantity"]) for a in data["supply_allocations"] if a["source"] == "purchase"),
+            Decimal(0),
+        )
+>       assert bought == Decimal(32) - Decimal(amount), (
+            "Matching stock was abandoned and a full batch purchased"
+        )
+E       AssertionError: Matching stock was abandoned and a full batch purchased
+E       assert Decimal('32') == (Decimal('32') - Decimal('16.5'))
+E        +  where Decimal('32') = Decimal(32)
+E        +  and   Decimal('16.5') = Decimal('16.5')
+
+backend/tests/configuration/test_source_partial_reuse.py:43: AssertionError
+_ test_source_constraint_reuses_matching_stock_and_buys_only_shortfall[True-0-16] _
+
+client = <starlette.testclient.TestClient object at 0x1140d4640>
+catalog = {'imported': {'source_kind': 'excel', 'id': '5d599c55-da42-46c8-bfc8-9ef1bd5396b3', 'filename': 'test.xlsx', 'created_...7de6-4a99-a06c-b8d05db6cda6', 'revision': 1, 'updated_at': '2026-09-30T10:37:28.447995+00:00', 'actor': '测试维护者', ...}]}
+workbook = b'PK\x03\x04\x14\x00\x00\x00\x00\x00\xae\x94>]\xe3\xf5\x92]\xf6\x00\x00\x00\xf6\x00\x00\x00\x0f\x00\x00\x00xl/workbook...\x01\x00\x00xl/worksheets/sheet1.xmlPK\x05\x06\x00\x00\x00\x00\x03\x00\x03\x00\xcb\x00\x00\x00\x96\x06\x00\x00\x00\x00'
+good_index = 0, amount = '16', already_generated = True
+
+    @pytest.mark.parametrize("good_index,amount", [(0, "16"), (1, "16"), (0, "16.5")])
+    @pytest.mark.parametrize("already_generated", [False, True])
+    def test_source_constraint_reuses_matching_stock_and_buys_only_shortfall(
+        client, catalog, workbook, good_index, amount, already_generated
+    ):
+        add_source_copy(client, catalog, workbook)
+        draft = existing_draft(client, catalog, quantities=(amount, amount))
+        data = read(client, draft)["configuration"]
+        good, other = data["devices"][good_index], data["devices"][1 - good_index]
+        alternate = next(s for s in other["variant_snapshot"]["source_ids"] if s != good["source_id"])
+        value = {k: other[k] for k in ["id", "name", "kind", "quantity", "variant_id"]}
+        value["source_id"] = alternate
+        draft = write(client, draft, [dict(action="device_put", value=value)])
+        if already_generated:
+            draft = apply(client, draft, plan(client, draft))
+        data = read(client, draft)["configuration"]
+        generation = dict(
+            data["generation"],
+            preferences=[
+                dict(
+                    data["generation"]["preferences"][0],
+                    source_id=good["source_id"],
+                )
+            ],
+        )
+        draft = write(client, draft, [dict(action="requirements_patch", generation=generation)])
+        draft = apply(client, draft, plan(client, draft))
+        result = read(client, draft)
+        data = result["configuration"]
+        bought = sum(
+            (Decimal(a["quantity"]) for a in data["supply_allocations"] if a["source"] == "purchase"),
+            Decimal(0),
+        )
+>       assert bought == Decimal(32) - Decimal(amount), (
+            "Matching stock was abandoned and a full batch purchased"
+        )
+E       AssertionError: Matching stock was abandoned and a full batch purchased
+E       assert Decimal('32') == (Decimal('32') - Decimal('16'))
+E        +  where Decimal('32') = Decimal(32)
+E        +  and   Decimal('16') = Decimal('16')
+
+backend/tests/configuration/test_source_partial_reuse.py:43: AssertionError
+_ test_source_constraint_reuses_matching_stock_and_buys_only_shortfall[True-1-16] _
+
+client = <starlette.testclient.TestClient object at 0x1140d5220>
+catalog = {'imported': {'source_kind': 'excel', 'id': '7ace46fc-0e4c-45cf-8857-25e98437c3ec', 'filename': 'test.xlsx', 'created_...e614-46e2-88eb-c8eeff44a21d', 'revision': 1, 'updated_at': '2026-09-30T10:37:29.011501+00:00', 'actor': '测试维护者', ...}]}
+workbook = b'PK\x03\x04\x14\x00\x00\x00\x00\x00\xae\x94>]\xe3\xf5\x92]\xf6\x00\x00\x00\xf6\x00\x00\x00\x0f\x00\x00\x00xl/workbook...\x01\x00\x00xl/worksheets/sheet1.xmlPK\x05\x06\x00\x00\x00\x00\x03\x00\x03\x00\xcb\x00\x00\x00\x96\x06\x00\x00\x00\x00'
+good_index = 1, amount = '16', already_generated = True
+
+    @pytest.mark.parametrize("good_index,amount", [(0, "16"), (1, "16"), (0, "16.5")])
+    @pytest.mark.parametrize("already_generated", [False, True])
+    def test_source_constraint_reuses_matching_stock_and_buys_only_shortfall(
+        client, catalog, workbook, good_index, amount, already_generated
+    ):
+        add_source_copy(client, catalog, workbook)
+        draft = existing_draft(client, catalog, quantities=(amount, amount))
+        data = read(client, draft)["configuration"]
+        good, other = data["devices"][good_index], data["devices"][1 - good_index]
+        alternate = next(s for s in other["variant_snapshot"]["source_ids"] if s != good["source_id"])
+        value = {k: other[k] for k in ["id", "name", "kind", "quantity", "variant_id"]}
+        value["source_id"] = alternate
+        draft = write(client, draft, [dict(action="device_put", value=value)])
+        if already_generated:
+            draft = apply(client, draft, plan(client, draft))
+        data = read(client, draft)["configuration"]
+        generation = dict(
+            data["generation"],
+            preferences=[
+                dict(
+                    data["generation"]["preferences"][0],
+                    source_id=good["source_id"],
+                )
+            ],
+        )
+        draft = write(client, draft, [dict(action="requirements_patch", generation=generation)])
+        draft = apply(client, draft, plan(client, draft))
+        result = read(client, draft)
+        data = result["configuration"]
+        bought = sum(
+            (Decimal(a["quantity"]) for a in data["supply_allocations"] if a["source"] == "purchase"),
+            Decimal(0),
+        )
+>       assert bought == Decimal(32) - Decimal(amount), (
+            "Matching stock was abandoned and a full batch purchased"
+        )
+E       AssertionError: Matching stock was abandoned and a full batch purchased
+E       assert Decimal('32') == (Decimal('32') - Decimal('16'))
+E        +  where Decimal('32') = Decimal(32)
+E        +  and   Decimal('16') = Decimal('16')
+
+backend/tests/configuration/test_source_partial_reuse.py:43: AssertionError
+_ test_source_constraint_reuses_matching_stock_and_buys_only_shortfall[True-0-16.5] _
+
+client = <starlette.testclient.TestClient object at 0x10da49c70>
+catalog = {'imported': {'source_kind': 'excel', 'id': '4153f18b-9d60-4e7a-9135-a88f40cd6f12', 'filename': 'test.xlsx', 'created_...8fa4-4f03-9318-e940de5b8d18', 'revision': 1, 'updated_at': '2026-09-30T10:37:29.605476+00:00', 'actor': '测试维护者', ...}]}
+workbook = b'PK\x03\x04\x14\x00\x00\x00\x00\x00\xae\x94>]\xe3\xf5\x92]\xf6\x00\x00\x00\xf6\x00\x00\x00\x0f\x00\x00\x00xl/workbook...\x01\x00\x00xl/worksheets/sheet1.xmlPK\x05\x06\x00\x00\x00\x00\x03\x00\x03\x00\xcb\x00\x00\x00\x96\x06\x00\x00\x00\x00'
+good_index = 0, amount = '16.5', already_generated = True
+
+    @pytest.mark.parametrize("good_index,amount", [(0, "16"), (1, "16"), (0, "16.5")])
+    @pytest.mark.parametrize("already_generated", [False, True])
+    def test_source_constraint_reuses_matching_stock_and_buys_only_shortfall(
+        client, catalog, workbook, good_index, amount, already_generated
+    ):
+        add_source_copy(client, catalog, workbook)
+        draft = existing_draft(client, catalog, quantities=(amount, amount))
+        data = read(client, draft)["configuration"]
+        good, other = data["devices"][good_index], data["devices"][1 - good_index]
+        alternate = next(s for s in other["variant_snapshot"]["source_ids"] if s != good["source_id"])
+        value = {k: other[k] for k in ["id", "name", "kind", "quantity", "variant_id"]}
+        value["source_id"] = alternate
+        draft = write(client, draft, [dict(action="device_put", value=value)])
+        if already_generated:
+            draft = apply(client, draft, plan(client, draft))
+        data = read(client, draft)["configuration"]
+        generation = dict(
+            data["generation"],
+            preferences=[
+                dict(
+                    data["generation"]["preferences"][0],
+                    source_id=good["source_id"],
+                )
+            ],
+        )
+        draft = write(client, draft, [dict(action="requirements_patch", generation=generation)])
+        draft = apply(client, draft, plan(client, draft))
+        result = read(client, draft)
+        data = result["configuration"]
+        bought = sum(
+            (Decimal(a["quantity"]) for a in data["supply_allocations"] if a["source"] == "purchase"),
+            Decimal(0),
+        )
+>       assert bought == Decimal(32) - Decimal(amount), (
+            "Matching stock was abandoned and a full batch purchased"
+        )
+E       AssertionError: Matching stock was abandoned and a full batch purchased
+E       assert Decimal('32') == (Decimal('32') - Decimal('16.5'))
+E        +  where Decimal('32') = Decimal(32)
+E        +  and   Decimal('16.5') = Decimal('16.5')
+
+backend/tests/configuration/test_source_partial_reuse.py:43: AssertionError
+=========================== short test summary info ============================
+FAILED backend/tests/configuration/test_source_partial_reuse.py::test_source_constraint_reuses_matching_stock_and_buys_only_shortfall[False-0-16]
+FAILED backend/tests/configuration/test_source_partial_reuse.py::test_source_constraint_reuses_matching_stock_and_buys_only_shortfall[False-1-16]
+FAILED backend/tests/configuration/test_source_partial_reuse.py::test_source_constraint_reuses_matching_stock_and_buys_only_shortfall[False-0-16.5]
+FAILED backend/tests/configuration/test_source_partial_reuse.py::test_source_constraint_reuses_matching_stock_and_buys_only_shortfall[True-0-16]
+FAILED backend/tests/configuration/test_source_partial_reuse.py::test_source_constraint_reuses_matching_stock_and_buys_only_shortfall[True-1-16]
+FAILED backend/tests/configuration/test_source_partial_reuse.py::test_source_constraint_reuses_matching_stock_and_buys_only_shortfall[True-0-16.5]
+6 failed in 3.81s

@@ -30,13 +30,17 @@ def role_available(data, device, *, requirement_id):
 
 
 def reusable_batches(context, data, *, requirement, quantity, variant):
-    allowed = set(context.preference(requirement["id"]).get("reusable_device_ids", []))
+    preference = context.preference(requirement["id"])
+    allowed = set(preference.get("reusable_device_ids", []))
     allowed.update(device_ids(requirement) if requirement.get("allocations") else [])
+    source_id = preference.get("source_id")
     own_key = "role:" + requirement["id"]
     result = []
     for device in data["devices"]:
         origin = device.get("generated_origin") or {}
         if origin.get("key") == own_key or device["variant_id"] != variant["id"]:
+            continue
+        if source_id and device["source_id"] != source_id:
             continue
         shared = (
             context.deployment == "shared"
