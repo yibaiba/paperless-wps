@@ -15,9 +15,17 @@ test('accepting an inline candidate writes product identity into workbook metada
   };
   const metadata = { schema_version: 1, workbook_instance_id: 'w1', line_bindings: [] };
   const candidate = { variant_id: 'v1', source_id: 's1' };
-  applyCandidate(host, { id: 'p1', revision: 2 }, { row: 4 }, metadata, candidate);
+  applyCandidate({
+    host,
+    profile: { id: 'p1', revision: 2 },
+    cell: { row: 4 },
+    metadata,
+    candidate,
+    section: '无纸化会议系统',
+  });
   assert.equal(saved.profile_id, 'p1');
   assert.equal(saved.profile_revision, 2);
   assert.equal(saved.line_bindings[0].variant_id, 'v1');
   assert.equal(saved.line_bindings[0].source_id, 's1');
+  assert.equal(saved.line_bindings[0].section, '无纸化会议系统');
 });

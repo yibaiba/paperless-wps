@@ -9,13 +9,19 @@ export interface CandidateWriter {
   writeMetadata(value: WorkbookMetadata): void;
 }
 
-export function applyCandidate(
-  host: CandidateWriter,
-  profile: TemplateProfile,
-  cell: ActiveCell,
-  metadata: WorkbookMetadata,
-  candidate: Candidate,
-) {
+interface CandidateAcceptance {
+  host: CandidateWriter;
+  profile: TemplateProfile;
+  cell: ActiveCell;
+  metadata: WorkbookMetadata;
+  candidate: Candidate;
+  section?: string;
+}
+
+export function applyCandidate(options: CandidateAcceptance) {
+  const {
+    host, profile, cell, metadata, candidate,
+  } = options;
   host.writeCandidate(profile, cell.row, candidate);
   const row = host.readRows(profile).find((item) => item.row === cell.row);
   if (!row) throw new Error('写入后未找到当前产品行');
@@ -25,6 +31,7 @@ export function applyCandidate(
     line_id: previous?.line_id ?? crypto.randomUUID(),
     sheet: row.sheet,
     row: row.row,
+    section: options.section?.trim() ?? previous?.section ?? '',
     anchor_fingerprint: rowAnchor(row),
     device_id: previous?.device_id,
     variant_id: candidate.variant_id,

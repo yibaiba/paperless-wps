@@ -114,6 +114,7 @@ export interface LineBinding {
   line_id: string;
   sheet: string;
   row: number;
+  section?: string;
   anchor_fingerprint?: string;
   content_fingerprint?: string;
   device_id?: string;

@@ -71,3 +71,32 @@ test('sheet context remembers products beyond the local sequence window', () => 
   assert.equal(context.sheet_variant_ids.length, 12);
   assert.ok(context.sheet_variant_ids.includes('variant-0'));
 });
+
+test('completed binding metadata isolates context to the active section', () => {
+  const context = suggestionContext({
+    cell: { sheet: '报价表', row: 20 },
+    row: { values: { section: '表决系统' } },
+    metadata: { line_bindings: [
+      { sheet: '报价表', row: 4, section: '无纸化系统', variant_id: 'paperless' },
+      { sheet: '报价表', row: 16, section: '表决系统', variant_id: 'voting-host' },
+      { sheet: '报价表', row: 22, section: '表决系统', variant_id: 'voting-terminal' },
+    ] },
+  });
+
+  assert.deepEqual(context.previous_variant_ids, ['voting-host']);
+  assert.deepEqual(context.next_variant_ids, ['voting-terminal']);
+  assert.deepEqual(context.sheet_variant_ids, ['voting-terminal', 'voting-host']);
+});
+
+test('legacy bindings without section metadata retain whole-sheet context', () => {
+  const context = suggestionContext({
+    cell: { sheet: '报价表', row: 20 },
+    row: { values: { section: '表决系统' } },
+    metadata: { line_bindings: [
+      { sheet: '报价表', row: 4, variant_id: 'legacy-paperless' },
+      { sheet: '报价表', row: 16, variant_id: 'legacy-voting' },
+    ] },
+  });
+
+  assert.deepEqual(context.previous_variant_ids, ['legacy-voting', 'legacy-paperless']);
+});

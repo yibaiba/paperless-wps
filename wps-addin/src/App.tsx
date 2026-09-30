@@ -147,7 +147,13 @@ export function App() {
     if (!profile || !cell) return;
     setCandidates([]);
     try {
-      setMetadata(applyCandidate(host, profile, cell, metadata, candidate));
+      const currentRow = host.readRow(profile, cell.row);
+      const section = currentRow.values.section?.trim() || host.readInheritedField(
+        profile, { row: cell.row, field: 'section' },
+      ).trim();
+      setMetadata(applyCandidate({
+        host, profile, cell, metadata, candidate, section,
+      }));
     } catch (reason) { setError(reason instanceof Error ? reason.message : String(reason)); }
   }, [cell, host, metadata, profile]);
 

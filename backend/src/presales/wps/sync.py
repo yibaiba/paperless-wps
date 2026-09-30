@@ -250,6 +250,7 @@ class WorkbookSync:
             "line_id": line.line_id,
             "sheet": line.sheet,
             "row": line.row,
+            "section": line.section,
             "content_fingerprint": digest(content),
             "device_id": device_id,
             "variant_id": line.variant_id,

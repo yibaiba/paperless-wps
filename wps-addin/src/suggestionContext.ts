@@ -11,27 +11,37 @@ interface SuggestionContextInput {
   inheritedSection?: string;
 }
 
+function bindingsForSection(
+  bindings: WorkbookMetadata['line_bindings'],
+  section: string,
+) {
+  const sectionsKnown = bindings.every((item) => item.section !== undefined);
+  if (!sectionsKnown) return bindings;
+  return bindings.filter((item) => item.section?.trim() === section);
+}
+
 export function suggestionContext(options: SuggestionContextInput) {
   const { cell, row, metadata } = options;
   const sheetBindings = metadata.line_bindings.filter((item) => item.sheet === cell.sheet);
+  const section = row.values.section?.trim() || options.inheritedSection?.trim() || '';
+  const contextBindings = bindingsForSection(sheetBindings, section);
   const current = sheetBindings.find((item) => item.row === cell.row);
-  const previous = [...sheetBindings]
+  const previous = [...contextBindings]
     .filter((item) => item.row < cell.row)
     .sort((left, right) => right.row - left.row)
     .slice(0, MAX_PREVIOUS_VARIANTS)
     .map((item) => ({ variant_id: item.variant_id, source_id: item.source_id }));
-  const next = [...sheetBindings]
+  const next = [...contextBindings]
     .filter((item) => item.row > cell.row)
     .sort((left, right) => left.row - right.row)
     .slice(0, MAX_NEXT_VARIANTS)
     .map((item) => ({ variant_id: item.variant_id, source_id: item.source_id }));
-  const sheetContext = [...sheetBindings]
+  const sheetContext = [...contextBindings]
     .sort((left, right) => {
       const distance = Math.abs(left.row - cell.row) - Math.abs(right.row - cell.row);
       return distance || left.row - right.row;
     })
     .slice(0, MAX_SHEET_VARIANTS);
-  const section = row.values.section?.trim() || options.inheritedSection?.trim() || '';
   return {
     sheet: cell.sheet,
     section,

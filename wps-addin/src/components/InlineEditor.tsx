@@ -272,9 +272,14 @@ export function InlineEditor() {
         candidates,
         chosen: candidate,
       });
-      const metadata = applyCandidate(
-        host, context.profile, context.cell, host.readMetadata(), candidate,
-      );
+      const metadata = applyCandidate({
+        host,
+        profile: context.profile,
+        cell: context.cell,
+        metadata: host.readMetadata(),
+        candidate,
+        section: workbookContext.value.product.section,
+      });
       if (feedback) {
         try {
           host.enqueueSuggestionFeedback(feedback);

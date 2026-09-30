@@ -617,6 +617,7 @@ def test_preview_commit_retry_and_stale_conflict(client, catalog):
     preview_data = preview.json()
     assert preview_data["has_changes"] is True
     assert preview_data["line_bindings"][0]["device_id"]
+    assert preview_data["line_bindings"][0]["section"] == "无纸化会议系统"
     assert bound["project_id"] is None
 
     commit_request = {
