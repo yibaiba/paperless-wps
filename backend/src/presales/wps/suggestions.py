@@ -4,13 +4,13 @@ from sqlalchemy import select
 
 from presales.configuration.catalog.service import CatalogService
 from presales.configuration.common import Entities
-from presales.configuration.knowledge.evaluator import scope_matches
 from presales.configuration.models import SourceLink
 from presales.lists.queries import search_catalog
 from presales.lists.schemas import CatalogSearch
 from presales.storage import ProductRecord
 
 from .catalog_index import CatalogSuggestionIndex
+from .completion_planner import RelationPlan, fulfilled_alternative_ids, plan_relations
 from .feedback import CompletionFeedback
 from .schemas import SuggestionRequest
 from .suggestion_ranking import (
@@ -24,7 +24,6 @@ from .templates import TemplateProfiles
 
 GROUP_ORDER = {"direct": 0, "series": 1, "alternative": 2, "accessory": 3, "related": 4}
 MIN_COMPLETION_MARGIN = 35
-CONFIRMED_RELATION_SCORE = 320
 
 
 def candidate_view(variant, source, *, group, status="unknown", evidence=()):
@@ -73,9 +72,14 @@ class Suggestions:
         learned_scores = CompletionFeedback(self.session).scores(request, self.actor)
         direct = self._direct(request, by_id) if request.query.strip() else []
         seeds = self._seed_variants(request, direct, by_id)
-        related = self._related(seeds, variants, by_id)
+        selected_ids = self._selected_variant_ids(request)
+        selected_variants = [by_id[identity] for identity in selected_ids if identity in by_id]
+        knowledge = Entities(self.session).list("knowledge")
+        related = self._related(seeds, variants, by_id, selected_ids, knowledge)
         if not request.query.strip():
             related = exclude_context_models(related, request, by_id)
+            suppressed = fulfilled_alternative_ids(selected_variants, knowledge)
+            related = [item for item in related if item["variant_id"] not in suppressed]
         direct = rank_candidates(
             self._deduplicate(direct),
             request,
@@ -182,18 +186,25 @@ class Suggestions:
         ids.extend(item["variant_id"] for item in direct[:3])
         return context_variants(ids, by_id)
 
-    def _related(self, seeds, variants, by_id):
+    @staticmethod
+    def _selected_variant_ids(request):
+        return {
+            identity
+            for identity in [
+                request.context.selected_variant_id,
+                *request.context.previous_variant_ids,
+                *request.context.next_variant_ids,
+            ]
+            if identity
+        }
+
+    def _related(self, seeds, variants, by_id, selected_ids, knowledge):
         results = []
-        knowledge = Entities(self.session).list("knowledge")
-        for seed in seeds:
+        for distance, seed in enumerate(seeds):
             for identity in seed.get("replacements", []):
                 results.extend(self._variant_candidates(by_id.get(identity), "alternative"))
-            for rule in knowledge:
-                if (
-                    rule["kind"] == "accessory"
-                    and rule["status"] == "confirmed"
-                ):
-                    results.extend(self._confirmed_accessories(seed, rule, by_id))
+            for plan in plan_relations(seed, knowledge, selected_ids, distance):
+                results.extend(self._planned_accessories(plan, by_id))
             for variant in variants:
                 same_category = seed["product"].get("category") and (
                     seed["product"].get("category") == variant["product"].get("category")
@@ -211,25 +222,19 @@ class Suggestions:
                     results.extend(self._variant_candidates(variant, "related"))
         return results
 
-    def _confirmed_accessories(self, seed, rule, by_id):
-        if scope_matches(seed, rule["selector"]):
-            identities = rule["target_variant_ids"]
-            direction = "forward"
-        elif seed["id"] in rule["target_variant_ids"]:
-            identities = rule["selector"].get("variant_ids", [])
-            direction = "reverse"
-        else:
-            return []
+    def _planned_accessories(self, plan: RelationPlan, by_id):
         results = []
-        for identity in identities:
+        for identity in plan.variant_ids:
             candidates = self._variant_candidates(
-                by_id.get(identity), "accessory", evidence=[rule["name"]]
+                by_id.get(identity), "accessory", evidence=[plan.rule_name]
             )
             for candidate in candidates:
-                candidate["_confirmed_relation_score"] = CONFIRMED_RELATION_SCORE
-                candidate["_confirmed_relation_reason"] = "匹配已确认配套关系"
-                candidate["_confirmed_relation_direction"] = direction
-                candidate["_confirmed_relation_seed_id"] = seed["id"]
+                candidate["_confirmed_relation_score"] = plan.score
+                candidate["_confirmed_relation_reason"] = plan.reason
+                candidate["_confirmed_relation_direction"] = plan.direction
+                candidate["_confirmed_relation_seed_id"] = plan.seed_id
+                candidate["_confirmed_relation_rule_id"] = plan.rule_id
+                candidate["_confirmed_relation_decisive"] = plan.decisive
             results.extend(candidates)
         return results
 
@@ -260,7 +265,9 @@ def finalize_completion_readiness(items, query):
     ready, blocker = _completion_decision(items, query)
     internal = {
         "_confirmed_relation_direction",
+        "_confirmed_relation_decisive",
         "_confirmed_relation_reason",
+        "_confirmed_relation_rule_id",
         "_confirmed_relation_score",
         "_confirmed_relation_seed_id",
         "_ranking_score",
@@ -285,7 +292,7 @@ def _completion_decision(items, query):
         return False, "source_ambiguous"
     if not top.get("_scope_confirmed") and not query.strip():
         return False, "template_source_unconfirmed"
-    if _reverse_relation_is_ambiguous(items, top):
+    if _confirmed_relation_is_ambiguous(items, top):
         return False, "variant_ambiguous"
     product_items = [item for item in items if _logical_product(item) == _logical_product(top)]
     concrete = _concrete_candidates(top, product_items)
@@ -296,7 +303,7 @@ def _completion_decision(items, query):
     exact = _is_unique_exact_match(items, query, _logical_product(top))
     if top["confidence"] != "high" or not (exact or top.get("_strong_completion_evidence")):
         return False, "insufficient_evidence"
-    if top.get("_confirmed_relation_score"):
+    if top.get("_confirmed_relation_decisive"):
         return True, None
     competitor = _completion_competitor(items, top)
     margin = float("inf") if competitor is None else (
@@ -307,13 +314,13 @@ def _completion_decision(items, query):
     return True, None
 
 
-def _reverse_relation_is_ambiguous(items, top):
-    if top.get("_confirmed_relation_direction") != "reverse":
+def _confirmed_relation_is_ambiguous(items, top):
+    if not top.get("_confirmed_relation_rule_id"):
         return False
     related = [
         item
         for item in items
-        if item.get("_confirmed_relation_direction") == "reverse"
+        if item.get("_confirmed_relation_rule_id") == top.get("_confirmed_relation_rule_id")
         and item.get("_confirmed_relation_seed_id") == top.get("_confirmed_relation_seed_id")
     ]
     concrete = _concrete_candidates(top, related)

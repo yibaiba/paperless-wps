@@ -212,6 +212,7 @@ def test_software_with_multiple_confirmed_hardware_pairs_requires_choice():
             "_strong_completion_evidence": True,
             "_confirmed_relation_direction": "reverse",
             "_confirmed_relation_seed_id": "software",
+            "_confirmed_relation_rule_id": "pairing",
         }
         for identity, score in [("hardware-a", 500), ("hardware-b", 400)]
     ]
@@ -232,8 +233,10 @@ def test_unique_confirmed_pair_can_tab_despite_a_generic_close_competitor():
             "_source_scope_match": True,
             "_strong_completion_evidence": True,
             "_confirmed_relation_score": 320,
+            "_confirmed_relation_decisive": True,
             "_confirmed_relation_direction": "reverse",
             "_confirmed_relation_seed_id": "software",
+            "_confirmed_relation_rule_id": "pairing",
         },
         {
             **candidate("generic"),

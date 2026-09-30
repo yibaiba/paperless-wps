@@ -461,7 +461,7 @@ def test_confirmed_software_pair_recommends_its_hardware_in_reverse(client, cata
     top = response.json()["items"][0]
     assert top["variant_id"] == hardware["id"]
     assert top["group"] == "accessory"
-    assert top["context_reasons"][0] == "匹配已确认配套关系"
+    assert top["context_reasons"][0] == "补齐已选产品的对应主设备"
     assert top["completion_ready"] is True
 
 
