@@ -201,6 +201,27 @@ def test_same_product_with_multiple_configurations_never_tabs_directly():
     assert result[0]["completion_ready"] is False
 
 
+def test_software_with_multiple_confirmed_hardware_pairs_requires_choice():
+    items = [
+        {
+            **candidate(identity, group="accessory"),
+            "confidence": "high",
+            "_ranking_score": score,
+            "_scope_confirmed": True,
+            "_source_scope_match": True,
+            "_strong_completion_evidence": True,
+            "_confirmed_relation_direction": "reverse",
+            "_confirmed_relation_seed_id": "software",
+        }
+        for identity, score in [("hardware-a", 500), ("hardware-b", 400)]
+    ]
+
+    result = finalize_completion_readiness(items, "")
+
+    assert result[0]["completion_ready"] is False
+    assert result[0]["completion_blocker"] == "variant_ambiguous"
+
+
 def test_unconfirmed_template_source_never_tabs_contextual_suggestion():
     items = [
         {
@@ -312,6 +333,30 @@ def test_short_sequence_disambiguates_a_majority_single_step_branch():
 
     assert ranked[0]["variant_id"] == expected["id"]
     assert ranked[0]["context_reasons"][0] == "延续短序列清单顺序 CRIR-D-A → CRIR-D-B → CRIR-D-X"
+
+
+def test_confirmed_pair_beats_an_unrelated_catalog_sequence():
+    software = variant("software", "RS-MSC100C-W", category="客户端软件")
+    hardware = variant("hardware", "PCS-6580T", category="客户端硬件")
+    unrelated = variant("unrelated", "RS-MSC100C-K", category="客户端软件")
+    variants = {item["id"]: item for item in [software, hardware, unrelated]}
+    request = SuggestionRequest(context={"previous_variant_ids": [software["id"]]})
+    paired = {
+        **candidate(hardware["id"], group="accessory"),
+        "_confirmed_relation_score": 320,
+        "_confirmed_relation_reason": "匹配已确认配套关系",
+    }
+    transitions = {("rs-msc100c-w", "rs-msc100c-k"): ["红盾无纸化会议系统"]}
+
+    ranked = rank_candidates(
+        [candidate(unrelated["id"]), paired],
+        request,
+        variants,
+        transitions,
+    )
+
+    assert ranked[0]["variant_id"] == hardware["id"]
+    assert ranked[0]["context_reasons"][0] == "匹配已确认配套关系"
 
 
 def test_section_name_alone_does_not_claim_an_exact_source_sheet():

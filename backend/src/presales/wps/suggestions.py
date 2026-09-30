@@ -20,6 +20,7 @@ from .templates import TemplateProfiles
 
 GROUP_ORDER = {"direct": 0, "series": 1, "alternative": 2, "accessory": 3, "related": 4}
 MIN_COMPLETION_MARGIN = 35
+CONFIRMED_RELATION_SCORE = 320
 
 
 def candidate_view(variant, source, *, group, status="unknown", evidence=()):
@@ -158,14 +159,8 @@ class Suggestions:
                 if (
                     rule["kind"] == "accessory"
                     and rule["status"] == "confirmed"
-                    and scope_matches(seed, rule["selector"])
                 ):
-                    for identity in rule["target_variant_ids"]:
-                        results.extend(
-                            self._variant_candidates(
-                                by_id.get(identity), "accessory", evidence=[rule["name"]]
-                            )
-                        )
+                    results.extend(self._confirmed_accessories(seed, rule, by_id))
             for variant in variants:
                 same_category = seed["product"].get("category") and (
                     seed["product"].get("category") == variant["product"].get("category")
@@ -181,6 +176,28 @@ class Suggestions:
                     results.extend(self._variant_candidates(variant, "series"))
                 elif same_category:
                     results.extend(self._variant_candidates(variant, "related"))
+        return results
+
+    def _confirmed_accessories(self, seed, rule, by_id):
+        if scope_matches(seed, rule["selector"]):
+            identities = rule["target_variant_ids"]
+            direction = "forward"
+        elif seed["id"] in rule["target_variant_ids"]:
+            identities = rule["selector"].get("variant_ids", [])
+            direction = "reverse"
+        else:
+            return []
+        results = []
+        for identity in identities:
+            candidates = self._variant_candidates(
+                by_id.get(identity), "accessory", evidence=[rule["name"]]
+            )
+            for candidate in candidates:
+                candidate["_confirmed_relation_score"] = CONFIRMED_RELATION_SCORE
+                candidate["_confirmed_relation_reason"] = "匹配已确认配套关系"
+                candidate["_confirmed_relation_direction"] = direction
+                candidate["_confirmed_relation_seed_id"] = seed["id"]
+            results.extend(candidates)
         return results
 
     @staticmethod
@@ -209,6 +226,10 @@ def finalize_completion_readiness(items, query):
         return []
     ready, blocker = _completion_decision(items, query)
     internal = {
+        "_confirmed_relation_direction",
+        "_confirmed_relation_reason",
+        "_confirmed_relation_score",
+        "_confirmed_relation_seed_id",
         "_ranking_score",
         "_scope_confirmed",
         "_source_context_match",
@@ -231,6 +252,8 @@ def _completion_decision(items, query):
         return False, "source_ambiguous"
     if not top.get("_scope_confirmed") and not query.strip():
         return False, "template_source_unconfirmed"
+    if _reverse_relation_is_ambiguous(items, top):
+        return False, "variant_ambiguous"
     product_items = [item for item in items if _logical_product(item) == _logical_product(top)]
     concrete = _concrete_candidates(top, product_items)
     if len({item["variant_id"] for item in concrete}) > 1:
@@ -247,6 +270,19 @@ def _completion_decision(items, query):
     if not exact and margin < MIN_COMPLETION_MARGIN:
         return False, "insufficient_margin"
     return True, None
+
+
+def _reverse_relation_is_ambiguous(items, top):
+    if top.get("_confirmed_relation_direction") != "reverse":
+        return False
+    related = [
+        item
+        for item in items
+        if item.get("_confirmed_relation_direction") == "reverse"
+        and item.get("_confirmed_relation_seed_id") == top.get("_confirmed_relation_seed_id")
+    ]
+    concrete = _concrete_candidates(top, related)
+    return len({item["variant_id"] for item in concrete}) > 1
 
 
 def _concrete_candidates(top, product_items):

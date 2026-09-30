@@ -58,6 +58,8 @@ def rank_candidates(
             learned_reason,
             scope_confirmed=bool(catalog_scope),
         )
+        relation_score = item.get("_confirmed_relation_score", 0)
+        relation_reason = item.get("_confirmed_relation_reason", "")
         query_score = _query_score(variant, request.query)
         source_score, source_match, scope_match = _source_context_score(
             item, request, catalog_scope
@@ -66,8 +68,11 @@ def rank_candidates(
             reasons = ["匹配模板产品来源", *reasons][:3]
         elif source_match:
             reasons = ["匹配当前来源工作表", *reasons][:3]
+        if relation_reason:
+            reasons = [relation_reason, *reasons][:3]
         score = (
             context_score
+            + relation_score
             + query_score
             + source_score
             + GROUP_SCORE[item["group"]]
@@ -87,6 +92,7 @@ def rank_candidates(
                 or learned_reason
                 or query_score >= 80
                 or transition_strong
+                or relation_score > 0
                 or item["group"] in STRONG_RELATION_GROUPS
             ),
         }

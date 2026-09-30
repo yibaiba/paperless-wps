@@ -393,6 +393,78 @@ def test_suggestions_use_previous_product_series_and_current_system(client, cata
     assert completed.json()["items"] == []
 
 
+def test_confirmed_software_pair_recommends_its_hardware_in_reverse(client, catalog):
+    software_product = client.post(
+        "/api/configuration/products",
+        json={
+            "name": "红盾 Windows 客户端软件",
+            "model": "RS-MSC100C-W",
+            "category": "Windows 客户端",
+            "actor": "测试维护者",
+            "evidence": "隔离测试资料，不是业务确认",
+        },
+    )
+    assert software_product.status_code == 200, software_product.text
+    hardware = update_variant_context(
+        client, catalog["variants"][0], series=[], systems=["红盾无纸化会议系统"]
+    )
+    software = update_variant_context(
+        client,
+        catalog["variants"][1],
+        series=[],
+        systems=["红盾无纸化会议系统"],
+        product_id=software_product.json()["id"],
+    )
+    relation = client.post(
+        "/api/configuration/knowledge",
+        json={
+            "name": "红盾 Windows 终端每台配客户端软件",
+            "kind": "accessory",
+            "status": "confirmed",
+            "selector": {"variant_ids": [hardware["id"]]},
+            "need_key": "redshield.windows.client-software",
+            "need_name": "红盾 Windows 客户端软件",
+            "target_variant_ids": [software["id"]],
+            "accessory_type": "required",
+            "calculation_scope": "device",
+            "quantity_source": "device_quantity",
+            "mode": "per_unit",
+            "factor": "1",
+            "output_kind": "software",
+            "allocation_mode": "consumable",
+            "actor": "测试维护者",
+            "evidence": "隔离测试资料，不是业务确认",
+        },
+    )
+    assert relation.status_code == 200, relation.text
+    token, _ = paired(client)
+    headers = authorized(token)
+    profile = template(client, headers, catalog)
+
+    response = client.post(
+        "/api/wps/suggestions",
+        headers=headers,
+        json={
+            "query": "",
+            "template_profile_id": profile["id"],
+            "template_profile_revision": profile["revision"],
+            "context": {
+                "sheet": "报价表",
+                "system": "红盾无纸化会议系统",
+                "previous_variant_ids": [software["id"]],
+            },
+            "limit": 10,
+        },
+    )
+
+    assert response.status_code == 200, response.text
+    top = response.json()["items"][0]
+    assert top["variant_id"] == hardware["id"]
+    assert top["group"] == "accessory"
+    assert top["context_reasons"][0] == "匹配已确认配套关系"
+    assert top["completion_ready"] is True
+
+
 def test_accepted_suggestion_feedback_is_idempotent_and_affects_ranking(client, catalog):
     product = client.post(
         "/api/configuration/products",
