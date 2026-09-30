@@ -1,0 +1,116 @@
+FF                                                                       [100%]
+=================================== FAILURES ===================================
+______________ test_manual_source_selection_survives_regeneration ______________
+
+client = <starlette.testclient.TestClient object at 0x115285400>
+catalog = {'imported': {'source_kind': 'excel', 'id': '711ed066-513a-4989-8f82-e9e7d18d3a54', 'filename': 'test.xlsx', 'created_...8925-4cb5-bd77-960fa49a1a46', 'revision': 1, 'updated_at': '2026-09-30T01:36:22.244289+00:00', 'actor': '测试维护者', ...}]}
+workbook = b'PK\x03\x04\x14\x00\x00\x00\x00\x00\x8bL>]\xe3\xf5\x92]\xf6\x00\x00\x00\xf6\x00\x00\x00\x0f\x00\x00\x00xl/workbook.xm...\x01\x00\x00xl/worksheets/sheet1.xmlPK\x05\x06\x00\x00\x00\x00\x03\x00\x03\x00\xcb\x00\x00\x00\x96\x06\x00\x00\x00\x00'
+
+    def test_manual_source_selection_survives_regeneration(client, catalog, workbook):
+        add_source_copy(client, catalog, workbook)
+        definition, package = published(client, catalog)
+        draft = draft_for(client, definition, package)
+        draft = apply(client, draft, plan(client, draft))
+        device = read(client, draft)["configuration"]["devices"][0]
+        alternate = next(
+            s for s in device["variant_snapshot"]["source_ids"] if s != device["source_id"]
+        )
+        replacement = {k: device[k] for k in ["id", "name", "variant_id", "quantity", "kind", "note"]}
+        replacement["source_id"] = alternate
+        draft = write(client, draft, [dict(action="device_put", value=replacement)])
+        assert read(client, draft)["configuration"]["devices"][0]["source_id"] == alternate
+        draft = apply(client, draft, plan(client, draft))
+>       assert read(client, draft)["configuration"]["devices"][0]["source_id"] == alternate
+E       AssertionError: assert '219553d5-916...-187a86064bdb' == '2c1bc5bb-a7b...-54f1eba005bc'
+E
+E         - 2c1bc5bb-a7b8-43d4-ab7a-54f1eba005bc
+E         + 219553d5-9166-4b05-a363-187a86064bdb
+
+backend/tests/configuration/test_reuse_boundary_review.py:46: AssertionError
+_____ test_role_reuse_permission_does_not_extend_to_another_accessory_need _____
+
+client = <starlette.testclient.TestClient object at 0x11524b390>
+catalog = {'imported': {'source_kind': 'excel', 'id': 'da0058ac-b9c1-4e44-b7d1-33e8d9153a90', 'filename': 'test.xlsx', 'created_...de64-4528-bd8b-474383ce66fc', 'revision': 1, 'updated_at': '2026-09-30T01:36:23.290240+00:00', 'actor': '测试维护者', ...}]}
+
+    def test_role_reuse_permission_does_not_extend_to_another_accessory_need(client, catalog):
+        definition, package = published(client, catalog, accessory=True)
+        rule = next(
+            r for r in client.get("/api/configuration/knowledge").json() if r["kind"] == "accessory"
+        )
+        payload = editable(KnowledgeInput, rule)
+        payload.update(name="隔离另一台控制主机", need_key="control", need_name="控制主机")
+        extra = post(client, "/knowledge", payload)
+        payload = editable(KnowledgePackage, package)
+        payload["members"].append(dict(id=extra["id"], revision=extra["revision"]))
+        response = client.put(
+            "/api/configuration/knowledge-packages/" + package["id"],
+            json=dict(
+                expected_revision=package["revision"],
+                payload=payload,
+            ),
+        )
+        assert response.status_code == 200, response.text
+        draft = draft_for(client, definition, response.json())
+        data = read(client, draft)["configuration"]
+        role = next(r for r in data["requirements"] if r["role_id"] == "server")
+        existing = dict(
+            id="existing-server",
+            name="隔离客户已有服务端主机",
+            quantity="1",
+            kind="hardware",
+            variant_id=catalog["variants"][1]["id"],
+            source_id=catalog["sources"][1]["id"],
+        )
+        draft = write(
+            client,
+            draft,
+            [
+                dict(action="device_put", value=existing),
+                dict(
+                    action="supply_set",
+                    device_id=existing["id"],
+                    allocations=[
+                        dict(
+                            id="existing-supply",
+                            device_id=existing["id"],
+                            quantity="1",
+                            source="existing",
+                            evidence="客户确认服务器可以复用",
+                        )
+                    ],
+                ),
+                dict(
+                    action="requirements_patch",
+                    generation=dict(
+                        data["generation"],
+                        preferences=[
+                            dict(
+                                requirement_id=role["id"],
+                                reusable_device_ids=[existing["id"]],
+                                evidence="仅服务器角色允许复用，不允许控制主机使用",
+                            )
+                        ],
+                    ),
+                ),
+            ],
+        )
+        draft = apply(client, draft, plan(client, draft))
+        result = read(client, draft)
+        server_need = next(s for s in result["checked"]["suggestions"] if s["need_key"] == "server")
+        control_need = next(s for s in result["checked"]["suggestions"] if s["need_key"] == "control")
+        allocations = result["configuration"]["accessory_allocations"]
+        assert (
+            next(a for a in allocations if a["demand_id"] == server_need["id"])["device_id"]
+            == existing["id"]
+        )
+>       assert (
+            next(a for a in allocations if a["demand_id"] == control_need["id"])["device_id"]
+            != existing["id"]
+        )
+E       AssertionError: assert 'existing-server' != 'existing-server'
+
+backend/tests/configuration/test_reuse_boundary_review.py:120: AssertionError
+=========================== short test summary info ============================
+FAILED backend/tests/configuration/test_reuse_boundary_review.py::test_manual_source_selection_survives_regeneration
+FAILED backend/tests/configuration/test_reuse_boundary_review.py::test_role_reuse_permission_does_not_extend_to_another_accessory_need
+2 failed in 2.17s

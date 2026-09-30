@@ -1,0 +1,16 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.6, pytest-9.1.1, pluggy-1.6.0 -- /Users/yibaiba/Code/RustProject/pi/presales-platform/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /private/var/folders/vv/2pbkx3_s66n0ybf417p97q_r0000gn/T/presales-reuse-review-eocdr3xz/backend
+configfile: pyproject.toml
+plugins: timeout-2.4.0, anyio-4.15.1
+timeout: 60.0s
+timeout method: signal
+timeout func_only: False
+collecting ... collected 1 item
+
+backend/tests/test_topology_concurrency.py::test_concurrent_topology_save_and_rule_conversion SKIPPED [100%]
+
+=========================== short test summary info ============================
+SKIPPED [1] backend/tests/test_topology_concurrency.py:15: 需要 PostgreSQL 测试连接
+============================== 1 skipped in 0.02s ==============================

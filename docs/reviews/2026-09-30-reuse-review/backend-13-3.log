@@ -1,0 +1,16 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.6, pytest-9.1.1, pluggy-1.6.0 -- /Users/yibaiba/Code/RustProject/pi/presales-platform/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /private/var/folders/vv/2pbkx3_s66n0ybf417p97q_r0000gn/T/presales-reuse-review-eocdr3xz/backend
+configfile: pyproject.toml
+plugins: timeout-2.4.0, anyio-4.15.1
+timeout: 60.0s
+timeout method: signal
+timeout func_only: False
+collecting ... collected 3 items
+
+backend/tests/configuration/test_quote_formula_scaling.py::test_large_quote_uses_range_formula_and_keeps_unknowns[zero] PASSED [ 33%]
+backend/tests/configuration/test_quote_formula_scaling.py::test_large_quote_uses_range_formula_and_keeps_unknowns[missing_price] PASSED [ 66%]
+backend/tests/configuration/test_quote_formula_scaling.py::test_large_quote_uses_range_formula_and_keeps_unknowns[unknown_supply] PASSED [100%]
+
+============================== 3 passed in 17.37s ==============================

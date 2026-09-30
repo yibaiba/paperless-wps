@@ -1,0 +1,34 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.6, pytest-9.1.1, pluggy-1.6.0 -- /Users/yibaiba/Code/RustProject/pi/presales-platform/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /private/var/folders/vv/2pbkx3_s66n0ybf417p97q_r0000gn/T/presales-reuse-review-eocdr3xz/backend
+configfile: pyproject.toml
+plugins: timeout-2.4.0, anyio-4.15.1
+timeout: 60.0s
+timeout method: signal
+timeout func_only: False
+collecting ... collected 21 items
+
+backend/tests/configuration/test_regeneration_fixes.py::test_split_role_regeneration_preserves_manually_locked_variant[32] PASSED [  4%]
+backend/tests/configuration/test_regeneration_fixes.py::test_split_role_regeneration_preserves_manually_locked_variant[48] PASSED [  9%]
+backend/tests/configuration/test_regeneration_fixes.py::test_split_role_regeneration_preserves_manually_locked_variant[0] PASSED [ 14%]
+backend/tests/configuration/test_regeneration_fixes.py::test_regeneration_preserves_explicit_unknown_supply PASSED [ 19%]
+backend/tests/configuration/test_regeneration_fixes.py::test_revision_comparison_reports_changed_room_quantity_input PASSED [ 23%]
+backend/tests/configuration/test_regeneration_fixes.py::test_manual_supply_survives_increase_and_decrease PASSED [ 28%]
+backend/tests/configuration/test_regeneration_fixes.py::test_project_inputs_and_customer_constraints_appear_in_revision_diff PASSED [ 33%]
+backend/tests/configuration/test_requirement_setup.py::test_description_before_roles_and_mcp_parity PASSED [ 38%]
+backend/tests/configuration/test_requirement_setup.py::test_setup_reuses_role_and_keeps_devices_and_same_name_rooms_separate PASSED [ 42%]
+backend/tests/configuration/test_requirement_setup.py::test_mcp_setup_operation_same_result_as_web_preview PASSED [ 47%]
+backend/tests/configuration/test_requirement_setup.py::test_draft_definition_does_not_assert_roles_and_stale_package_is_explicit PASSED [ 52%]
+backend/tests/configuration/test_requirement_setup.py::test_fixed_definition_does_not_use_new_role_profile PASSED [ 57%]
+backend/tests/configuration/test_requirement_setup.py::test_issue_references_are_stable_and_retain_affected_objects PASSED [ 61%]
+backend/tests/configuration/test_requirement_setup.py::test_environment_is_role_scoped_and_feature_condition_does_not_create_devices PASSED [ 66%]
+backend/tests/configuration/test_reuse_boundary_review.py::test_manual_source_survives_regeneration_reopen_and_undo[terminal] PASSED [ 71%]
+backend/tests/configuration/test_reuse_boundary_review.py::test_manual_source_survives_regeneration_reopen_and_undo[server] PASSED [ 76%]
+backend/tests/configuration/test_reuse_boundary_review.py::test_role_reuse_permission_does_not_extend_to_another_accessory_need PASSED [ 80%]
+backend/tests/configuration/test_reuse_boundary_review.py::test_note_edit_does_not_lock_automatic_selection PASSED [ 85%]
+backend/tests/configuration/test_review_regressions.py::test_first_web_draft_can_check_and_save_unsaved_project PASSED [ 90%]
+backend/tests/configuration/test_review_regressions.py::test_saved_unassigned_device_keeps_actionable_issue PASSED [ 95%]
+backend/tests/configuration/test_review_regressions.py::test_export_keeps_stale_description_pending_after_recalculation PASSED [100%]
+
+============================= 21 passed in 14.37s ==============================

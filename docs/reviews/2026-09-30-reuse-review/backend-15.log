@@ -1,0 +1,43 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.6, pytest-9.1.1, pluggy-1.6.0 -- /Users/yibaiba/Code/RustProject/pi/presales-platform/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /private/var/folders/vv/2pbkx3_s66n0ybf417p97q_r0000gn/T/presales-reuse-review-eocdr3xz/backend
+configfile: pyproject.toml
+plugins: timeout-2.4.0, anyio-4.15.1
+timeout: 60.0s
+timeout method: signal
+timeout func_only: False
+collecting ... collected 28 items
+
+backend/tests/configuration/test_role_partial_reuse.py::test_existing_16_only_buys_remaining_16_and_both_have_role_usage PASSED [  3%]
+backend/tests/configuration/test_role_partial_reuse.py::test_multiple_batches_and_changed_quantity_reuse_ids PASSED [  7%]
+backend/tests/configuration/test_role_partial_reuse.py::test_full_reuse_keeps_recommendation_gap PASSED [ 10%]
+backend/tests/configuration/test_role_partial_reuse.py::test_only_allocated_part_of_larger_existing_batch_is_used PASSED [ 14%]
+backend/tests/configuration/test_role_partial_reuse.py::test_same_existing_quantity_is_not_reused_for_two_systems PASSED [ 17%]
+backend/tests/configuration/test_role_partial_reuse.py::test_delete_restore_save_reopen_keep_role_allocations PASSED [ 21%]
+backend/tests/configuration/test_role_partial_reuse.py::test_quantity_reduction_exposes_overallocated_device PASSED [ 25%]
+backend/tests/configuration/test_role_partial_reuse.py::test_split_role_resources_are_not_guessed PASSED [ 28%]
+backend/tests/configuration/test_role_partial_reuse.py::test_accessory_reuse_preserves_ranking_gap PASSED [ 32%]
+backend/tests/configuration/test_role_partial_reuse.py::test_split_terminal_role_does_not_duplicate_server_accessory PASSED [ 35%]
+backend/tests/configuration/test_role_partial_reuse.py::test_decimal_remaining_quantity_is_preserved PASSED [ 39%]
+backend/tests/configuration/test_role_partial_reuse.py::test_split_batches_count_device_and_environment_quantity_once PASSED [ 42%]
+backend/tests/configuration/test_role_partial_reuse.py::test_seed_partial_browser_database PASSED [ 46%]
+backend/tests/configuration/test_scoped_quantity_setup.py::test_setup_inputs_drive_quantity_and_survive_save[room] PASSED [ 50%]
+backend/tests/configuration/test_scoped_quantity_setup.py::test_setup_inputs_drive_quantity_and_survive_save[project] PASSED [ 53%]
+backend/tests/configuration/test_scoped_requirement_edits.py::test_deleting_room_clears_only_its_inputs PASSED [ 57%]
+backend/tests/configuration/test_scoped_requirement_edits.py::test_role_resource_patch_must_not_overwrite_multiple_requirements PASSED [ 60%]
+backend/tests/configuration/test_scoped_requirement_edits.py::test_setup_preserves_room_and_project_input_scopes PASSED [ 64%]
+backend/tests/configuration/test_scoped_requirement_edits.py::test_room_deletion_retry_and_checkpoint_restore PASSED [ 67%]
+backend/tests/configuration/test_scoped_requirement_edits.py::test_single_resource_edit_and_explicit_id_edit_preserve_other_requirements PASSED [ 71%]
+backend/tests/configuration/test_scoped_requirement_edits.py::test_scope_setup_missing_room_is_atomic_and_omitted_values_are_preserved PASSED [ 75%]
+backend/tests/configuration/test_search.py::test_search_settings_are_private_and_preserve_key PASSED [ 78%]
+backend/tests/configuration/test_search.py::test_provider_validates_embedding_and_reranker_contract PASSED [ 82%]
+backend/tests/configuration/test_search.py::test_document_contains_structured_product_facts PASSED [ 85%]
+backend/tests/configuration/test_search.py::test_index_job_tracks_current_and_stale_documents PASSED [ 89%]
+backend/tests/configuration/test_search.py::test_failed_index_job_is_visible PASSED [ 92%]
+backend/tests/configuration/test_search.py::test_semantic_mode_requires_postgresql PASSED [ 96%]
+backend/tests/configuration/test_search.py::test_postgresql_semantic_ranking_respects_business_status SKIPPED [100%]
+
+=========================== short test summary info ============================
+SKIPPED [1] backend/tests/configuration/test_search.py:172: 需要 PostgreSQL pgvector
+======================== 27 passed, 1 skipped in 11.69s ========================

@@ -1,0 +1,42 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.6, pytest-9.1.1, pluggy-1.6.0 -- /Users/yibaiba/Code/RustProject/pi/presales-platform/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /private/var/folders/vv/2pbkx3_s66n0ybf417p97q_r0000gn/T/presales-reuse-review-eocdr3xz/backend
+configfile: pyproject.toml
+plugins: timeout-2.4.0, anyio-4.15.1
+timeout: 60.0s
+timeout method: signal
+timeout func_only: False
+collecting ... collected 19 items
+
+backend/tests/configuration/test_web_draft_edges.py::test_preview_delta_does_not_change_draft_and_stale_preview_rejected PASSED [  5%]
+backend/tests/configuration/test_web_draft_edges.py::test_scope_and_formal_baseline_not_rolled_back_by_undo PASSED [ 10%]
+backend/tests/configuration/test_web_draft_edges.py::test_web_and_mcp_projection_paths_match_and_supply_checks_recompute PASSED [ 15%]
+backend/tests/configuration/test_web_draft_edges.py::test_tampered_snapshot_not_accepted_by_operations PASSED [ 21%]
+backend/tests/configuration/test_web_draft_edges.py::test_refresh_uses_latest_catalog_only_when_requested PASSED [ 26%]
+backend/tests/configuration/test_web_draft_edges.py::test_lightweight_projection_equals_full_check PASSED [ 31%]
+backend/tests/configuration/test_web_draft_edges.py::test_layout_only_does_not_recalculate_procurement PASSED [ 36%]
+backend/tests/configuration/test_web_drafts.py::test_restore_retry_conflict_and_formal_isolation PASSED [ 42%]
+backend/tests/configuration/test_web_drafts.py::test_note_does_not_run_full_check_and_delta_has_no_snapshots PASSED [ 47%]
+backend/tests/configuration/test_web_drafts.py::test_invalid_batch_atomic PASSED [ 52%]
+backend/tests/paperless/test_catalog.py::test_all_paperless_source_rows_and_hidden_version_are_preserved SKIPPED [ 57%]
+backend/tests/paperless/test_catalog.py::test_sizes_and_merged_mandatory_note_remain_separate SKIPPED [ 63%]
+backend/tests/paperless/test_catalog.py::test_conflicting_capacity_is_preserved_without_rewriting SKIPPED [ 68%]
+backend/tests/paperless/test_catalog.py::test_selected_configuration_snapshot_retains_source_and_os SKIPPED [ 73%]
+backend/tests/paperless/test_configuration.py::test_candidate_modules_require_selection_and_count_existing_roles SKIPPED [ 78%]
+backend/tests/paperless/test_configuration.py::test_shared_required_host_is_not_added_for_each_lift_model SKIPPED [ 84%]
+backend/tests/paperless/test_configuration.py::test_source_set_revision_invalidates_preview_and_retains_history SKIPPED [ 89%]
+backend/tests/paperless/test_configuration.py::test_draft_relation_is_visible_but_not_calculated SKIPPED [ 94%]
+backend/tests/paperless/test_configuration.py::test_note_conflict_has_sources_and_remains_unconfirmed_in_project SKIPPED [100%]
+
+=========================== short test summary info ============================
+SKIPPED [1] backend/tests/paperless/test_catalog.py:4: 真实资料测试需要 PAPERLESS_CATALOG_PATH 和 TEST_DATABASE_URL
+SKIPPED [1] backend/tests/paperless/test_catalog.py:19: 真实资料测试需要 PAPERLESS_CATALOG_PATH 和 TEST_DATABASE_URL
+SKIPPED [1] backend/tests/paperless/test_catalog.py:33: 真实资料测试需要 PAPERLESS_CATALOG_PATH 和 TEST_DATABASE_URL
+SKIPPED [1] backend/tests/paperless/test_catalog.py:46: 真实资料测试需要 PAPERLESS_CATALOG_PATH 和 TEST_DATABASE_URL
+SKIPPED [1] backend/tests/paperless/test_configuration.py:4: 真实资料测试需要 PAPERLESS_CATALOG_PATH 和 TEST_DATABASE_URL
+SKIPPED [1] backend/tests/paperless/test_configuration.py:37: 真实资料测试需要 PAPERLESS_CATALOG_PATH 和 TEST_DATABASE_URL
+SKIPPED [1] backend/tests/paperless/test_configuration.py:48: 真实资料测试需要 PAPERLESS_CATALOG_PATH 和 TEST_DATABASE_URL
+SKIPPED [1] backend/tests/paperless/test_configuration.py:89: 真实资料测试需要 PAPERLESS_CATALOG_PATH 和 TEST_DATABASE_URL
+SKIPPED [1] backend/tests/paperless/test_configuration.py:100: 真实资料测试需要 PAPERLESS_CATALOG_PATH 和 TEST_DATABASE_URL
+======================== 10 passed, 9 skipped in 3.48s =========================

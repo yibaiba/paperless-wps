@@ -1,0 +1,24 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.6, pytest-9.1.1, pluggy-1.6.0 -- /Users/yibaiba/Code/RustProject/pi/presales-platform/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /private/var/folders/vv/2pbkx3_s66n0ybf417p97q_r0000gn/T/presales-reuse-review-eocdr3xz/backend
+configfile: pyproject.toml
+plugins: timeout-2.4.0, anyio-4.15.1
+timeout: 60.0s
+timeout method: signal
+timeout func_only: False
+collecting ... collected 11 items
+
+backend/tests/configuration/test_quantity_review_fixes.py::test_direct_binding_checks_quantity_after_edit_and_recovery PASSED [  9%]
+backend/tests/configuration/test_quantity_review_fixes.py::test_direct_binding_missing_basis_or_input_is_unknown[basis] PASSED [ 18%]
+backend/tests/configuration/test_quantity_review_fixes.py::test_direct_binding_missing_basis_or_input_is_unknown[input] PASSED [ 27%]
+backend/tests/configuration/test_quantity_review_fixes.py::test_fulfilled_server_uses_accessory_quantity_only_when_linked PASSED [ 36%]
+backend/tests/configuration/test_quantity_review_fixes.py::test_same_shareable_instance_cannot_fill_same_demand_twice PASSED [ 45%]
+backend/tests/configuration/test_quantity_review_fixes.py::test_recheck_detects_historical_overallocation_and_device_reduction[True] PASSED [ 54%]
+backend/tests/configuration/test_quantity_review_fixes.py::test_recheck_detects_historical_overallocation_and_device_reduction[False] PASSED [ 63%]
+backend/tests/configuration/test_quantity_review_fixes.py::test_role_quantity_uses_pinned_definition_until_explicit_refresh[True] PASSED [ 72%]
+backend/tests/configuration/test_quantity_review_fixes.py::test_role_quantity_uses_pinned_definition_until_explicit_refresh[False] PASSED [ 81%]
+backend/tests/configuration/test_quantity_review_fixes.py::test_partial_fulfilled_role_does_not_hide_unlinked_split PASSED [ 90%]
+backend/tests/configuration/test_quantity_review_fixes.py::test_shareable_batch_allows_remaining_capacity_and_completed_retry PASSED [100%]
+
+============================= 11 passed in 10.82s ==============================

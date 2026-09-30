@@ -1,0 +1,45 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.6, pytest-9.1.1, pluggy-1.6.0 -- /Users/yibaiba/Code/RustProject/pi/presales-platform/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /private/var/folders/vv/2pbkx3_s66n0ybf417p97q_r0000gn/T/presales-reuse-review-eocdr3xz/backend
+configfile: pyproject.toml
+plugins: timeout-2.4.0, anyio-4.15.1
+timeout: 60.0s
+timeout method: signal
+timeout func_only: False
+collecting ... collected 30 items
+
+backend/tests/test_drawio.py::test_product_quantity_authoritative_roundtrip_and_revision PASSED [  3%]
+backend/tests/test_drawio.py::test_native_shape_binding_preserves_style_waypoints_and_drawing_only_shapes PASSED [  6%]
+backend/tests/test_drawio.py::test_native_edge_becomes_unconfirmed_then_rule_and_preserves_waypoints PASSED [ 10%]
+backend/tests/test_drawio.py::test_compressed_multiple_pages_and_copied_nodes_have_distinct_ids PASSED [ 13%]
+backend/tests/test_drawio.py::test_system_membership_and_shared_counts_removal PASSED [ 16%]
+backend/tests/test_drawio.py::test_invalid_xml_fails_explicitly[<invalid>] PASSED [ 20%]
+backend/tests/test_drawio.py::test_invalid_xml_fails_explicitly[<root/>] PASSED [ 23%]
+backend/tests/test_drawio.py::test_invalid_xml_fails_explicitly[<!DOCTYPE x [<!ENTITY boom "entity">]><mxGraphModel>&boom;</mxGraphModel>] PASSED [ 26%]
+backend/tests/test_drawio.py::test_invalid_xml_fails_explicitly[<mxfile><diagram id="bad">not deflate</diagram></mxfile>] PASSED [ 30%]
+backend/tests/test_drawio.py::test_invalid_xml_fails_explicitly[<mxfile><diagram><mxGraphModel><root/></mxGraphModel></diagram></mxfile>] PASSED [ 33%]
+backend/tests/test_drawio.py::test_invalid_business_metadata_not_silently_ignored[ps_quantity-0] PASSED [ 36%]
+backend/tests/test_drawio.py::test_invalid_business_metadata_not_silently_ignored[ps_quantity-NaN] PASSED [ 40%]
+backend/tests/test_drawio.py::test_invalid_business_metadata_not_silently_ignored[ps_product_id-missing] PASSED [ 43%]
+backend/tests/test_drawio.py::test_invalid_business_metadata_not_silently_ignored[ps_serves_group_ids-[] PASSED [ 46%]
+backend/tests/test_drawio.py::test_batch_add_preserves_order_existing_drawing_and_separate_positions PASSED [ 50%]
+backend/tests/test_drawio.py::test_invalid_batch_add_does_not_change_saved_topology[empty] PASSED [ 53%]
+backend/tests/test_drawio.py::test_invalid_batch_add_does_not_change_saved_topology[duplicate] PASSED [ 56%]
+backend/tests/test_drawio.py::test_invalid_batch_add_does_not_change_saved_topology[missing] PASSED [ 60%]
+backend/tests/test_drawio.py::test_batch_grid_wraps_below_nested_existing_content PASSED [ 63%]
+backend/tests/test_projects.py::test_project_keeps_specific_configuration_and_separate_rows PASSED [ 66%]
+backend/tests/test_projects.py::test_invalid_quantity_and_wrong_project_are_rejected PASSED [ 70%]
+backend/tests/test_review_concurrency.py::test_postgres_concurrent_decisions_keep_one_history SKIPPED [ 73%]
+backend/tests/test_reviews.py::test_review_history_reopen_and_stale_update PASSED [ 76%]
+backend/tests/test_reviews.py::test_status_reaches_catalog_and_project_but_not_other_version PASSED [ 80%]
+backend/tests/test_reviews.py::test_invalid_review_cannot_create_history[override0] PASSED [ 83%]
+backend/tests/test_reviews.py::test_invalid_review_cannot_create_history[override1] PASSED [ 86%]
+backend/tests/test_reviews.py::test_invalid_review_cannot_create_history[override2] PASSED [ 90%]
+backend/tests/test_reviews.py::test_invalid_review_cannot_create_history[override3] PASSED [ 93%]
+backend/tests/test_reviews.py::test_missing_issue_is_explicit PASSED     [ 96%]
+backend/tests/test_reviews.py::test_row_problem_does_not_mark_every_record_of_same_model PASSED [100%]
+
+=========================== short test summary info ============================
+SKIPPED [1] backend/tests/test_review_concurrency.py:15: 需要测试用 PostgreSQL 连接
+======================== 29 passed, 1 skipped in 2.43s =========================

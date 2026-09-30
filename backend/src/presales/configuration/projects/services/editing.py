@@ -140,7 +140,7 @@ def put(data, operation):
             value["generated_origin"] = dict(
                 previous["generated_origin"],
                 variant_locked=previous["generated_origin"]["variant_locked"]
-                or previous["variant_id"] != value["variant_id"],
+                or any(previous[k] != value[k] for k in ("variant_id", "source_id")),
                 quantity_locked=previous["generated_origin"]["quantity_locked"]
                 or previous["quantity"] != value["quantity"],
             )

@@ -110,6 +110,7 @@ def accessory_options(context, data, *, demand, checked, tasks):
         if (
             binding
             and binding["role_id"] == task["role"]["id"]
+            and binding["need_key"] == demand["need_key"]
             and alias["system"]["id"] == task["system"]["id"]
         ):
             allowed.update(

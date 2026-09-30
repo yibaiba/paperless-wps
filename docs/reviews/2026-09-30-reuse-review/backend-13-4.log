@@ -1,0 +1,17 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.6, pytest-9.1.1, pluggy-1.6.0 -- /Users/yibaiba/Code/RustProject/pi/presales-platform/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /private/var/folders/vv/2pbkx3_s66n0ybf417p97q_r0000gn/T/presales-reuse-review-eocdr3xz/backend
+configfile: pyproject.toml
+plugins: timeout-2.4.0, anyio-4.15.1
+timeout: 60.0s
+timeout method: signal
+timeout func_only: False
+collecting ... collected 4 items
+
+backend/tests/configuration/test_readiness.py::test_empty_project_is_a_savable_incomplete_draft PASSED [ 25%]
+backend/tests/configuration/test_readiness.py::test_complete_known_configuration_is_ready_for_confirmed_output PASSED [ 50%]
+backend/tests/configuration/test_readiness.py::test_missing_selection_and_unapplied_accessory_keep_output_incomplete PASSED [ 75%]
+backend/tests/configuration/test_readiness.py::test_any_confirmed_conflict_blocks_confirmed_output PASSED [100%]
+
+============================== 4 passed in 0.17s ===============================

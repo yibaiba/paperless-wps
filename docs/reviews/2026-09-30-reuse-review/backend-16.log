@@ -1,0 +1,41 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.6, pytest-9.1.1, pluggy-1.6.0 -- /Users/yibaiba/Code/RustProject/pi/presales-platform/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /private/var/folders/vv/2pbkx3_s66n0ybf417p97q_r0000gn/T/presales-reuse-review-eocdr3xz/backend
+configfile: pyproject.toml
+plugins: timeout-2.4.0, anyio-4.15.1
+timeout: 60.0s
+timeout method: signal
+timeout func_only: False
+collecting ... collected 26 items
+
+backend/tests/configuration/test_second_review_fixes.py::test_mixed_revisions_can_be_fulfilled_independently[project] PASSED [  3%]
+backend/tests/configuration/test_second_review_fixes.py::test_mixed_revisions_can_be_fulfilled_independently[room] PASSED [  7%]
+backend/tests/configuration/test_second_review_fixes.py::test_incomplete_mixed_demands_also_have_distinct_identities PASSED [ 11%]
+backend/tests/configuration/test_second_review_fixes.py::test_ambiguous_legacy_allocation_is_retained_but_never_double_credited PASSED [ 15%]
+backend/tests/configuration/test_second_review_fixes.py::test_noop_correction_keeps_pending_reviews[omitted] PASSED [ 19%]
+backend/tests/configuration/test_second_review_fixes.py::test_noop_correction_keeps_pending_reviews[empty] PASSED [ 23%]
+backend/tests/configuration/test_second_review_fixes.py::test_noop_correction_keeps_pending_reviews[stale] PASSED [ 26%]
+backend/tests/configuration/test_second_review_fixes.py::test_unambiguous_historical_demand_identity_stays_unchanged PASSED [ 30%]
+backend/tests/configuration/test_second_review_fixes.py::test_qualified_identity_survives_removing_other_revision[accessory_allocations] PASSED [ 34%]
+backend/tests/configuration/test_second_review_fixes.py::test_qualified_identity_survives_removing_other_revision[included_allocations] PASSED [ 38%]
+backend/tests/configuration/test_second_review_fixes.py::test_qualified_identity_survives_removing_other_revision[accessory_choices] PASSED [ 42%]
+backend/tests/configuration/test_selection_binding_review.py::test_source_disagreement_survives_price_edit_save_and_manual_regeneration PASSED [ 46%]
+backend/tests/configuration/test_selection_binding_review.py::test_fulfilled_role_resolves_all_parent_demands[device-new] PASSED [ 50%]
+backend/tests/configuration/test_selection_binding_review.py::test_fulfilled_role_resolves_all_parent_demands[device-automatic] PASSED [ 53%]
+backend/tests/configuration/test_selection_binding_review.py::test_fulfilled_role_resolves_all_parent_demands[device-manual] PASSED [ 57%]
+backend/tests/configuration/test_selection_binding_review.py::test_fulfilled_role_resolves_all_parent_demands[system-new] PASSED [ 61%]
+backend/tests/configuration/test_selection_binding_review.py::test_fulfilled_role_resolves_all_parent_demands[system-automatic] PASSED [ 65%]
+backend/tests/configuration/test_selection_binding_review.py::test_fulfilled_role_resolves_all_parent_demands[system-manual] PASSED [ 69%]
+backend/tests/configuration/test_selection_binding_review.py::test_explicit_source_selects_its_candidate_instead_of_aborting_search PASSED [ 73%]
+backend/tests/configuration/test_sheet_edits.py::test_preview_atomic_missing_id_does_not_save PASSED [ 76%]
+backend/tests/configuration/test_sheet_edits.py::test_quantity_keeps_supply_and_reports_unassigned PASSED [ 80%]
+backend/tests/configuration/test_sheet_edits.py::test_web_mcp_edit_equivalence_and_save PASSED [ 84%]
+backend/tests/configuration/test_sheet_edits.py::test_invalid_numeric_input_and_readonly_snapshot PASSED [ 88%]
+backend/tests/configuration/test_sheet_edits.py::test_batch_decimal_price_zero_and_model_change_remains_stale PASSED [ 92%]
+backend/tests/configuration/test_sheet_edits.py::test_replacement_catalog_without_role_is_explicitly_unknown PASSED [ 96%]
+backend/tests/configuration/test_web_draft_concurrency.py::test_web_drafts_concurrent_retry_and_competing_edit SKIPPED [100%]
+
+=========================== short test summary info ============================
+SKIPPED [1] backend/tests/configuration/test_web_draft_concurrency.py:7: 并发验收需要 PostgreSQL 隔离连接
+======================== 25 passed, 1 skipped in 11.54s ========================

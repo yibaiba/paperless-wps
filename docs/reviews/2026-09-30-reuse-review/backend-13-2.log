@@ -1,0 +1,19 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.6, pytest-9.1.1, pluggy-1.6.0 -- /Users/yibaiba/Code/RustProject/pi/presales-platform/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /private/var/folders/vv/2pbkx3_s66n0ybf417p97q_r0000gn/T/presales-reuse-review-eocdr3xz/backend
+configfile: pyproject.toml
+plugins: timeout-2.4.0, anyio-4.15.1
+timeout: 60.0s
+timeout method: signal
+timeout func_only: False
+collecting ... collected 6 items
+
+backend/tests/configuration/test_quotation_details.py::test_long_descriptions_continue_without_extra_quantities PASSED [ 16%]
+backend/tests/configuration/test_quotation_details.py::test_explicit_quote_group_and_unknown_supply PASSED [ 33%]
+backend/tests/configuration/test_quotation_details.py::test_saved_revision_search_and_validated_boundaries PASSED [ 50%]
+backend/tests/configuration/test_quotation_details.py::test_metadata_patch_retains_manual_prices PASSED [ 66%]
+backend/tests/configuration/test_quotation_details.py::test_quote_patch_presence_is_part_of_idempotency_key PASSED [ 83%]
+backend/tests/configuration/test_quotation_details.py::test_price_columns_and_quantity_changes_are_explicit PASSED [100%]
+
+============================== 6 passed in 4.25s ===============================
