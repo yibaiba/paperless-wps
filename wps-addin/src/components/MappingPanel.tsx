@@ -4,7 +4,9 @@ import { useEffect, useMemo, useState } from 'react';
 import type { WpsApi } from '../api';
 import type { HostAdapter } from '../host';
 import { validateMappedHeaders, validateMapping } from '../mappingValidation';
-import type { ManagedField, SheetRow, TemplateField, TemplateProfile } from '../types';
+import type {
+  CatalogScope, CatalogScopePreview, ManagedField, SheetRow, TemplateField, TemplateProfile,
+} from '../types';
 
 const FIELDS: Array<[TemplateField, string]> = [
   ['model', '产品型号'], ['name', '产品名称'], ['description', '产品说明'],
@@ -32,6 +34,11 @@ export function MappingPanel({ host, api, profiles, profile, onSelected, onSaved
   const [headers, setHeaders] = useState<string[]>([]);
   const [previewRows, setPreviewRows] = useState<SheetRow[]>([]);
   const [previewSignature, setPreviewSignature] = useState('');
+  const [scope, setScope] = useState<CatalogScope | undefined>(
+    profile?.catalog_scope ?? undefined,
+  );
+  const [scopeOptions, setScopeOptions] = useState<CatalogScopePreview[]>([]);
+  const [previewRowCount, setPreviewRowCount] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const draftSignature = JSON.stringify({ sheet, headerRow, mapping, managed });
@@ -47,6 +54,7 @@ export function MappingPanel({ host, api, profiles, profile, onSelected, onSaved
   useEffect(() => {
     if (!profile) {
       setName('现场报价模板'); setMapping({}); setManaged([]);
+      setScope(undefined); setScopeOptions([]); setPreviewRowCount(0);
       return;
     }
     setSheet(profile.sheet_selector);
@@ -54,12 +62,16 @@ export function MappingPanel({ host, api, profiles, profile, onSelected, onSaved
     setName(profile.name);
     setMapping(profile.field_columns);
     setManaged(profile.managed_fields);
+    setScope(profile.catalog_scope ?? undefined);
+    setScopeOptions([]);
+    setPreviewRowCount(0);
     setPreviewRows([]);
     setPreviewSignature('');
   }, [profile]);
 
-  function preview() {
+  async function preview() {
     setError('');
+    setBusy(true);
     try {
       validateMapping(mapping, managed);
       validateMappedHeaders(mapping, headers);
@@ -75,20 +87,28 @@ export function MappingPanel({ host, api, profiles, profile, onSelected, onSaved
         normalized_header_fingerprint: '',
         created_by: '',
       };
-      const rows = host.readRows(draft).slice(0, 5);
-      setPreviewRows(rows);
+      const rows = host.readRows(draft).slice(0, 20);
+      const result = await api.previewSourceScopes(rows.map((row) => ({
+        model: row.values.model ?? '', name: row.values.name ?? '',
+      })));
+      setPreviewRows(rows.slice(0, 5));
+      setPreviewRowCount(rows.length);
+      setScopeOptions(result.items);
       setPreviewSignature(draftSignature);
     } catch (reason) {
       setPreviewRows([]);
+      setScopeOptions([]);
+      setPreviewRowCount(0);
       setPreviewSignature('');
       setError(reason instanceof Error ? reason.message : String(reason));
-    }
+    } finally { setBusy(false); }
   }
 
   async function save() {
     setBusy(true); setError('');
     try {
       if (previewSignature !== draftSignature) throw new Error('字段映射变化后需要重新预览');
+      if (!scope) throw new Error('请选择该模板对应的产品来源范围');
       const result = await api.saveTemplate({
         ...(profile ? { profile_id: profile.id, expected_revision: profile.revision } : {}),
         name,
@@ -97,6 +117,7 @@ export function MappingPanel({ host, api, profiles, profile, onSelected, onSaved
         field_columns: mapping,
         managed_fields: managed,
         header_values: headers,
+        catalog_scope: scope,
       });
       onSaved(result);
     } catch (reason) {
@@ -146,7 +167,9 @@ export function MappingPanel({ host, api, profiles, profile, onSelected, onSaved
         </label> : <span />}
       </div>)}
     </div>
-    <button onClick={preview} disabled={busy}><EyeOutlined />预览解析结果</button>
+    <button onClick={() => { void preview(); }} disabled={busy}>
+      <EyeOutlined />{busy ? '分析中' : '预览解析结果'}
+    </button>
     {previewSignature === draftSignature ? <div className="mapping-preview">
       <div className="preview-title"><EyeOutlined />
         {previewRows.length ? `已验证 ${previewRows.length} 行` : '已验证表头和字段列'}
@@ -157,9 +180,25 @@ export function MappingPanel({ host, api, profiles, profile, onSelected, onSaved
         <strong>{row.values.model || row.values.name}</strong>
         <span>{row.values.quantity || '数量为空'}</span>
       </div>)}
+      <label>产品来源范围<select aria-label="产品来源范围"
+        value={scope ? `${scope.import_id}\u0000${scope.sheet}` : ''}
+        onChange={(event) => {
+          const [importId, sourceSheet] = event.target.value.split('\u0000');
+          setScope(importId ? { import_id: importId, sheet: sourceSheet } : undefined);
+        }}>
+        <option value="">请选择并确认</option>
+        {scopeOptions.map((item) => <option
+          key={`${item.import_id}:${item.sheet}`}
+          value={`${item.import_id}\u0000${item.sheet}`}>
+          {item.filename} · {item.sheet}
+          {previewRowCount ? ` · 命中 ${item.matched_rows}/${previewRowCount}` : ''}
+          {item.ambiguous_rows ? ` · ${item.ambiguous_rows} 行歧义` : ''}
+        </option>)}
+      </select></label>
     </div> : null}
     {error ? <div className="error" role="alert">{error}</div> : null}
-    <button className="primary" onClick={save} disabled={busy || previewSignature !== draftSignature}>
+    <button className="primary" onClick={save}
+      disabled={busy || previewSignature !== draftSignature || !scope}>
       <SaveOutlined />{busy ? '保存中' : '保存映射'}
     </button>
   </section>;

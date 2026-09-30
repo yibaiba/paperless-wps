@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 
 from presales.api import session_dependency
 from presales.configuration.http import execute
@@ -13,6 +13,7 @@ from .feedback import CompletionFeedback
 from .schemas import (
     BindingCreate,
     PairingExchange,
+    SourceScopePreview,
     SuggestionFeedbackWrite,
     SuggestionRequest,
     SyncCommit,
@@ -57,6 +58,15 @@ def save_template(
     )
 
 
+@router.post("/template-profiles/source-scope-preview")
+def preview_template_source_scopes(
+    data: SourceScopePreview,
+    session=Depends(session_dependency),
+    access=Depends(principal),
+):
+    return execute(lambda: commit(session, lambda: TemplateProfiles(session).preview_scopes(data)))
+
+
 @router.get("/template-profiles/{profile_id}")
 def get_template(
     profile_id: str,
@@ -72,11 +82,17 @@ def get_template(
 @router.post("/suggestions")
 def suggestions(
     data: SuggestionRequest,
+    request: Request,
     session=Depends(session_dependency),
     access=Depends(principal),
 ):
     return execute(
-        lambda: commit(session, lambda: Suggestions(session, actor=access.actor).search(data))
+        lambda: commit(
+            session,
+            lambda: Suggestions(
+                session, actor=access.actor, catalog_index=request.app.state.wps_catalog_index
+            ).search(data),
+        )
     )
 
 

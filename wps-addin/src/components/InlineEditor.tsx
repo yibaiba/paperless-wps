@@ -36,6 +36,13 @@ const CANDIDATE_LIST_ID = 'product-candidates';
 const GROUP_LABELS: Record<Candidate['group'], string> = {
   direct: '直接', series: '同系列', alternative: '替代', accessory: '配套', related: '相关',
 };
+const BLOCKER_MESSAGES: Partial<Record<NonNullable<Candidate['completion_blocker']>, string>> = {
+  template_source_unconfirmed: '请先在模板设置中确认产品来源',
+  source_ambiguous: '存在多个资料来源，请明确选择',
+  variant_ambiguous: '存在多个产品配置，请明确选择',
+  insufficient_evidence: '上下文证据不足，请明确选择',
+  insufficient_margin: '候选过于接近，请明确选择',
+};
 
 export function InlineEditor() {
   const host = useMemo(() => new WpsHostAdapter(), []);
@@ -273,7 +280,9 @@ export function InlineEditor() {
   const phase = completionPhase({
     busy, error, candidates, selection, hasGhost: Boolean(ghost), query,
   });
-  const choiceMessage = ambiguous ? '存在同名型号或多个配置，请明确选择' : '请选择要补全的产品';
+  const choiceMessage = selectedCandidate?.completion_blocker
+    ? BLOCKER_MESSAGES[selectedCandidate.completion_blocker]
+    : ambiguous ? '存在同名型号或多个配置，请明确选择' : '请选择要补全的产品';
 
   return <main className={`inline-editor ${placement}`} data-phase={phase}
     data-row={context.cell.row} data-column={context.cell.column}

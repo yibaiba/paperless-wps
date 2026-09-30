@@ -19,7 +19,7 @@ def authorized(token):
     return {"Authorization": "Bearer " + token["access_token"]}
 
 
-def update_variant_context(client, variant, *, series, systems, product_id=None):
+def update_variant_context(client, variant, *, series, systems, product_id=None, name=None):
     fields = {
         "description": "",
         "supply_status": "available",
@@ -34,7 +34,7 @@ def update_variant_context(client, variant, *, series, systems, product_id=None)
     payload = {key: variant.get(key, default) for key, default in fields.items()}
     payload.update(
         product_id=product_id or variant["product_id"],
-        name=variant["name"],
+        name=name or variant["name"],
         status=variant["status"],
         series=series,
         systems=systems,
@@ -49,7 +49,10 @@ def update_variant_context(client, variant, *, series, systems, product_id=None)
     return response.json()
 
 
-def template(client, headers):
+def template(client, headers, catalog=None):
+    catalog_scope = (
+        {"import_id": catalog["imported"]["id"], "sheet": "产品表"} if catalog else None
+    )
     response = client.post(
         "/api/wps/template-profiles",
         headers=headers,
@@ -60,6 +63,7 @@ def template(client, headers):
             "field_columns": {"model": 2, "name": 3, "quantity": 5, "unit": 6},
             "managed_fields": ["model", "name", "unit"],
             "header_values": ["序号", "产品型号", "产品名称", "说明", "数量", "单位"],
+            **({"catalog_scope": catalog_scope} if catalog_scope else {}),
         },
     )
     assert response.status_code == 200, response.text
@@ -160,6 +164,64 @@ def test_template_revision_and_suggestions(client, catalog):
     assert {item["source_id"] for item in items} == {source["id"] for source in catalog["sources"]}
     assert all(item["group"] == "direct" for item in items)
     assert all(item["confidence"] == "high" for item in items)
+
+
+def test_template_source_scope_preview_and_revision(client, catalog):
+    token, _ = paired(client)
+    headers = authorized(token)
+    preview = client.post(
+        "/api/wps/template-profiles/source-scope-preview",
+        headers=headers,
+        json={"rows": [{"model": "SERVER-X", "name": "测试服务器"}]},
+    )
+    assert preview.status_code == 200, preview.text
+    scope = preview.json()["items"][0]
+    assert scope["import_id"] == catalog["imported"]["id"]
+    assert scope["sheet"] == "产品表"
+    assert scope["matched_rows"] == 1
+    assert scope["ambiguous_rows"] == 1
+
+    created = template(client, headers, catalog)
+    assert created["schema_version"] == 2
+    assert created["catalog_scope"] == {
+        "import_id": catalog["imported"]["id"],
+        "sheet": "产品表",
+    }
+
+
+def test_suggestion_index_invalidates_on_catalog_revision(client, catalog):
+    token, _ = paired(client)
+    headers = authorized(token)
+    profile = template(client, headers, catalog)
+    request = {
+        "query": "SERVER-X",
+        "template_profile_id": profile["id"],
+        "template_profile_revision": profile["revision"],
+    }
+    initial = client.post("/api/wps/suggestions", headers=headers, json=request)
+    assert initial.status_code == 200, initial.text
+    initial_item = next(
+        item
+        for item in initial.json()["items"]
+        if item["variant_id"] == catalog["variants"][0]["id"]
+    )
+    assert initial_item["variant_name"] == "64GB"
+
+    update_variant_context(
+        client,
+        catalog["variants"][0],
+        series=[],
+        systems=[],
+        name="64GB 已更新",
+    )
+    refreshed = client.post("/api/wps/suggestions", headers=headers, json=request)
+    assert refreshed.status_code == 200, refreshed.text
+    refreshed_item = next(
+        item
+        for item in refreshed.json()["items"]
+        if item["variant_id"] == catalog["variants"][0]["id"]
+    )
+    assert refreshed_item["variant_name"] == "64GB 已更新"
 
 
 def test_suggestions_use_previous_product_series_and_current_system(client, catalog):
@@ -267,12 +329,13 @@ def test_accepted_suggestion_feedback_is_idempotent_and_affects_ranking(client, 
     )
     token, _ = paired(client, actor="反馈测试售前")
     headers = authorized(token)
+    profile = template(client, headers)
     operation_id = str(uuid4())
     payload = {
         "operation_id": operation_id,
         "workbook_instance_id": "feedback-workbook",
-        "template_profile_id": "feedback-template",
-        "template_profile_revision": 1,
+        "template_profile_id": profile["id"],
+        "template_profile_revision": profile["revision"],
         "sheet": "报价表",
         "section": "反馈系统",
         "previous_variant_id": previous["id"],
@@ -298,8 +361,8 @@ def test_accepted_suggestion_feedback_is_idempotent_and_affects_ranking(client, 
     suggestion_request = {
         "query": "",
         "workbook_instance_id": "feedback-workbook",
-        "template_profile_id": "feedback-template",
-        "template_profile_revision": 1,
+        "template_profile_id": profile["id"],
+        "template_profile_revision": profile["revision"],
         "context": {
             "sheet": "报价表",
             "section": "反馈系统",
@@ -319,7 +382,8 @@ def test_accepted_suggestion_feedback_is_idempotent_and_affects_ranking(client, 
     request_data = {
         **suggestion_request,
         "workbook_instance_id": "another-workbook",
-        "template_profile_revision": 2,
+        "template_profile_id": None,
+        "template_profile_revision": None,
     }
     new_revision = client.post("/api/wps/suggestions", headers=headers, json=request_data)
     assert new_revision.status_code == 200, new_revision.text

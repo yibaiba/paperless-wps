@@ -9,6 +9,7 @@ NEIGHBOR_DISTANCE_PENALTY = 6
 TRANSITION_DISTANCE_PENALTY = 10
 SOURCE_SEQUENCE_MATCH_SCORE = 160
 SOURCE_CONTEXT_MATCH_SCORE = 180
+SOURCE_SCOPE_MATCH_SCORE = 260
 MIN_SEQUENCE_COMPLETION_SUPPORT = 2
 SHORT_SEQUENCE_BONUS = 70
 SYSTEM_CONTEXT_MATCH_SCORE = 120
@@ -36,7 +37,9 @@ def context_variants(identities, by_id):
     return result
 
 
-def rank_candidates(items, request, by_id, transitions=None, learned_scores=None):
+def rank_candidates(
+    items, request, by_id, transitions=None, learned_scores=None, catalog_scope=None
+):
     previous = context_variants(
         [request.context.selected_variant_id, *request.context.previous_variant_ids], by_id
     )
@@ -46,11 +49,22 @@ def rank_candidates(items, request, by_id, transitions=None, learned_scores=None
         variant = by_id[item["variant_id"]]
         learned_score, learned_reason = (learned_scores or {}).get(item["variant_id"], (0, ""))
         context_score, reasons, transition_strong = _context_score(
-            variant, request, previous, following, transitions or {}, learned_score, learned_reason
+            variant,
+            request,
+            previous,
+            following,
+            transitions or {},
+            learned_score,
+            learned_reason,
+            scope_confirmed=bool(catalog_scope),
         )
         query_score = _query_score(variant, request.query)
-        source_score, source_match = _source_context_score(item, request)
-        if source_match:
+        source_score, source_match, scope_match = _source_context_score(
+            item, request, catalog_scope
+        )
+        if scope_match:
+            reasons = ["匹配模板产品来源", *reasons][:3]
+        elif source_match:
             reasons = ["匹配当前来源工作表", *reasons][:3]
         score = (
             context_score
@@ -65,17 +79,21 @@ def rank_candidates(items, request, by_id, transitions=None, learned_scores=None
             "confidence": _confidence(item["group"], query_score, context_score),
             "_ranking_score": score,
             "_source_context_match": source_match,
+            "_source_scope_match": scope_match,
+            "_scope_confirmed": bool(catalog_scope),
             "_strong_completion_evidence": bool(
-                source_match
+                scope_match
+                or source_match
                 or learned_reason
                 or query_score >= 80
                 or transition_strong
                 or item["group"] in STRONG_RELATION_GROUPS
             ),
         }
-        ranked.append((score, -index, candidate))
-    ranked.sort(key=lambda value: (value[0], value[1]), reverse=True)
-    return [item for _, _, item in ranked]
+        scope_order = int(scope_match) if catalog_scope else 0
+        ranked.append((scope_order, score, -index, candidate))
+    ranked.sort(key=lambda value: (value[0], value[1], value[2]), reverse=True)
+    return [item for _, _, _, item in ranked]
 
 
 def exclude_context_models(items, request, by_id):
@@ -93,7 +111,15 @@ def exclude_context_models(items, request, by_id):
 
 
 def _context_score(
-    variant, request, previous, following, transitions, learned_score, learned_reason
+    variant,
+    request,
+    previous,
+    following,
+    transitions,
+    learned_score,
+    learned_reason,
+    *,
+    scope_confirmed=False,
 ):
     reasons, score = [], 0
     if learned_reason:
@@ -105,7 +131,7 @@ def _context_score(
         request.current_row.get("section", ""),
     ]
     transition_score, transition_reason, transition_strong = _best_transition_match(
-        variant, previous, following, transitions, sequence_contexts
+        variant, previous, following, transitions, sequence_contexts, scope_confirmed
     )
     if transition_reason:
         reasons.append(transition_reason)
@@ -128,7 +154,9 @@ def _context_score(
     return score, reasons[:3], transition_strong
 
 
-def _best_transition_match(variant, previous, following, transitions, sequence_contexts):
+def _best_transition_match(
+    variant, previous, following, transitions, sequence_contexts, scope_confirmed=False
+):
     candidate_model = _variant_model(variant)
     candidate_label = _variant_model_label(variant)
     matches = []
@@ -147,24 +175,50 @@ def _best_transition_match(variant, previous, following, transitions, sequence_c
                 0,
                 "延续短序列",
                 SHORT_SEQUENCE_BONUS,
+                scope_confirmed,
             )
         )
     for distance, neighbor in enumerate(previous):
         key = (_variant_model(neighbor), candidate_model)
         labels = (_variant_model_label(neighbor), candidate_label)
         matches.append(
-            _transition_evidence(key, labels, transitions, sequence_contexts, distance, "延续")
+            _transition_evidence(
+                key,
+                labels,
+                transitions,
+                sequence_contexts,
+                distance,
+                "延续",
+                scope_confirmed=scope_confirmed,
+            )
         )
     for distance, neighbor in enumerate(following):
         key = (candidate_model, _variant_model(neighbor))
         labels = (candidate_label, _variant_model_label(neighbor))
         matches.append(
-            _transition_evidence(key, labels, transitions, sequence_contexts, distance, "衔接")
+            _transition_evidence(
+                key,
+                labels,
+                transitions,
+                sequence_contexts,
+                distance,
+                "衔接",
+                scope_confirmed=scope_confirmed,
+            )
         )
     return max(matches, default=(0, "", False), key=lambda item: item[0])
 
 
-def _transition_evidence(key, labels, transitions, sequence_contexts, distance, direction, bonus=0):
+def _transition_evidence(
+    key,
+    labels,
+    transitions,
+    sequence_contexts,
+    distance,
+    direction,
+    bonus=0,
+    scope_confirmed=False,
+):
     sheets = transitions.get(key, [])
     if not sheets:
         return 0, "", False
@@ -174,7 +228,7 @@ def _transition_evidence(key, labels, transitions, sequence_contexts, distance, 
     if sheet_match:
         score += SOURCE_SEQUENCE_MATCH_SCORE
     score = max(0, score - distance * TRANSITION_DISTANCE_PENALTY)
-    strong = sheet_match or len(sheets) >= MIN_SEQUENCE_COMPLETION_SUPPORT
+    strong = scope_confirmed or sheet_match or len(sheets) >= MIN_SEQUENCE_COMPLETION_SUPPORT
     return score, f"{direction}清单顺序 {labels[0]} → {labels[1]}", strong
 
 
@@ -226,12 +280,19 @@ def _query_score(variant, query):
     return 40
 
 
-def _source_context_score(item, request):
+def _source_context_score(item, request, catalog_scope=None):
     source_sheet = (item.get("source") or {}).get("sheet") or ""
+    source_import = (item.get("source") or {}).get("import_id") or ""
     normalized_source = source_sheet.casefold().strip()
     active_sheet = request.context.sheet.casefold().strip()
     matched = bool(normalized_source) and normalized_source == active_sheet
-    return (SOURCE_CONTEXT_MATCH_SCORE, True) if matched else (0, False)
+    scope_match = bool(catalog_scope) and (
+        source_import == catalog_scope.get("import_id")
+        and source_sheet == catalog_scope.get("sheet")
+    )
+    if scope_match:
+        return SOURCE_SCOPE_MATCH_SCORE, matched, True
+    return (SOURCE_CONTEXT_MATCH_SCORE, True, False) if matched else (0, False, False)
 
 
 def _confidence(group, query_score, context_score):

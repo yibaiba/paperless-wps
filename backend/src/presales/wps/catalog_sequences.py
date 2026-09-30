@@ -9,10 +9,12 @@ def model_family(model):
     return "-".join(parts[:2]) if len(parts) >= 3 else ""
 
 
-def build_catalog_transitions(variants):
+def build_catalog_transitions(variants, catalog_scope=None):
     source_rows = defaultdict(list)
     for variant in variants:
         for source in variant.get("source_details", []):
+            if catalog_scope and not _scope_matches(source, catalog_scope):
+                continue
             for sequence_key in _variant_sequence_keys(variant):
                 key = (source.get("import_id"), source.get("sheet"), sequence_key)
                 source_rows[key].append((int(source.get("row") or 0), variant))
@@ -22,6 +24,12 @@ def build_catalog_transitions(variants):
         _add_pairs(transitions, ordered, sheet)
         _add_triples(transitions, ordered, sheet)
     return dict(transitions)
+
+
+def _scope_matches(source, scope):
+    return source.get("import_id") == scope.get("import_id") and source.get("sheet") == scope.get(
+        "sheet"
+    )
 
 
 def _add_pairs(transitions, ordered, sheet):

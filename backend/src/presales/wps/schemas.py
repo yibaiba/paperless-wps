@@ -18,6 +18,26 @@ class PairingExchange(Input):
     code: Text
 
 
+class CatalogScope(Input):
+    import_id: Text
+    sheet: Text
+
+
+class SourceScopePreviewRow(Input):
+    model: str = ""
+    name: str = ""
+
+    @model_validator(mode="after")
+    def has_identity(self):
+        if not self.model and not self.name:
+            raise ValueError("来源范围预览行必须包含型号或名称")
+        return self
+
+
+class SourceScopePreview(Input):
+    rows: list[SourceScopePreviewRow] = Field(default_factory=list, max_length=20)
+
+
 class TemplateProfileWrite(Input):
     profile_id: str | None = None
     expected_revision: int | None = Field(default=None, ge=1)
@@ -27,6 +47,7 @@ class TemplateProfileWrite(Input):
     field_columns: dict[TemplateField, int]
     managed_fields: list[ManagedField] = Field(default_factory=list)
     header_values: list[str] = Field(min_length=1)
+    catalog_scope: CatalogScope | None = None
 
     @model_validator(mode="after")
     def valid_mapping(self):
@@ -67,6 +88,12 @@ class SuggestionRequest(Input):
     current_row: dict[TemplateField, str] = Field(default_factory=dict)
     context: SuggestionContext = Field(default_factory=SuggestionContext)
     limit: int = Field(default=12, ge=1, le=30)
+
+    @model_validator(mode="after")
+    def valid_template_revision(self):
+        if bool(self.template_profile_id) != bool(self.template_profile_revision):
+            raise ValueError("模板 ID 和修订必须同时提供")
+        return self
 
 
 class SuggestionFeedbackWrite(Input):

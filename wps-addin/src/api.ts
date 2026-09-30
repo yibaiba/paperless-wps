@@ -1,6 +1,6 @@
 import type {
-  BindingState, Candidate, ProjectSummary, SuggestionFeedbackPayload, SyncPreviewResult,
-  TemplateProfile, WorkbookLine,
+  BindingState, Candidate, CatalogScopePreview, ProjectSummary, SuggestionFeedbackPayload,
+  SyncPreviewResult, TemplateProfile, WorkbookLine,
 } from './types';
 
 const API_BASE = (import.meta.env.VITE_API_BASE as string | undefined)?.replace(/\/$/, '') ?? '';
@@ -28,6 +28,14 @@ export class WpsApi {
     return this.request<TemplateProfile>('/template-profiles', {
       method: 'POST', body: JSON.stringify(value),
     });
+  }
+
+  previewSourceScopes(rows: Array<{ model: string; name: string }>) {
+    return this.request<{ items: CatalogScopePreview[]; total_rows: number }>(
+      '/template-profiles/source-scope-preview', {
+        method: 'POST', body: JSON.stringify({ rows }),
+      },
+    );
   }
 
   suggestions(value: Record<string, unknown>, signal?: AbortSignal) {

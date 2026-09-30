@@ -6,6 +6,7 @@ from presales.configuration.knowledge.evaluator import scope_matches
 from presales.lists.queries import search_catalog
 from presales.lists.schemas import CatalogSearch
 
+from .catalog_index import CatalogSuggestionIndex
 from .feedback import CompletionFeedback
 from .schemas import SuggestionRequest
 from .suggestion_ranking import (
@@ -15,6 +16,7 @@ from .suggestion_ranking import (
     model_family,
     rank_candidates,
 )
+from .templates import TemplateProfiles
 
 GROUP_ORDER = {"direct": 0, "series": 1, "alternative": 2, "accessory": 3, "related": 4}
 MIN_COMPLETION_MARGIN = 35
@@ -39,20 +41,30 @@ def candidate_view(variant, source, *, group, status="unknown", evidence=()):
         "confidence": "low",
         "evidence": list(evidence),
         "context_reasons": [],
-        "source": {"sheet": source.get("sheet"), "row": source.get("row")},
+        "source": {
+            "import_id": source.get("import_id"),
+            "sheet": source.get("sheet"),
+            "row": source.get("row"),
+        },
     }
 
 
 class Suggestions:
-    def __init__(self, session, actor=None):
+    def __init__(self, session, actor=None, catalog_index: CatalogSuggestionIndex | None = None):
         self.session = session
         self.catalog = CatalogService(session)
         self.actor = actor
+        self.catalog_index = catalog_index
 
     def search(self, request: SuggestionRequest):
-        variants = self.catalog.variants()
+        catalog_scope = self._catalog_scope(request)
+        if self.catalog_index:
+            snapshot = self.catalog_index.snapshot(self.session, catalog_scope)
+            variants, transitions = snapshot.variants, snapshot.transitions
+        else:
+            variants = self.catalog.variants()
+            transitions = build_catalog_transitions(variants, catalog_scope)
         by_id = {variant["id"]: variant for variant in variants}
-        transitions = build_catalog_transitions(variants)
         learned_scores = CompletionFeedback(self.session).scores(request, self.actor)
         direct = self._direct(request, by_id) if request.query.strip() else []
         seeds = self._seed_variants(request, direct, by_id)
@@ -60,10 +72,20 @@ class Suggestions:
         if not request.query.strip():
             related = exclude_context_models(related, request, by_id)
         direct = rank_candidates(
-            self._deduplicate(direct), request, by_id, transitions, learned_scores
+            self._deduplicate(direct),
+            request,
+            by_id,
+            transitions,
+            learned_scores,
+            catalog_scope,
         )
         related = rank_candidates(
-            self._deduplicate(related), request, by_id, transitions, learned_scores
+            self._deduplicate(related),
+            request,
+            by_id,
+            transitions,
+            learned_scores,
+            catalog_scope,
         )
         direct_limit = min(6, request.limit)
         ordered = [*direct[:direct_limit], *related, *direct[direct_limit:]] if direct else related
@@ -80,6 +102,14 @@ class Suggestions:
                 for kind in sorted(groups, key=lambda value: GROUP_ORDER[value])
             ],
         }
+
+    def _catalog_scope(self, request):
+        if not request.template_profile_id:
+            return None
+        profile = TemplateProfiles(self.session).get(
+            request.template_profile_id, request.template_profile_revision
+        )
+        return profile.get("catalog_scope")
 
     def _direct(self, request, by_id):
         page = search_catalog(
@@ -177,40 +207,62 @@ class Suggestions:
 def finalize_completion_readiness(items, query):
     if not items:
         return []
-    top = items[0]
-    top_key = _logical_product(top)
-    same_product = [item for item in items if _logical_product(item) == top_key]
-    source_matches = [item for item in same_product if item.get("_source_context_match")]
-    concrete_unique = len(same_product) == 1 or (
-        bool(top.get("_source_context_match")) and len(source_matches) == 1
-    )
-    competitor = next((item for item in items[1:] if _logical_product(item) != top_key), None)
-    margin = (
-        float("inf") if competitor is None else top["_ranking_score"] - competitor["_ranking_score"]
-    )
-    exact = _is_unique_exact_match(items, query, top_key)
-    strong_evidence = bool(top.get("_strong_completion_evidence"))
-    ready = (
-        concrete_unique
-        and top["confidence"] == "high"
-        and (exact or (strong_evidence and margin >= MIN_COMPLETION_MARGIN))
-    )
+    ready, blocker = _completion_decision(items, query)
+    internal = {
+        "_ranking_score",
+        "_scope_confirmed",
+        "_source_context_match",
+        "_source_scope_match",
+        "_strong_completion_evidence",
+    }
     return [
         {
-            **{
-                key: value
-                for key, value in item.items()
-                if key
-                not in {
-                    "_ranking_score",
-                    "_source_context_match",
-                    "_strong_completion_evidence",
-                }
-            },
+            **{key: value for key, value in item.items() if key not in internal},
             "completion_ready": index == 0 and ready,
+            "completion_blocker": blocker if index == 0 else "insufficient_evidence",
         }
         for index, item in enumerate(items)
     ]
+
+
+def _completion_decision(items, query):
+    top = items[0]
+    if top.get("_scope_confirmed") and not top.get("_source_scope_match"):
+        return False, "source_ambiguous"
+    if not top.get("_scope_confirmed") and not query.strip():
+        return False, "template_source_unconfirmed"
+    product_items = [item for item in items if _logical_product(item) == _logical_product(top)]
+    concrete = _concrete_candidates(top, product_items)
+    if len({item["variant_id"] for item in concrete}) > 1:
+        return False, "variant_ambiguous"
+    if len(concrete) > 1:
+        return False, "source_ambiguous"
+    exact = _is_unique_exact_match(items, query, _logical_product(top))
+    if top["confidence"] != "high" or not (exact or top.get("_strong_completion_evidence")):
+        return False, "insufficient_evidence"
+    competitor = _completion_competitor(items, top)
+    margin = float("inf") if competitor is None else (
+        top["_ranking_score"] - competitor["_ranking_score"]
+    )
+    if not exact and margin < MIN_COMPLETION_MARGIN:
+        return False, "insufficient_margin"
+    return True, None
+
+
+def _concrete_candidates(top, product_items):
+    match_key = "_source_scope_match" if top.get("_scope_confirmed") else "_source_context_match"
+    matched = [item for item in product_items if item.get(match_key)]
+    return matched if top.get(match_key) and matched else product_items
+
+
+def _completion_competitor(items, top):
+    for item in items[1:]:
+        if _logical_product(item) == _logical_product(top):
+            continue
+        if top.get("_scope_confirmed") and not item.get("_source_scope_match"):
+            continue
+        return item
+    return None
 
 
 def _logical_product(item):

@@ -3,6 +3,15 @@ export type TemplateField =
   | 'brand' | 'price' | 'note' | 'section';
 export type ManagedField = 'model' | 'name' | 'description' | 'unit' | 'brand' | 'price';
 
+export interface CatalogScope { import_id: string; sheet: string }
+
+export interface CatalogScopePreview extends CatalogScope {
+  filename: string;
+  matched_rows: number;
+  ambiguous_rows: number;
+  linked_count: number;
+}
+
 export interface TemplateProfile {
   id: string;
   revision: number;
@@ -14,6 +23,7 @@ export interface TemplateProfile {
   managed_fields: ManagedField[];
   normalized_header_fingerprint: string;
   created_by: string;
+  catalog_scope?: CatalogScope | null;
 }
 
 export interface Candidate {
@@ -32,9 +42,11 @@ export interface Candidate {
   status: 'pass' | 'unknown' | 'conflict' | 'unassessed';
   confidence: 'high' | 'medium' | 'low';
   completion_ready: boolean;
+  completion_blocker: null | 'template_source_unconfirmed' | 'source_ambiguous'
+    | 'variant_ambiguous' | 'insufficient_evidence' | 'insufficient_margin';
   evidence: unknown[];
   context_reasons: string[];
-  source: { sheet: string; row: number };
+  source: { import_id: string; sheet: string; row: number };
 }
 
 export interface SuggestionFeedbackPayload {

@@ -33,6 +33,7 @@ from .rules.engine import ZenQuantityEngine
 from .rules.routes import router as rules_router
 from .storage import database_factory
 from .topology.routes import router as topology_router
+from .wps.catalog_index import CatalogSuggestionIndex
 from .wps.routes import router as wps_router
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -71,6 +72,7 @@ def create_app(
         app.state.search_settings = search_settings or PrivateSearchSettings(
             ROOT / "data/private/search.json"
         )
+        app.state.wps_catalog_index = CatalogSuggestionIndex()
         with httpx.Client() as model_http:
             app.state.model_provider = model_provider or (
                 lambda: ModelClient(model_http, app.state.model_settings.read())

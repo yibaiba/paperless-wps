@@ -145,8 +145,14 @@ def test_explicit_feedback_overrides_catalog_order_and_penalizes_skipped_choice(
 
 def test_contextual_tab_requires_a_clear_margin_over_another_product():
     close = [
-        {**candidate("first"), "confidence": "high", "_ranking_score": 150, "name": "产品一"},
-        {**candidate("second"), "confidence": "high", "_ranking_score": 130, "name": "产品二"},
+        {
+            **candidate("first"), "confidence": "high", "_ranking_score": 150,
+            "name": "产品一", "_scope_confirmed": True, "_source_scope_match": True,
+        },
+        {
+            **candidate("second"), "confidence": "high", "_ranking_score": 130,
+            "name": "产品二", "_scope_confirmed": True, "_source_scope_match": True,
+        },
     ]
     decisive = [
         {**close[0], "_strong_completion_evidence": True},
@@ -195,7 +201,7 @@ def test_same_product_with_multiple_configurations_never_tabs_directly():
     assert result[0]["completion_ready"] is False
 
 
-def test_exact_source_sheet_resolves_cross_template_configurations():
+def test_unconfirmed_template_source_never_tabs_contextual_suggestion():
     items = [
         {
             **candidate("first"),
@@ -218,7 +224,8 @@ def test_exact_source_sheet_resolves_cross_template_configurations():
 
     result = finalize_completion_readiness(items, "")
 
-    assert result[0]["completion_ready"] is True
+    assert result[0]["completion_ready"] is False
+    assert result[0]["completion_blocker"] == "template_source_unconfirmed"
     assert "_source_context_match" not in result[0]
 
 
@@ -247,16 +254,41 @@ def test_repeated_template_transition_can_auto_tab():
     other = variant("other", "CRIR-D-SM")
     variants = {item["id"]: item for item in [previous, expected, other]}
     request = SuggestionRequest(context={"previous_variant_ids": [previous["id"]]})
+    scoped_candidates = [candidate(expected["id"]), candidate(other["id"])]
+    for item in scoped_candidates:
+        item["source"] = {"import_id": "catalog", "sheet": "模板一", "row": 1}
     ranked = rank_candidates(
-        [candidate(expected["id"]), candidate(other["id"])],
+        scoped_candidates,
         request,
         variants,
-        {("crir-d-oa", "crir-d-we"): ["模板一", "模板二"]},
+        {("crir-d-oa", "crir-d-we"): ["模板一"]},
+        catalog_scope={"import_id": "catalog", "sheet": "模板一"},
     )
 
     result = finalize_completion_readiness(ranked, "")
 
     assert result[0]["completion_ready"] is True
+
+
+def test_confirmed_scope_partitions_candidates_before_feedback_score():
+    variants = {
+        "inside": variant("inside", "CRIR-D-WE"),
+        "outside": variant("outside", "CRIR-D-SM"),
+    }
+    inside = candidate("inside")
+    inside["source"] = {"import_id": "catalog", "sheet": "标准版", "row": 2}
+    outside = candidate("outside")
+    outside["source"] = {"import_id": "catalog", "sheet": "其他版", "row": 2}
+
+    ranked = rank_candidates(
+        [outside, inside],
+        SuggestionRequest(),
+        variants,
+        learned_scores={"outside": (360, "采用个人历史顺序")},
+        catalog_scope={"import_id": "catalog", "sheet": "标准版"},
+    )
+
+    assert ranked[0]["variant_id"] == "inside"
 
 
 def test_short_sequence_disambiguates_a_majority_single_step_branch():
