@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<customUI xmlns="http://schemas.microsoft.com/office/2006/01/customui" onLoad="OnAddinLoad">
+  <ribbon startFromScratch="false">
+    <tabs>
+      <tab id="presalesTab" label="售前产品助手" insertBeforeMso="TabHome">
+        <group id="presalesAccount" label="连接">
+          <button id="connect" label="连接账号" imageMso="AccountsMenu" size="large" onAction="OnAction"/>
+          <button id="open" label="打开助手" imageMso="GoTo" size="large" onAction="OnAction"/>
+        </group>
+        <group id="presalesWorkbook" label="工作簿">
+          <button id="mapping" label="映射模板" imageMso="TableProperties" onAction="OnAction"/>
+          <button id="binding" label="绑定项目" imageMso="HyperlinkInsert" onAction="OnAction"/>
+          <button id="sync" label="同步项目" imageMso="RefreshAll" onAction="OnAction"/>
+        </group>
+      </tab>
+    </tabs>
+  </ribbon>
+</customUI>

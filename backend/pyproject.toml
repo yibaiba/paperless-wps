@@ -26,6 +26,7 @@ dependencies = [
 
 [project.scripts]
 presales-mcp = "presales.mcp_server:main"
+presales-wps-pair = "presales.wps.cli:main"
 
 [tool.setuptools.package-data]
 "presales.quotation" = ["templates/*.xlsx"]

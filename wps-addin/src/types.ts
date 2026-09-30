@@ -1,0 +1,142 @@
+export type TemplateField =
+  | 'model' | 'name' | 'description' | 'quantity' | 'unit'
+  | 'brand' | 'price' | 'note' | 'section';
+export type ManagedField = 'model' | 'name' | 'description' | 'unit' | 'brand' | 'price';
+
+export interface TemplateProfile {
+  id: string;
+  revision: number;
+  schema_version: number;
+  name: string;
+  sheet_selector: string;
+  header_row: number;
+  field_columns: Partial<Record<TemplateField, number>>;
+  managed_fields: ManagedField[];
+  normalized_header_fingerprint: string;
+  created_by: string;
+}
+
+export interface Candidate {
+  key: string;
+  group: 'direct' | 'series' | 'alternative' | 'accessory' | 'related';
+  variant_id: string;
+  source_id: string;
+  model: string;
+  name: string;
+  brand: string;
+  variant_name: string;
+  description: string;
+  unit: string;
+  price: string | null;
+  price_status: 'available' | 'pending';
+  status: 'pass' | 'unknown' | 'conflict' | 'unassessed';
+  confidence: 'high' | 'medium' | 'low';
+  completion_ready: boolean;
+  evidence: unknown[];
+  context_reasons: string[];
+  source: { sheet: string; row: number };
+}
+
+export interface SuggestionFeedbackPayload {
+  operation_id: string;
+  workbook_instance_id: string;
+  template_profile_id: string;
+  template_profile_revision: number;
+  sheet: string;
+  section: string;
+  previous_variant_id?: string;
+  context_previous_variant_ids: string[];
+  context_next_variant_ids: string[];
+  suggested_variant_id?: string;
+  chosen_variant_id: string;
+  chosen_source_id: string;
+  query_kind: 'contextual' | 'typed';
+}
+
+export interface ActiveCell {
+  sheet: string;
+  row: number;
+  column: number;
+  value: string;
+  formula: string;
+  merged: boolean;
+}
+
+export interface InlineEditorContext {
+  nonce: number;
+  profile: TemplateProfile;
+  cell: ActiveCell;
+  anchor: { width: number; height: number };
+}
+
+export interface LineBinding {
+  line_id: string;
+  sheet: string;
+  row: number;
+  anchor_fingerprint?: string;
+  content_fingerprint?: string;
+  device_id?: string;
+  variant_id: string;
+  source_id: string;
+}
+
+export interface BindingState {
+  binding_id: string;
+  binding_revision: number;
+  project_id: string | null;
+  base_revision: number;
+  draft_id: string;
+  draft_revision: number;
+  template_profile_id: string;
+  template_profile_revision: number;
+  managed_device_ids: string[];
+  line_bindings: LineBinding[];
+  created_by: string;
+}
+
+export interface WorkbookMetadata {
+  schema_version: 1;
+  workbook_instance_id: string;
+  profile_id?: string;
+  profile_revision?: number;
+  binding?: BindingState;
+  line_bindings: LineBinding[];
+}
+
+export interface WorkbookLine {
+  line_id: string;
+  sheet: string;
+  row: number;
+  model: string;
+  name: string;
+  description: string;
+  quantity: string;
+  unit: string;
+  brand: string;
+  price: string | null;
+  note: string;
+  section: string;
+  kind: 'hardware' | 'software' | 'license' | 'accessory';
+  variant_id: string;
+  source_id: string;
+  device_id?: string;
+}
+
+export interface SheetRow {
+  sheet: string;
+  row: number;
+  values: Partial<Record<TemplateField, string>>;
+  formula_fields: TemplateField[];
+  merged_fields: TemplateField[];
+}
+
+export interface ProjectSummary { id: string; name: string; revision: number }
+
+export interface SyncPreviewResult {
+  preview_fingerprint: string;
+  changes: Array<{ kind: string; id: string; before: unknown; after: unknown }>;
+  issues: Array<Record<string, unknown>>;
+  line_bindings: LineBinding[];
+  has_changes: boolean;
+  operation_count: number;
+}

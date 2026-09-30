@@ -1,0 +1,135 @@
+:root {
+  color: #17211d;
+  background: transparent;
+  font-family: Inter, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  font-synthesis: none;
+  --primary: #16784a;
+  --border: #c7cfcb;
+  --muted: #5f6b65;
+  --selected: #eaf5ef;
+}
+
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; margin: 0; }
+body { background: transparent; font-size: 13px; letter-spacing: 0; overflow: hidden; }
+button, input { font: inherit; letter-spacing: 0; }
+
+.inline-editor {
+  background: #fff;
+  border: 1px solid var(--primary);
+  box-shadow: 0 4px 12px rgba(18, 32, 25, 0.18);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+.inline-input-row {
+  align-items: center;
+  display: flex;
+  flex: 0 0 max(32px, var(--anchor-height, 32px));
+  gap: 4px;
+  min-height: 32px;
+  padding: 0;
+}
+.inline-query { align-self: stretch; flex: 1; min-width: 0; position: relative; }
+.inline-query input {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  color: #17211d;
+  height: 100%;
+  outline: 0;
+  padding: 3px 7px;
+  position: relative;
+  width: 100%;
+  z-index: 1;
+}
+.inline-ghost {
+  color: #8a9690;
+  font-size: 13px;
+  height: 100%;
+  left: 7px;
+  line-height: max(30px, var(--anchor-height, 30px));
+  overflow: hidden;
+  pointer-events: none;
+  position: absolute;
+  right: 7px;
+  text-overflow: clip;
+  top: 0;
+  white-space: nowrap;
+}
+.inline-ghost span { visibility: hidden; }
+.inline-input-row kbd {
+  background: #f5f7f6;
+  border: 1px solid var(--border);
+  border-bottom-color: #9aa59f;
+  border-radius: 3px;
+  color: #47534d;
+  font-family: inherit;
+  font-size: 11px;
+  line-height: 20px;
+  margin-right: 5px;
+  padding: 0 5px;
+}
+.inline-busy {
+  animation: busy-pulse 800ms ease-in-out infinite alternate;
+  background: var(--primary);
+  border-radius: 50%;
+  height: 6px;
+  margin-right: 8px;
+  width: 6px;
+}
+.inline-candidates { border-top: 1px solid var(--border); min-height: 0; overflow-y: auto; }
+.inline-candidates button {
+  align-items: center;
+  background: #fff;
+  border: 0;
+  border-bottom: 1px solid #e7ebe9;
+  color: #17211d;
+  cursor: pointer;
+  display: flex;
+  flex: 0 0 48px;
+  justify-content: space-between;
+  min-height: 48px;
+  padding: 5px 8px;
+  text-align: left;
+  width: 100%;
+}
+.inline-candidates button:last-child { border-bottom: 0; }
+.inline-candidates button.selected { background: var(--selected); box-shadow: inset 3px 0 var(--primary); }
+.inline-candidates button:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }
+.candidate-copy { display: flex; flex: 1; min-width: 0; }
+.candidate-copy strong, .candidate-copy span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.candidate-copy strong { flex: 1; font-size: 13px; font-weight: 600; }
+.candidate-copy > span { color: var(--muted); font-size: 12px; margin-left: 8px; max-width: 46%; }
+.candidate-copy small { color: #7b8781; font-size: 10px; margin-left: 5px; }
+.candidate-kind {
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  color: var(--muted);
+  font-size: 10px;
+  margin-left: 8px;
+  padding: 2px 4px;
+}
+.candidate-kind.direct { border-color: #9fd0b7; color: #0f6b40; }
+.candidate-kind.series { border-color: #83b7bd; color: #17656c; }
+.candidate-kind.alternative { border-color: #e1bd7b; color: #8a5204; }
+.inline-error, .inline-status, .inline-empty { color: var(--muted); font-size: 12px; }
+.inline-error, .inline-status {
+  border-top: 1px solid var(--border);
+  flex: 0 0 30px;
+  padding: 6px 8px;
+}
+.inline-error { background: #fff1f0; color: #a82218; }
+.inline-status { background: #f7faf8; color: #47534d; }
+.inline-empty { background: #fff; height: 100%; }
+
+.inline-editor.above .inline-candidates { border-bottom: 1px solid var(--border); border-top: 0; order: 1; }
+.inline-editor.above .inline-error, .inline-editor.above .inline-status { order: 2; }
+.inline-editor.above .inline-input-row { order: 3; }
+
+@keyframes busy-pulse { from { opacity: 0.35; } to { opacity: 1; } }
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; scroll-behavior: auto !important; }
+}

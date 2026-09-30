@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<manifest xmlns="http://schemas.wps.cn/oaassist/2019/manifest"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <id>presales-product-assistant</id>
+  <Version>0.1.0</Version>
+  <name>售前产品助手</name>
+  <description>产品联想、模板映射与改单同步</description>
+  <author>Presales Platform</author>
+  <hosts><host name="et"/></hosts>
+  <permissions>
+    <permission name="document.read"/>
+    <permission name="document.write"/>
+  </permissions>
+  <ribbon src="ribbon.xml"/>
+  <scripts><script src="main.js"/></scripts>
+</manifest>

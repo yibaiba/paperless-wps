@@ -33,6 +33,7 @@ from .rules.engine import ZenQuantityEngine
 from .rules.routes import router as rules_router
 from .storage import database_factory
 from .topology.routes import router as topology_router
+from .wps.routes import router as wps_router
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -108,6 +109,7 @@ def create_app(
     application.include_router(list_router)
     application.include_router(web_drafts_router)
     application.include_router(quotation_router)
+    application.include_router(wps_router)
     return application
 
 

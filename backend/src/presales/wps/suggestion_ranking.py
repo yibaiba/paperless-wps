@@ -1,0 +1,244 @@
+from .catalog_sequences import build_catalog_transitions, model_family
+
+__all__ = ["build_catalog_transitions", "model_family", "rank_candidates"]
+
+STATUS_SCORE = {"pass": 20, "unknown": 10, "unassessed": 5, "conflict": -100}
+GROUP_SCORE = {"direct": 0, "series": 20, "alternative": 25, "accessory": 25, "related": 0}
+STRONG_RELATION_GROUPS = {"alternative", "accessory"}
+NEIGHBOR_DISTANCE_PENALTY = 6
+TRANSITION_DISTANCE_PENALTY = 10
+SOURCE_SEQUENCE_MATCH_SCORE = 160
+SOURCE_CONTEXT_MATCH_SCORE = 180
+MIN_SEQUENCE_COMPLETION_SUPPORT = 2
+SHORT_SEQUENCE_BONUS = 70
+SYSTEM_CONTEXT_MATCH_SCORE = 120
+
+
+def text_matches(value, context):
+    left, right = value.casefold().strip(), context.casefold().strip()
+    return bool(left and right and (left in right or right in left))
+
+
+def exact_context_match(value, contexts):
+    normalized = value.casefold().strip()
+    return bool(normalized) and any(
+        normalized == context.casefold().strip() for context in contexts if context.strip()
+    )
+
+
+def context_variants(identities, by_id):
+    result, seen = [], set()
+    for identity in identities:
+        if not identity or identity in seen or identity not in by_id:
+            continue
+        seen.add(identity)
+        result.append(by_id[identity])
+    return result
+
+
+def rank_candidates(items, request, by_id, transitions=None, learned_scores=None):
+    previous = context_variants(
+        [request.context.selected_variant_id, *request.context.previous_variant_ids], by_id
+    )
+    following = context_variants(request.context.next_variant_ids, by_id)
+    ranked = []
+    for index, item in enumerate(items):
+        variant = by_id[item["variant_id"]]
+        learned_score, learned_reason = (learned_scores or {}).get(item["variant_id"], (0, ""))
+        context_score, reasons, transition_strong = _context_score(
+            variant, request, previous, following, transitions or {}, learned_score, learned_reason
+        )
+        query_score = _query_score(variant, request.query)
+        source_score, source_match = _source_context_score(item, request)
+        if source_match:
+            reasons = ["匹配当前来源工作表", *reasons][:3]
+        score = (
+            context_score
+            + query_score
+            + source_score
+            + GROUP_SCORE[item["group"]]
+            + STATUS_SCORE.get(item["status"], 0)
+        )
+        candidate = {
+            **item,
+            "context_reasons": reasons,
+            "confidence": _confidence(item["group"], query_score, context_score),
+            "_ranking_score": score,
+            "_source_context_match": source_match,
+            "_strong_completion_evidence": bool(
+                source_match
+                or learned_reason
+                or query_score >= 80
+                or transition_strong
+                or item["group"] in STRONG_RELATION_GROUPS
+            ),
+        }
+        ranked.append((score, -index, candidate))
+    ranked.sort(key=lambda value: (value[0], value[1]), reverse=True)
+    return [item for _, _, item in ranked]
+
+
+def exclude_context_models(items, request, by_id):
+    identities = [
+        request.context.selected_variant_id,
+        *request.context.previous_variant_ids,
+        *request.context.next_variant_ids,
+    ]
+    models = {
+        item["product"].get("model", "").casefold().strip()
+        for item in context_variants(identities, by_id)
+        if item["product"].get("model", "").strip()
+    }
+    return [item for item in items if item["model"].casefold().strip() not in models]
+
+
+def _context_score(
+    variant, request, previous, following, transitions, learned_score, learned_reason
+):
+    reasons, score = [], 0
+    if learned_reason:
+        reasons.append(learned_reason)
+    score += learned_score
+    sequence_contexts = [
+        request.context.section,
+        request.context.system,
+        request.current_row.get("section", ""),
+    ]
+    transition_score, transition_reason, transition_strong = _best_transition_match(
+        variant, previous, following, transitions, sequence_contexts
+    )
+    if transition_reason:
+        reasons.append(transition_reason)
+        score += transition_score
+    if any(exact_context_match(system, sequence_contexts) for system in variant.get("systems", [])):
+        reasons.append("匹配当前系统")
+        score += SYSTEM_CONTEXT_MATCH_SCORE
+    role_values = [variant["product"].get("category", ""), *variant.get("functions", [])]
+    if any(text_matches(value, request.context.role) for value in role_values):
+        reasons.append("匹配当前角色")
+        score += 25
+    previous_score, previous_reason = _best_neighbor_match(variant, previous, "previous")
+    following_score, following_reason = _best_neighbor_match(variant, following, "next")
+    if previous_reason:
+        reasons.append(previous_reason)
+        score += previous_score
+    if following_reason:
+        reasons.append(following_reason)
+        score += following_score
+    return score, reasons[:3], transition_strong
+
+
+def _best_transition_match(variant, previous, following, transitions, sequence_contexts):
+    candidate_model = _variant_model(variant)
+    candidate_label = _variant_model_label(variant)
+    matches = []
+    if len(previous) >= 2:
+        key = (_variant_model(previous[1]), _variant_model(previous[0]), candidate_model)
+        labels = (
+            f"{_variant_model_label(previous[1])} → {_variant_model_label(previous[0])}",
+            candidate_label,
+        )
+        matches.append(
+            _transition_evidence(
+                key,
+                labels,
+                transitions,
+                sequence_contexts,
+                0,
+                "延续短序列",
+                SHORT_SEQUENCE_BONUS,
+            )
+        )
+    for distance, neighbor in enumerate(previous):
+        key = (_variant_model(neighbor), candidate_model)
+        labels = (_variant_model_label(neighbor), candidate_label)
+        matches.append(
+            _transition_evidence(key, labels, transitions, sequence_contexts, distance, "延续")
+        )
+    for distance, neighbor in enumerate(following):
+        key = (candidate_model, _variant_model(neighbor))
+        labels = (candidate_label, _variant_model_label(neighbor))
+        matches.append(
+            _transition_evidence(key, labels, transitions, sequence_contexts, distance, "衔接")
+        )
+    return max(matches, default=(0, "", False), key=lambda item: item[0])
+
+
+def _transition_evidence(key, labels, transitions, sequence_contexts, distance, direction, bonus=0):
+    sheets = transitions.get(key, [])
+    if not sheets:
+        return 0, "", False
+    normalized_contexts = {value.casefold().strip() for value in sequence_contexts if value.strip()}
+    sheet_match = any(sheet.casefold().strip() in normalized_contexts for sheet in sheets)
+    score = 100 + min(len(sheets) * 5, 20) + bonus
+    if sheet_match:
+        score += SOURCE_SEQUENCE_MATCH_SCORE
+    score = max(0, score - distance * TRANSITION_DISTANCE_PENALTY)
+    strong = sheet_match or len(sheets) >= MIN_SEQUENCE_COMPLETION_SUPPORT
+    return score, f"{direction}清单顺序 {labels[0]} → {labels[1]}", strong
+
+
+def _best_neighbor_match(variant, neighbors, direction):
+    best_score, best_reason = 0, ""
+    for distance, neighbor in enumerate(neighbors):
+        relation_score, relation = _variant_relation(variant, neighbor)
+        score = max(0, relation_score - distance * NEIGHBOR_DISTANCE_PENALTY)
+        if score <= best_score:
+            continue
+        prefix = "衔接" if direction == "next" else "延续"
+        best_score, best_reason = score, f"{prefix}{relation}"
+    return best_score, best_reason
+
+
+def _variant_relation(variant, neighbor):
+    if variant["id"] == neighbor["id"]:
+        return 0, ""
+    shared = set(variant.get("series", [])) & set(neighbor.get("series", []))
+    if shared:
+        return 60, f"同系列 {sorted(shared)[0]}"
+    family = model_family(variant["product"].get("model", ""))
+    if family and family == model_family(neighbor["product"].get("model", "")):
+        return 50, f"型号族 {family}"
+    category = variant["product"].get("category")
+    if category and category == neighbor["product"].get("category"):
+        return 15, "相邻行分类"
+    return 0, ""
+
+
+def _variant_model(variant):
+    return variant["product"].get("model", "").casefold().strip()
+
+
+def _variant_model_label(variant):
+    return variant["product"].get("model", "").strip()
+
+
+def _query_score(variant, query):
+    value = query.casefold().strip()
+    if not value:
+        return 0
+    fields = [variant["product"].get("model", ""), variant["product"].get("name", "")]
+    normalized = [field.casefold() for field in fields]
+    if value in normalized:
+        return 120
+    if any(field.startswith(value) for field in normalized):
+        return 80
+    return 40
+
+
+def _source_context_score(item, request):
+    source_sheet = (item.get("source") or {}).get("sheet") or ""
+    normalized_source = source_sheet.casefold().strip()
+    active_sheet = request.context.sheet.casefold().strip()
+    matched = bool(normalized_source) and normalized_source == active_sheet
+    return (SOURCE_CONTEXT_MATCH_SCORE, True) if matched else (0, False)
+
+
+def _confidence(group, query_score, context_score):
+    if query_score >= 80 or context_score >= 50:
+        return "high"
+    if group in STRONG_RELATION_GROUPS and context_score > 0:
+        return "high"
+    if query_score >= 40 or context_score >= 25:
+        return "medium"
+    return "low"

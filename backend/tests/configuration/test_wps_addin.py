@@ -1,0 +1,402 @@
+from uuid import uuid4
+
+from sqlalchemy import select
+
+from presales.wps.auth import WpsAuth
+from presales.wps.models import WpsAccessToken, WpsSuggestionFeedback
+
+
+def paired(client, actor="测试售前"):
+    with client.app.state.session_factory() as session:
+        code = WpsAuth(session).issue_pairing(actor)
+        session.commit()
+    response = client.post("/api/wps/pairings/exchange", json={"code": code})
+    assert response.status_code == 200, response.text
+    return response.json(), code
+
+
+def authorized(token):
+    return {"Authorization": "Bearer " + token["access_token"]}
+
+
+def update_variant_context(client, variant, *, series, systems, product_id=None):
+    fields = {
+        "description": "",
+        "supply_status": "available",
+        "replacements": [],
+        "review_requirements": [],
+        "included_items": [],
+        "capability_ids": [],
+        "attributes": [],
+        "functions": [],
+        "interfaces": [],
+    }
+    payload = {key: variant.get(key, default) for key, default in fields.items()}
+    payload.update(
+        product_id=product_id or variant["product_id"],
+        name=variant["name"],
+        status=variant["status"],
+        series=series,
+        systems=systems,
+        actor="测试维护者",
+        evidence="隔离测试资料，不是业务确认",
+    )
+    response = client.put(
+        f"/api/configuration/variants/{variant['id']}",
+        json={"expected_revision": variant["revision"], "payload": payload},
+    )
+    assert response.status_code == 200, response.text
+    return response.json()
+
+
+def template(client, headers):
+    response = client.post(
+        "/api/wps/template-profiles",
+        headers=headers,
+        json={
+            "name": "现场报价模板",
+            "sheet_selector": "报价表",
+            "header_row": 2,
+            "field_columns": {"model": 2, "name": 3, "quantity": 5, "unit": 6},
+            "managed_fields": ["model", "name", "unit"],
+            "header_values": ["序号", "产品型号", "产品名称", "说明", "数量", "单位"],
+        },
+    )
+    assert response.status_code == 200, response.text
+    return response.json()
+
+
+def binding(client, headers, profile):
+    response = client.post(
+        "/api/wps/bindings",
+        headers=headers,
+        json={
+            "workbook_instance_id": str(uuid4()),
+            "name": "WPS 现场项目",
+            "template_profile_id": profile["id"],
+            "template_profile_revision": profile["revision"],
+            "operation_id": str(uuid4()),
+        },
+    )
+    assert response.status_code == 200, response.text
+    return response.json()
+
+
+def sync_body(bound, profile, catalog):
+    return {
+        "binding_id": bound["binding_id"],
+        "expected_draft_revision": bound["draft_revision"],
+        "expected_project_revision": bound["base_revision"],
+        "template_profile_revision": profile["revision"],
+        "known_device_ids": bound["managed_device_ids"],
+        "lines": [
+            {
+                "line_id": "报价表:3",
+                "sheet": "报价表",
+                "row": 3,
+                "model": "SERVER-X",
+                "name": "测试服务器",
+                "description": "64GB",
+                "quantity": "2",
+                "unit": "台",
+                "price": "1200",
+                "note": "WPS 测试",
+                "section": "无纸化会议系统",
+                "kind": "hardware",
+                "variant_id": catalog["variants"][0]["id"],
+                "source_id": catalog["sources"][0]["id"],
+            }
+        ],
+    }
+
+
+def test_pairing_is_single_use_and_token_is_required(client):
+    token, code = paired(client)
+    assert token["actor"] == "测试售前"
+    assert client.post("/api/wps/pairings/exchange", json={"code": code}).status_code == 422
+    assert client.get("/api/wps/template-profiles").status_code == 401
+    assert client.get("/api/wps/template-profiles", headers=authorized(token)).status_code == 200
+    with client.app.state.session_factory() as session:
+        access = session.scalar(select(WpsAccessToken).where(WpsAccessToken.actor == "测试售前"))
+        WpsAuth(session).revoke(access.id)
+        session.commit()
+    assert client.get("/api/wps/template-profiles", headers=authorized(token)).status_code == 401
+
+
+def test_template_revision_and_suggestions(client, catalog):
+    token, _ = paired(client)
+    headers = authorized(token)
+    created = template(client, headers)
+    change = {
+        "profile_id": created["id"],
+        "expected_revision": created["revision"],
+        "name": "现场报价模板二版",
+        "sheet_selector": "报价表",
+        "header_row": 3,
+        "field_columns": {"model": 2, "name": 3, "quantity": 5, "unit": 6},
+        "managed_fields": ["model", "name", "unit"],
+        "header_values": ["序号", "型号", "名称", "说明", "数量", "单位"],
+    }
+    updated = client.post("/api/wps/template-profiles", headers=headers, json=change)
+    assert updated.status_code == 200, updated.text
+    assert updated.json()["revision"] == 2
+    assert (
+        updated.json()["normalized_header_fingerprint"] != created["normalized_header_fingerprint"]
+    )
+    historical = client.get(
+        f"/api/wps/template-profiles/{created['id']}?revision=1", headers=headers
+    )
+    assert historical.status_code == 200
+    assert historical.json()["name"] == "现场报价模板"
+
+    response = client.post(
+        "/api/wps/suggestions",
+        headers=headers,
+        json={"query": "SERVER-X", "limit": 10},
+    )
+    assert response.status_code == 200, response.text
+    items = response.json()["items"]
+    assert len(items) == 2
+    assert {item["source_id"] for item in items} == {source["id"] for source in catalog["sources"]}
+    assert all(item["group"] == "direct" for item in items)
+    assert all(item["confidence"] == "high" for item in items)
+
+
+def test_suggestions_use_previous_product_series_and_current_system(client, catalog):
+    product = client.post(
+        "/api/configuration/products",
+        json={
+            "name": "测试备选服务器",
+            "model": "SERVER-Y",
+            "category": "服务器",
+            "actor": "测试维护者",
+            "evidence": "隔离测试资料，不是业务确认",
+        },
+    )
+    assert product.status_code == 200, product.text
+    first = update_variant_context(
+        client, catalog["variants"][0], series=["服务器系列"], systems=["系统甲"]
+    )
+    second = update_variant_context(
+        client,
+        catalog["variants"][1],
+        series=["服务器系列"],
+        systems=["系统乙"],
+        product_id=product.json()["id"],
+    )
+    token, _ = paired(client)
+    headers = authorized(token)
+    context = {
+        "system": "系统乙",
+        "selected_variant_id": first["id"],
+        "previous_variant_ids": [first["id"]],
+    }
+
+    direct = client.post(
+        "/api/wps/suggestions",
+        headers=headers,
+        json={"query": "SERVER", "context": context, "limit": 10},
+    )
+    assert direct.status_code == 200, direct.text
+    assert direct.json()["items"][0]["variant_id"] == second["id"]
+    assert direct.json()["items"][0]["context_reasons"] == [
+        "延续清单顺序 SERVER-X → SERVER-Y",
+        "匹配当前系统",
+        "延续同系列 服务器系列",
+    ]
+
+    proactive = client.post(
+        "/api/wps/suggestions",
+        headers=headers,
+        json={"query": "", "context": context, "limit": 10},
+    )
+    assert proactive.status_code == 200, proactive.text
+    assert proactive.json()["items"][0]["variant_id"] == second["id"]
+    assert proactive.json()["items"][0]["group"] == "series"
+    assert proactive.json()["items"][0]["confidence"] == "high"
+
+    bridge = client.post(
+        "/api/wps/suggestions",
+        headers=headers,
+        json={
+            "query": "",
+            "context": {"next_variant_ids": [second["id"]]},
+            "limit": 10,
+        },
+    )
+    assert bridge.status_code == 200, bridge.text
+    assert bridge.json()["items"][0]["variant_id"] == first["id"]
+    assert bridge.json()["items"][0]["confidence"] == "high"
+    assert "衔接清单顺序" in bridge.json()["items"][0]["context_reasons"][0]
+
+    completed_context = {
+        **context,
+        "selected_variant_id": second["id"],
+        "previous_variant_ids": [second["id"], first["id"]],
+    }
+    completed = client.post(
+        "/api/wps/suggestions",
+        headers=headers,
+        json={"query": "", "context": completed_context, "limit": 10},
+    )
+    assert completed.status_code == 200, completed.text
+    assert completed.json()["items"] == []
+
+
+def test_accepted_suggestion_feedback_is_idempotent_and_affects_ranking(client, catalog):
+    product = client.post(
+        "/api/configuration/products",
+        json={
+            "name": "反馈学习产品",
+            "model": "LEARN-Y",
+            "category": "服务器",
+            "actor": "测试维护者",
+            "evidence": "隔离测试资料，不是业务确认",
+        },
+    )
+    assert product.status_code == 200, product.text
+    previous = update_variant_context(
+        client, catalog["variants"][0], series=["反馈系列"], systems=[]
+    )
+    chosen = update_variant_context(
+        client,
+        catalog["variants"][1],
+        series=["反馈系列"],
+        systems=[],
+        product_id=product.json()["id"],
+    )
+    token, _ = paired(client, actor="反馈测试售前")
+    headers = authorized(token)
+    operation_id = str(uuid4())
+    payload = {
+        "operation_id": operation_id,
+        "workbook_instance_id": "feedback-workbook",
+        "template_profile_id": "feedback-template",
+        "template_profile_revision": 1,
+        "sheet": "报价表",
+        "section": "反馈系统",
+        "previous_variant_id": previous["id"],
+        "context_previous_variant_ids": [previous["id"]],
+        "context_next_variant_ids": [],
+        "suggested_variant_id": previous["id"],
+        "chosen_variant_id": chosen["id"],
+        "chosen_source_id": catalog["sources"][1]["id"],
+        "query_kind": "contextual",
+    }
+
+    first = client.post("/api/wps/suggestion-feedback", headers=headers, json=payload)
+    repeated = client.post("/api/wps/suggestion-feedback", headers=headers, json=payload)
+    assert first.status_code == 200, first.text
+    assert repeated.status_code == 200, repeated.text
+    assert first.json()["id"] == repeated.json()["id"]
+    with client.app.state.session_factory() as session:
+        records = session.scalars(
+            select(WpsSuggestionFeedback).where(WpsSuggestionFeedback.operation_id == operation_id)
+        ).all()
+        assert len(records) == 1
+
+    suggestion_request = {
+        "query": "",
+        "workbook_instance_id": "feedback-workbook",
+        "template_profile_id": "feedback-template",
+        "template_profile_revision": 1,
+        "context": {
+            "sheet": "报价表",
+            "section": "反馈系统",
+            "previous_variant_ids": [previous["id"]],
+        },
+        "limit": 10,
+    }
+    suggestions = client.post(
+        "/api/wps/suggestions",
+        headers=headers,
+        json=suggestion_request,
+    )
+    assert suggestions.status_code == 200, suggestions.text
+    assert suggestions.json()["items"][0]["variant_id"] == chosen["id"]
+    assert suggestions.json()["items"][0]["context_reasons"][0] == "采用当前工作簿上下文顺序"
+
+    request_data = {
+        **suggestion_request,
+        "workbook_instance_id": "another-workbook",
+        "template_profile_revision": 2,
+    }
+    new_revision = client.post("/api/wps/suggestions", headers=headers, json=request_data)
+    assert new_revision.status_code == 200, new_revision.text
+    assert new_revision.json()["items"][0]["context_reasons"][0] == "采用个人历史顺序"
+
+    another_token, _ = paired(client, actor="另一个反馈测试售前")
+    collision = client.post(
+        "/api/wps/suggestion-feedback", headers=authorized(another_token), json=payload
+    )
+    assert collision.status_code == 422
+    assert "反馈操作编号已被其他账号使用" in collision.text
+
+
+def test_preview_commit_retry_and_stale_conflict(client, catalog):
+    token, _ = paired(client)
+    headers = authorized(token)
+    profile = template(client, headers)
+    bound = binding(client, headers, profile)
+    request = sync_body(bound, profile, catalog)
+
+    preview = client.post("/api/wps/sync/preview", headers=headers, json=request)
+    assert preview.status_code == 200, preview.text
+    preview_data = preview.json()
+    assert preview_data["has_changes"] is True
+    assert preview_data["line_bindings"][0]["device_id"]
+    assert bound["project_id"] is None
+
+    commit_request = {
+        **request,
+        "preview_fingerprint": preview_data["preview_fingerprint"],
+        "operation_id": str(uuid4()),
+    }
+    first = client.post("/api/wps/sync/commit", headers=headers, json=commit_request)
+    assert first.status_code == 200, first.text
+    saved = first.json()
+    assert saved["status"] == "saved" and saved["project_revision"] == 1
+    assert saved["managed_device_ids"] == [saved["line_bindings"][0]["device_id"]]
+    retry = client.post("/api/wps/sync/commit", headers=headers, json=commit_request)
+    assert retry.status_code == 200 and retry.json() == saved
+
+    project = client.get("/api/configuration/projects/" + saved["project_id"]).json()
+    device = project["configuration"]["devices"][0]
+    assert device["quantity"] == "2" and device["note"] == "WPS 测试"
+    assert project["configuration"]["quotation"]["prices"][0]["unit_price"] == "1200"
+
+    stale = client.post("/api/wps/sync/preview", headers=headers, json=request)
+    assert stale.status_code == 409
+    assert "VERSION_CONFLICT" in stale.text
+
+    current_line = {
+        **commit_request["lines"][0],
+        "device_id": saved["line_bindings"][0]["device_id"],
+    }
+    current_request = {
+        **request,
+        "expected_draft_revision": saved["draft_revision"],
+        "expected_project_revision": saved["project_revision"],
+        "known_device_ids": saved["managed_device_ids"],
+        "lines": [current_line],
+    }
+    unchanged = client.post("/api/wps/sync/preview", headers=headers, json=current_request)
+    assert unchanged.status_code == 200, unchanged.text
+    assert unchanged.json()["has_changes"] is False
+
+    delete_request = {**current_request, "lines": []}
+    delete_preview = client.post("/api/wps/sync/preview", headers=headers, json=delete_request)
+    assert delete_preview.status_code == 200, delete_preview.text
+    deleted = client.post(
+        "/api/wps/sync/commit",
+        headers=headers,
+        json={
+            **delete_request,
+            "preview_fingerprint": delete_preview.json()["preview_fingerprint"],
+            "operation_id": str(uuid4()),
+        },
+    )
+    assert deleted.status_code == 200, deleted.text
+    assert deleted.json()["project_revision"] == 2
+    project = client.get("/api/configuration/projects/" + saved["project_id"]).json()
+    assert project["configuration"]["devices"] == []
