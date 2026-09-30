@@ -1,9 +1,10 @@
+from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 from sqlalchemy import select
 
 from presales.wps.auth import WpsAuth
-from presales.wps.models import WpsAccessToken, WpsSuggestionFeedback
+from presales.wps.models import WpsAccessToken, WpsDiagnosticEvent, WpsSuggestionFeedback
 
 
 def paired(client, actor="测试售前"):
@@ -125,6 +126,70 @@ def test_pairing_is_single_use_and_token_is_required(client):
         WpsAuth(session).revoke(access.id)
         session.commit()
     assert client.get("/api/wps/template-profiles", headers=authorized(token)).status_code == 401
+
+
+def diagnostic_event(**extra):
+    return {
+        "event_id": str(uuid4()),
+        "installation_id": "anonymous-installation",
+        "session_id": "anonymous-session",
+        "occurred_at": datetime.now(UTC).isoformat(),
+        "plugin_version": "0.1.0",
+        "host_os": "macOS",
+        "host_version": "12.1.28496",
+        "event_type": "query_success",
+        "completion_phase": "ghost",
+        "duration_ms": 120,
+        "candidate_count": 3,
+        "completion_ready": True,
+        "outcome": "success",
+        **extra,
+    }
+
+
+def test_diagnostics_are_idempotent_private_and_expire(client):
+    token, _ = paired(client)
+    headers = authorized(token)
+    event = diagnostic_event()
+    first = client.post("/api/wps/diagnostics/batch", headers=headers, json={"events": [event]})
+    repeated = client.post(
+        "/api/wps/diagnostics/batch", headers=headers, json={"events": [event]}
+    )
+    assert first.status_code == 200, first.text
+    assert first.json()["accepted"] == 1
+    assert repeated.json()["duplicates"] == 1
+
+    rejected = client.post(
+        "/api/wps/diagnostics/batch",
+        headers=headers,
+        json={"events": [{**diagnostic_event(), "query": "客户原始输入"}]},
+    )
+    assert rejected.status_code == 422
+
+    with client.app.state.session_factory() as session:
+        saved = session.scalar(
+            select(WpsDiagnosticEvent).where(WpsDiagnosticEvent.event_id == event["event_id"])
+        )
+        assert saved is not None
+        assert not hasattr(saved, "actor")
+        session.add(
+            WpsDiagnosticEvent(
+                **{
+                    **diagnostic_event(event_id=str(uuid4())),
+                    "occurred_at": datetime.now(UTC),
+                    "received_at": datetime.now(UTC) - timedelta(days=31),
+                }
+            )
+        )
+        session.commit()
+
+    cleanup = client.post(
+        "/api/wps/diagnostics/batch",
+        headers=headers,
+        json={"events": [diagnostic_event()]},
+    )
+    assert cleanup.status_code == 200, cleanup.text
+    assert cleanup.json()["purged"] == 1
 
 
 def test_template_revision_and_suggestions(client, catalog):

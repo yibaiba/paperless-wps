@@ -1,6 +1,6 @@
 import type {
-  BindingState, Candidate, CatalogScopePreview, ProjectSummary, SuggestionFeedbackPayload,
-  SyncPreviewResult, TemplateProfile, WorkbookLine,
+  BindingState, Candidate, CatalogScopePreview, DiagnosticEventPayload, ProjectSummary,
+  SuggestionFeedbackPayload, SyncPreviewResult, TemplateProfile, WorkbookLine,
 } from './types';
 
 const API_BASE = (import.meta.env.VITE_API_BASE as string | undefined)?.replace(/\/$/, '') ?? '';
@@ -47,6 +47,14 @@ export class WpsApi {
   suggestionFeedback(value: SuggestionFeedbackPayload) {
     return this.request<{ id: string; operation_id: string; status: string }>(
       '/suggestion-feedback', { method: 'POST', body: JSON.stringify(value), keepalive: true },
+    );
+  }
+
+  diagnostics(events: DiagnosticEventPayload[]) {
+    return this.request<{ accepted: number; duplicates: number; purged: number }>(
+      '/diagnostics/batch', {
+        method: 'POST', body: JSON.stringify({ events }), keepalive: true,
+      },
     );
   }
 

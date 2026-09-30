@@ -65,6 +65,34 @@ export interface SuggestionFeedbackPayload {
   query_kind: 'contextual' | 'typed';
 }
 
+export type DiagnosticEventType = 'inline_open' | 'focus_lost' | 'query_start'
+  | 'query_success' | 'query_error' | 'no_match' | 'tab_register' | 'tab_restore'
+  | 'tab_accept' | 'tab_expand' | 'accept_success' | 'accept_error';
+
+export interface DiagnosticEventPayload {
+  event_id: string;
+  installation_id: string;
+  session_id: string;
+  occurred_at: string;
+  plugin_version: string;
+  host_os: string;
+  host_version: string;
+  event_type: DiagnosticEventType;
+  completion_phase?: 'typing' | 'loading' | 'ghost' | 'ambiguous' | 'list' | 'no-match' | 'error';
+  duration_ms?: number;
+  candidate_count?: number;
+  completion_ready?: boolean;
+  outcome?: 'success' | 'failure' | 'expanded' | 'restored';
+  error_code?: string;
+  template_profile_id?: string;
+  template_profile_revision?: number;
+}
+
+export type DiagnosticEventInput = Pick<DiagnosticEventPayload, 'event_type'>
+  & Partial<Pick<DiagnosticEventPayload,
+    'completion_phase' | 'duration_ms' | 'candidate_count' | 'completion_ready'
+    | 'outcome' | 'error_code' | 'template_profile_id' | 'template_profile_revision'>>;
+
 export interface ActiveCell {
   sheet: string;
   row: number;

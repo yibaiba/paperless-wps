@@ -1,3 +1,4 @@
+from datetime import datetime
 from decimal import Decimal
 from typing import Literal
 
@@ -12,6 +13,23 @@ ManagedField = Literal["model", "name", "description", "unit", "brand", "price"]
 MAX_SPREADSHEET_COLUMN = 16384
 FEEDBACK_PREVIOUS_CONTEXT_LIMIT = 3
 FEEDBACK_NEXT_CONTEXT_LIMIT = 1
+DiagnosticEventType = Literal[
+    "inline_open",
+    "focus_lost",
+    "query_start",
+    "query_success",
+    "query_error",
+    "no_match",
+    "tab_register",
+    "tab_restore",
+    "tab_accept",
+    "tab_expand",
+    "accept_success",
+    "accept_error",
+]
+CompletionPhase = Literal[
+    "typing", "loading", "ghost", "ambiguous", "list", "no-match", "error"
+]
 
 
 class PairingExchange(Input):
@@ -114,6 +132,35 @@ class SuggestionFeedbackWrite(Input):
     chosen_variant_id: Text
     chosen_source_id: Text
     query_kind: Literal["contextual", "typed"]
+
+
+class DiagnosticEventWrite(Input):
+    event_id: Text
+    installation_id: Text
+    session_id: Text
+    occurred_at: datetime
+    plugin_version: Text
+    host_os: Text
+    host_version: Text
+    event_type: DiagnosticEventType
+    completion_phase: CompletionPhase | None = None
+    duration_ms: int | None = Field(default=None, ge=0, le=120_000)
+    candidate_count: int | None = Field(default=None, ge=0, le=30)
+    completion_ready: bool | None = None
+    outcome: Literal["success", "failure", "expanded", "restored"] | None = None
+    error_code: str | None = Field(default=None, max_length=80)
+    template_profile_id: str | None = None
+    template_profile_revision: int | None = Field(default=None, ge=1)
+
+    @model_validator(mode="after")
+    def valid_template(self):
+        if bool(self.template_profile_id) != bool(self.template_profile_revision):
+            raise ValueError("诊断模板 ID 和修订必须同时提供")
+        return self
+
+
+class DiagnosticBatchWrite(Input):
+    events: list[DiagnosticEventWrite] = Field(min_length=1, max_length=50)
 
 
 class BindingCreate(Input):

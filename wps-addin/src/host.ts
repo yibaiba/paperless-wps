@@ -1,7 +1,9 @@
 import type {
-  ActiveCell, Candidate, InlineEditorContext, SheetRow, TemplateField, TemplateProfile,
-  SuggestionFeedbackPayload, WorkbookMetadata,
+  ActiveCell, Candidate, DiagnosticEventInput, DiagnosticEventPayload, InlineEditorContext,
+  SheetRow, TemplateField, TemplateProfile, SuggestionFeedbackPayload, WorkbookMetadata,
 } from './types';
+import { CredentialStore } from './credentialStore.ts';
+import { DiagnosticRecorder } from './diagnostics.ts';
 import { enqueueFeedback, parseFeedbackOutbox, removeFeedback } from './feedbackOutbox.ts';
 import { InlineDialogManager } from './inlineDialog.ts';
 import type { InlineLayoutOptions, InlineLayoutResult } from './inlineLayout.ts';
@@ -49,9 +51,12 @@ export interface HostAdapter {
   showInlineEditor(profile: TemplateProfile, cell: ActiveCell): void;
   hideInlineEditor(): void;
   inlineCapabilityIssues(): string[];
-  interceptTab(sessionId: string, revision: string): void;
+  interceptTab(sessionId: string, revision: string): boolean;
   claimTab(sessionId: string): string | null;
-  restoreNativeTab(sessionId?: string): void;
+  restoreNativeTab(sessionId?: string): boolean;
+  recordDiagnostic(value: DiagnosticEventInput): DiagnosticEventPayload;
+  pendingDiagnostics(): DiagnosticEventPayload[];
+  removeDiagnostics(eventIds: string[]): void;
   layoutInlineEditor(
     options: Omit<InlineLayoutOptions, 'anchorWidth' | 'anchorHeight'>,
   ): InlineLayoutResult;
@@ -75,11 +80,18 @@ function text(value: unknown) { return value == null ? '' : String(value); }
 
 export class WpsHostAdapter implements HostAdapter {
   private readonly app: any;
+  private readonly credentials: CredentialStore;
+  private readonly diagnostics: DiagnosticRecorder;
   private readonly inlineDialog: InlineDialogManager;
   private readonly tabCoordinator: WpsTabCoordinator;
 
   constructor() {
     this.app = window.Application ?? window.wps?.EtApplication?.();
+    this.credentials = new CredentialStore({
+      shared: this.app?.PluginStorage,
+      persistent: persistentStorage(),
+    });
+    if (!this.credentials.capabilityIssues().length) this.credentials.restore();
     this.inlineDialog = new InlineDialogManager({
       app: this.app,
       href: window.location?.href ?? 'http://127.0.0.1/',
@@ -92,17 +104,24 @@ export class WpsHostAdapter implements HostAdapter {
       get: (key) => this.storeGet(key),
       set: (key, value) => this.storeSet(key, value),
     });
+    this.diagnostics = new DiagnosticRecorder({
+      get: (key) => this.storeGet(key),
+      set: (key, value) => this.storeSet(key, value),
+      installationId: () => this.credentials.installationId(),
+      hostOs: () => String(window.navigator?.platform ?? 'unknown'),
+      hostVersion: () => text(this.app?.Build ?? this.app?.Version) || 'unknown',
+    });
   }
 
   ready() { return Boolean(this.app?.ActiveWorkbook); }
 
-  token() { return this.storeGet('presales_access_token'); }
+  token() { return this.credentials.token(); }
 
-  saveToken(value: string) { this.storeSet('presales_access_token', value); }
+  saveToken(value: string) { this.credentials.saveToken(value); }
 
-  account() { return this.storeGet('presales_account'); }
+  account() { return this.credentials.account(); }
 
-  saveAccount(value: string) { this.storeSet('presales_account', value); }
+  saveAccount(value: string) { this.credentials.saveAccount(value); }
 
   requestedAction() { return this.storeGet('presales_requested_action'); }
 
@@ -245,23 +264,32 @@ export class WpsHostAdapter implements HostAdapter {
   }
 
   inlineCapabilityIssues() {
-    const issues = this.tabCoordinator.capabilityIssues();
+    const issues = [
+      ...this.tabCoordinator.capabilityIssues(),
+      ...this.credentials.capabilityIssues(),
+    ];
     if (typeof this.app?.CreateWebDialog !== 'function') issues.push('CreateWebDialog');
     if (typeof this.app?.GetWebDialog !== 'function') issues.push('GetWebDialog');
     if (typeof this.app?.ApiEvent?.AddApiEventListener !== 'function'
       || typeof this.app?.ApiEvent?.RemoveApiEventListener !== 'function') {
       issues.push('ApiEvent');
     }
-    return issues;
+    return [...new Set(issues)];
   }
 
   interceptTab(sessionId: string, revision: string) {
-    this.tabCoordinator.activate(sessionId, revision);
+    return this.tabCoordinator.activate(sessionId, revision);
   }
 
   claimTab(sessionId: string) { return this.tabCoordinator.claim(sessionId); }
 
-  restoreNativeTab(sessionId?: string) { this.tabCoordinator.restore(sessionId); }
+  restoreNativeTab(sessionId?: string) { return this.tabCoordinator.restore(sessionId); }
+
+  recordDiagnostic(value: DiagnosticEventInput) { return this.diagnostics.record(value); }
+
+  pendingDiagnostics() { return this.diagnostics.pending(); }
+
+  removeDiagnostics(eventIds: string[]) { this.diagnostics.remove(eventIds); }
 
   layoutInlineEditor(options: Omit<InlineLayoutOptions, 'anchorWidth' | 'anchorHeight'>) {
     return this.inlineDialog.layout(options);
@@ -379,4 +407,9 @@ export class WpsHostAdapter implements HostAdapter {
     }
     return `${name}${row}`;
   }
+}
+
+function persistentStorage() {
+  try { return window.localStorage; }
+  catch { return undefined; }
 }

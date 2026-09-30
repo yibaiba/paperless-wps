@@ -9,9 +9,11 @@ from presales.lists.schemas import ListSearch
 
 from .auth import WpsAuth, bearer_token
 from .bindings import WorkbookBindings
+from .diagnostics import WpsDiagnostics
 from .feedback import CompletionFeedback
 from .schemas import (
     BindingCreate,
+    DiagnosticBatchWrite,
     PairingExchange,
     SourceScopePreview,
     SuggestionFeedbackWrite,
@@ -107,6 +109,15 @@ def suggestion_feedback(
             session, lambda: CompletionFeedback(session).record(data, actor=access.actor)
         )
     )
+
+
+@router.post("/diagnostics/batch")
+def diagnostic_batch(
+    data: DiagnosticBatchWrite,
+    session=Depends(session_dependency),
+    access=Depends(principal),
+):
+    return execute(lambda: commit(session, lambda: WpsDiagnostics(session).record(data)))
 
 
 @router.get("/projects")

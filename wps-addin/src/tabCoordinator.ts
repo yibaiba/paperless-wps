@@ -31,9 +31,10 @@ export class WpsTabCoordinator {
 
   activate(sessionId: string, revision: string) {
     const current = this.session();
-    if (current?.session_id === sessionId && current.revision === revision) return;
+    if (current?.session_id === sessionId && current.revision === revision) return false;
     this.write({ session_id: sessionId, revision, status: 'ready' });
     this.options.app.OnKey('{TAB}', 'PresalesTab');
+    return true;
   }
 
   claim(sessionId: string) {
@@ -46,9 +47,10 @@ export class WpsTabCoordinator {
 
   restore(sessionId?: string) {
     const current = this.session();
-    if (sessionId && current?.session_id !== sessionId) return;
+    if (sessionId && current?.session_id !== sessionId) return false;
     this.options.set(TAB_SESSION_KEY, '');
     this.options.app?.OnKey?.('{TAB}');
+    return true;
   }
 
   session() {

@@ -5,6 +5,7 @@
   var tabSessionKey = 'presales_tab_session';
   var dialogKey = 'presales_inline_dialog_id';
   var backgroundErrorKey = 'presales_background_error';
+  var diagnosticSessionKey = 'presales_diagnostic_session_id';
 
   function storage() {
     return window.Application && window.Application.PluginStorage;
@@ -77,6 +78,10 @@
   window.OnAddinLoad = function (ribbonUI) {
     if (typeof window.Application.ribbonUI !== 'object') {
       window.Application.ribbonUI = ribbonUI;
+    }
+    var store = storage();
+    if (store && window.crypto && typeof window.crypto.randomUUID === 'function') {
+      store.setItem(diagnosticSessionKey, window.crypto.randomUUID());
     }
     restoreNativeTab('', false);
     return true;

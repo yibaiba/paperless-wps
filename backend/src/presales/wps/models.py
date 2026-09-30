@@ -45,3 +45,26 @@ class WpsSuggestionFeedback(Base):
     chosen_source_id: Mapped[str] = mapped_column(String)
     query_kind: Mapped[str] = mapped_column(String)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class WpsDiagnosticEvent(Base):
+    __tablename__ = "wps_diagnostic_events"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=identifier)
+    event_id: Mapped[str] = mapped_column(String, unique=True, index=True)
+    installation_id: Mapped[str] = mapped_column(String, index=True)
+    session_id: Mapped[str] = mapped_column(String, index=True)
+    occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, index=True)
+    plugin_version: Mapped[str] = mapped_column(String)
+    host_os: Mapped[str] = mapped_column(String)
+    host_version: Mapped[str] = mapped_column(String)
+    event_type: Mapped[str] = mapped_column(String, index=True)
+    completion_phase: Mapped[str | None] = mapped_column(String, nullable=True)
+    duration_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    candidate_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    completion_ready: Mapped[bool | None] = mapped_column(nullable=True)
+    outcome: Mapped[str | None] = mapped_column(String, nullable=True)
+    error_code: Mapped[str | None] = mapped_column(String, nullable=True)
+    template_profile_id: Mapped[str | None] = mapped_column(String, nullable=True)
+    template_profile_revision: Mapped[int | None] = mapped_column(Integer, nullable=True)

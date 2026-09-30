@@ -38,6 +38,7 @@ export function App() {
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const requests = useRef(new LatestRequest());
   const attemptedFeedback = useRef(new Set<string>());
+  const diagnosticsInFlight = useRef(false);
   const capabilityIssues = useMemo(() => host.inlineCapabilityIssues(), [host]);
 
   const loadProfiles = useCallback(async () => {
@@ -202,6 +203,28 @@ export function App() {
       }
     };
     const poll = window.setInterval(() => { void flush(); }, 1000);
+    void flush();
+    return () => window.clearInterval(poll);
+  }, [api, host, token]);
+
+  useEffect(() => {
+    if (!token) return undefined;
+    const flush = async () => {
+      if (diagnosticsInFlight.current) return;
+      try {
+        const pending = host.pendingDiagnostics().slice(0, 50);
+        if (!pending.length) return;
+        diagnosticsInFlight.current = true;
+        await api.diagnostics(pending);
+        host.removeDiagnostics(pending.map((event) => event.event_id));
+      } catch (reason) {
+        const message = reason instanceof Error ? reason.message : String(reason);
+        setError(`WPS 诊断上传失败：${message}`);
+      } finally {
+        diagnosticsInFlight.current = false;
+      }
+    };
+    const poll = window.setInterval(() => { void flush(); }, 2000);
     void flush();
     return () => window.clearInterval(poll);
   }, [api, host, token]);

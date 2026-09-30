@@ -27,7 +27,7 @@ import {
   startNextRowPrefetch,
 } from '../inlineSuggestionSession';
 import { LatestRequest } from '../latestRequest';
-import type { Candidate, InlineEditorContext } from '../types';
+import type { Candidate, DiagnosticEventInput, InlineEditorContext } from '../types';
 
 const CONTEXT_POLL_MS = 80;
 const POSITION_POLL_MS = 160;
@@ -67,6 +67,13 @@ export function InlineEditor() {
     () => context && readInlineWorkbookContext(host, context),
     [context, host],
   );
+  const diagnose = useCallback((value: DiagnosticEventInput) => {
+    try { host.recordDiagnostic(value); }
+    catch (reason) {
+      const message = reason instanceof Error ? reason.message : String(reason);
+      host.reportBackgroundError(`WPS 诊断记录失败：${message}`);
+    }
+  }, [host]);
 
   const refreshContext = useCallback(() => {
     const next = host.inlineContext();
@@ -89,8 +96,14 @@ export function InlineEditor() {
     setTabGeneration(0);
     accepting.current = false;
     setError('');
+    diagnose({
+      event_type: 'inline_open',
+      template_profile_id: next.profile.id,
+      template_profile_revision: next.profile.revision,
+      outcome: 'success',
+    });
     window.setTimeout(() => input.current?.focus(), 0);
-  }, [host]);
+  }, [diagnose, host]);
 
   useEffect(() => {
     window.PresalesInlineRefresh = refreshContext;
@@ -102,6 +115,17 @@ export function InlineEditor() {
       delete window.PresalesInlineRefresh;
     };
   }, [refreshContext]);
+
+  useEffect(() => {
+    if (!context) return undefined;
+    const onBlur = () => diagnose({
+      event_type: 'focus_lost',
+      template_profile_id: context.profile.id,
+      template_profile_revision: context.profile.revision,
+    });
+    window.addEventListener('blur', onBlur);
+    return () => window.removeEventListener('blur', onBlur);
+  }, [context, diagnose]);
 
   useEffect(() => {
     input.current?.focus();
@@ -127,8 +151,15 @@ export function InlineEditor() {
     }
     const timer = window.setTimeout(async () => {
       const request = requests.current.begin();
+      const started = performance.now();
       setBusy(true);
       setError('');
+      diagnose({
+        event_type: 'query_start',
+        completion_phase: 'loading',
+        template_profile_id: context.profile.id,
+        template_profile_revision: context.profile.revision,
+      });
       try {
         const key = inlineContextKey(context, metadata);
         const pending = query.trim() ? undefined : prefetch.current.take(key);
@@ -146,11 +177,36 @@ export function InlineEditor() {
         if (!request.isCurrent()) return;
         const next = result.items.slice(0, INLINE_CANDIDATE_LIMIT);
         setCandidates(next);
+        const durationMs = Math.round(performance.now() - started);
+        diagnose({
+          event_type: 'query_success',
+          completion_phase: next.length ? 'typing' : 'no-match',
+          duration_ms: durationMs,
+          candidate_count: next.length,
+          completion_ready: Boolean(next[0]?.completion_ready),
+          outcome: 'success',
+          template_profile_id: context.profile.id,
+          template_profile_revision: context.profile.revision,
+        });
+        if (!next.length) diagnose({
+          event_type: 'no_match', completion_phase: 'no-match', candidate_count: 0,
+          template_profile_id: context.profile.id,
+          template_profile_revision: context.profile.revision,
+        });
         const preferredField = context.profile.field_columns.model === context.cell.column
           ? 'model' : 'name';
         setSelection(selectionForCandidates(query, next, preferredField));
       } catch (reason) {
         if (request.isCurrent()) {
+          diagnose({
+            event_type: 'query_error',
+            completion_phase: 'error',
+            duration_ms: Math.round(performance.now() - started),
+            outcome: 'failure',
+            error_code: 'suggestion_request_failed',
+            template_profile_id: context.profile.id,
+            template_profile_revision: context.profile.revision,
+          });
           setError(reason instanceof Error ? reason.message : String(reason));
         }
       } finally {
@@ -158,7 +214,7 @@ export function InlineEditor() {
       }
     }, suggestionDelay(query));
     return () => window.clearTimeout(timer);
-  }, [api, composing, context, query, workbookContext]);
+  }, [api, composing, context, diagnose, query, workbookContext]);
 
   const selectedCandidate = candidates[selection.index];
   const preferredField = context?.profile.field_columns.model === context?.cell.column
@@ -240,12 +296,27 @@ export function InlineEditor() {
         prefetchNextRow(metadata);
         host.requestInlineAdvance();
       }
+      diagnose({
+        event_type: 'accept_success',
+        completion_phase: phase,
+        outcome: 'success',
+        template_profile_id: context.profile.id,
+        template_profile_revision: context.profile.revision,
+      });
       host.hideInlineEditor();
     } catch (reason) {
       accepting.current = false;
+      diagnose({
+        event_type: 'accept_error',
+        completion_phase: 'error',
+        outcome: 'failure',
+        error_code: 'candidate_write_failed',
+        template_profile_id: context.profile.id,
+        template_profile_revision: context.profile.revision,
+      });
       setError(reason instanceof Error ? reason.message : String(reason));
     }
-  }, [api, candidates, context, host, prefetchNextRow, query, workbookContext]);
+  }, [api, candidates, context, diagnose, host, phase, prefetchNextRow, query, workbookContext]);
 
   const executeCompletion = useCallback((
     key: 'Tab' | 'Enter',
@@ -255,16 +326,29 @@ export function InlineEditor() {
       key, candidates, selection, hasGhost: Boolean(ghost), query,
     });
     if (command === 'expand') {
+      if (key === 'Tab') diagnose({
+        event_type: 'tab_expand', completion_phase: phase, outcome: 'expanded',
+        template_profile_id: context?.profile.id,
+        template_profile_revision: context?.profile.revision,
+      });
       setSelection((current) => ({ ...current, expanded: true }));
       setTabGeneration((current) => current + 1);
     } else if (command === 'accept' && selectedCandidate) {
+      if (key === 'Tab') diagnose({
+        event_type: 'tab_accept', completion_phase: phase,
+        candidate_count: candidates.length, completion_ready: selectedCandidate.completion_ready,
+        template_profile_id: context?.profile.id,
+        template_profile_revision: context?.profile.revision,
+      });
       accept(selectedCandidate, key === 'Tab', operationId);
     } else if (command === 'native-tab') {
       host.hideInlineEditor();
       host.moveSelection(0, 1);
     }
     return command;
-  }, [accept, candidates, ghost, host, query, selectedCandidate, selection]);
+  }, [
+    accept, candidates, context, diagnose, ghost, host, phase, query, selectedCandidate, selection,
+  ]);
 
   const dispatchTab = useCallback((expectedSessionId: string) => {
     if (!context || context.session_id !== expectedSessionId) return;
@@ -291,17 +375,31 @@ export function InlineEditor() {
     const actionable = !busy && !error && !composing
       && (command === 'accept' || command === 'expand');
     if (!actionable) {
-      host.restoreNativeTab(context.session_id);
+      if (host.restoreNativeTab(context.session_id)) diagnose({
+        event_type: 'tab_restore', completion_phase: phase, outcome: 'restored',
+        template_profile_id: context.profile.id,
+        template_profile_revision: context.profile.revision,
+      });
       return undefined;
     }
     const revision = [
       phase, selection.index, Number(selection.expanded), Number(selection.explicit),
       candidates[0]?.key ?? '', tabGeneration,
     ].join(':');
-    host.interceptTab(context.session_id, revision);
-    return () => host.restoreNativeTab(context.session_id);
+    if (host.interceptTab(context.session_id, revision)) diagnose({
+      event_type: 'tab_register', completion_phase: phase,
+      template_profile_id: context.profile.id,
+      template_profile_revision: context.profile.revision,
+    });
+    return () => {
+      if (host.restoreNativeTab(context.session_id)) diagnose({
+        event_type: 'tab_restore', completion_phase: phase, outcome: 'restored',
+        template_profile_id: context.profile.id,
+        template_profile_revision: context.profile.revision,
+      });
+    };
   }, [
-    busy, candidates, composing, context, error, ghost, host, phase, query, selection,
+    busy, candidates, composing, context, diagnose, error, ghost, host, phase, query, selection,
     tabGeneration,
   ]);
 
