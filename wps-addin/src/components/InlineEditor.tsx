@@ -18,6 +18,7 @@ import {
   type CompletionSelection,
 } from '../completionState';
 import { WpsHostAdapter } from '../host';
+import { prioritizeInlineCandidates } from '../inlineCandidates';
 import { ghostCompletion } from '../inlineCompletion';
 import type { InlineLayoutOptions, InlinePlacement, InlineLayoutResult } from '../inlineLayout';
 import {
@@ -172,7 +173,7 @@ export function InlineEditor() {
           context: productContext,
         }, request.signal);
         if (!request.isCurrent()) return;
-        const next = result.items.slice(0, INLINE_CANDIDATE_LIMIT);
+        const next = prioritizeInlineCandidates(result.items, INLINE_CANDIDATE_LIMIT);
         setCandidates(next);
         const durationMs = Math.round(performance.now() - started);
         diagnose({
@@ -486,10 +487,17 @@ export function InlineEditor() {
         key={candidate.key} onMouseDown={(event) => event.preventDefault()}
         onClick={() => accept(candidate)}
         onMouseEnter={() => setSelection({ expanded: true, explicit: true, index })}
-        title={[candidate.model, candidate.variant_name, ...candidate.context_reasons].join(' · ')}>
+        title={[
+          candidate.model,
+          candidate.variant_name,
+          `${candidate.source.sheet} 第 ${candidate.source.row} 行`,
+          ...candidate.context_reasons,
+        ].join(' · ')}>
         <span className="candidate-copy">
           <strong>{candidate.name}</strong>
-          <span>{candidate.model}<small>{candidate.variant_name}</small></span>
+          <span>{candidate.model}<small>{candidate.variant_name}</small>
+            <small>{candidate.source.sheet} 第 {candidate.source.row} 行</small>
+          </span>
         </span>
         <span className={`candidate-kind ${candidate.group}`}>{GROUP_LABELS[candidate.group]}</span>
       </button>)}

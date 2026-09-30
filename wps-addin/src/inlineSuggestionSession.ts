@@ -1,6 +1,7 @@
 import type { WpsApi } from './api';
 import { CompletionPrefetch, completionPrefetchKey } from './completionPrefetch';
 import type { HostAdapter } from './host';
+import { prioritizeInlineCandidates } from './inlineCandidates';
 import { suggestionContext } from './suggestionContext';
 import type {
   Candidate, InlineEditorContext, SheetRow, WorkbookMetadata,
@@ -81,7 +82,7 @@ export function startNextRowPrefetch(options: {
       current_row: row.values,
       context: product,
     });
-    return result.items.slice(0, INLINE_CANDIDATE_LIMIT);
+    return prioritizeInlineCandidates(result.items, INLINE_CANDIDATE_LIMIT);
   });
 }
 
