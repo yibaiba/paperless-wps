@@ -222,6 +222,35 @@ def test_software_with_multiple_confirmed_hardware_pairs_requires_choice():
     assert result[0]["completion_blocker"] == "variant_ambiguous"
 
 
+def test_unique_confirmed_pair_can_tab_despite_a_generic_close_competitor():
+    items = [
+        {
+            **candidate("paired", group="accessory"),
+            "confidence": "high",
+            "_ranking_score": 500,
+            "_scope_confirmed": True,
+            "_source_scope_match": True,
+            "_strong_completion_evidence": True,
+            "_confirmed_relation_score": 320,
+            "_confirmed_relation_direction": "reverse",
+            "_confirmed_relation_seed_id": "software",
+        },
+        {
+            **candidate("generic"),
+            "confidence": "high",
+            "_ranking_score": 490,
+            "_scope_confirmed": True,
+            "_source_scope_match": True,
+            "_strong_completion_evidence": True,
+        },
+    ]
+
+    result = finalize_completion_readiness(items, "")
+
+    assert result[0]["completion_ready"] is True
+    assert result[0]["completion_blocker"] is None
+
+
 def test_unconfirmed_template_source_never_tabs_contextual_suggestion():
     items = [
         {

@@ -1,10 +1,14 @@
 from collections import defaultdict
 
+from sqlalchemy import select
+
 from presales.configuration.catalog.service import CatalogService
 from presales.configuration.common import Entities
 from presales.configuration.knowledge.evaluator import scope_matches
+from presales.configuration.models import SourceLink
 from presales.lists.queries import search_catalog
 from presales.lists.schemas import CatalogSearch
+from presales.storage import ProductRecord
 
 from .catalog_index import CatalogSuggestionIndex
 from .feedback import CompletionFeedback
@@ -105,12 +109,41 @@ class Suggestions:
         }
 
     def _catalog_scope(self, request):
-        if not request.template_profile_id:
-            return None
-        profile = TemplateProfiles(self.session).get(
-            request.template_profile_id, request.template_profile_revision
-        )
-        return profile.get("catalog_scope")
+        if request.template_profile_id:
+            profile = TemplateProfiles(self.session).get(
+                request.template_profile_id, request.template_profile_revision
+            )
+            if profile.get("catalog_scope"):
+                return profile["catalog_scope"]
+        return self._context_source_scope(request)
+
+    def _context_source_scope(self, request):
+        pairs = [
+            (request.context.selected_variant_id, request.context.selected_source_id),
+            *zip(
+                request.context.previous_variant_ids,
+                request.context.previous_source_ids,
+                strict=False,
+            ),
+            *zip(
+                request.context.next_variant_ids,
+                request.context.next_source_ids,
+                strict=False,
+            ),
+        ]
+        for variant_id, source_id in pairs:
+            if not variant_id or not source_id:
+                continue
+            link = self.session.scalar(
+                select(SourceLink).where(
+                    SourceLink.variant_id == variant_id,
+                    SourceLink.source_id == source_id,
+                )
+            )
+            source = self.session.get(ProductRecord, source_id) if link else None
+            if source:
+                return {"import_id": source.import_id, "sheet": source.sheet}
+        return None
 
     def _direct(self, request, by_id):
         page = search_catalog(
@@ -263,6 +296,8 @@ def _completion_decision(items, query):
     exact = _is_unique_exact_match(items, query, _logical_product(top))
     if top["confidence"] != "high" or not (exact or top.get("_strong_completion_evidence")):
         return False, "insufficient_evidence"
+    if top.get("_confirmed_relation_score"):
+        return True, None
     competitor = _completion_competitor(items, top)
     margin = float("inf") if competitor is None else (
         top["_ranking_score"] - competitor["_ranking_score"]

@@ -465,6 +465,54 @@ def test_confirmed_software_pair_recommends_its_hardware_in_reverse(client, cata
     assert top["completion_ready"] is True
 
 
+def test_confirmed_line_source_scopes_contextual_completion_for_v1_template(client, catalog):
+    second_product = client.post(
+        "/api/configuration/products",
+        json={
+            "name": "来源范围内的下一产品",
+            "model": "SERVER-Y",
+            "category": "服务器",
+            "actor": "测试维护者",
+            "evidence": "隔离测试资料，不是业务确认",
+        },
+    )
+    assert second_product.status_code == 200, second_product.text
+    first = update_variant_context(
+        client, catalog["variants"][0], series=["服务器系列"], systems=[]
+    )
+    second = update_variant_context(
+        client,
+        catalog["variants"][1],
+        series=["服务器系列"],
+        systems=[],
+        product_id=second_product.json()["id"],
+    )
+    token, _ = paired(client)
+    headers = authorized(token)
+    profile = template(client, headers)
+
+    response = client.post(
+        "/api/wps/suggestions",
+        headers=headers,
+        json={
+            "query": "",
+            "template_profile_id": profile["id"],
+            "template_profile_revision": profile["revision"],
+            "context": {
+                "previous_variant_ids": [first["id"]],
+                "previous_source_ids": [catalog["sources"][0]["id"]],
+            },
+            "limit": 10,
+        },
+    )
+
+    assert response.status_code == 200, response.text
+    top = response.json()["items"][0]
+    assert top["variant_id"] == second["id"]
+    assert top["completion_blocker"] is None
+    assert top["completion_ready"] is True
+
+
 def test_accepted_suggestion_feedback_is_idempotent_and_affects_ranking(client, catalog):
     product = client.post(
         "/api/configuration/products",

@@ -18,12 +18,12 @@ export function suggestionContext(options: SuggestionContextInput) {
     .filter((item) => item.row < cell.row)
     .sort((left, right) => right.row - left.row)
     .slice(0, MAX_PREVIOUS_VARIANTS)
-    .map((item) => item.variant_id);
+    .map((item) => ({ variant_id: item.variant_id, source_id: item.source_id }));
   const next = [...sheetBindings]
     .filter((item) => item.row > cell.row)
     .sort((left, right) => left.row - right.row)
     .slice(0, MAX_NEXT_VARIANTS)
-    .map((item) => item.variant_id);
+    .map((item) => ({ variant_id: item.variant_id, source_id: item.source_id }));
   const section = row.values.section?.trim() || options.inheritedSection?.trim() || '';
   return {
     sheet: cell.sheet,
@@ -31,7 +31,10 @@ export function suggestionContext(options: SuggestionContextInput) {
     system: section,
     role: '',
     selected_variant_id: current?.variant_id,
-    previous_variant_ids: previous,
-    next_variant_ids: next,
+    selected_source_id: current?.source_id,
+    previous_variant_ids: previous.map((item) => item.variant_id),
+    previous_source_ids: previous.map((item) => item.source_id),
+    next_variant_ids: next.map((item) => item.variant_id),
+    next_source_ids: next.map((item) => item.source_id),
   };
 }

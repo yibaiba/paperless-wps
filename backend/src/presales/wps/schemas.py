@@ -92,8 +92,11 @@ class SuggestionContext(Input):
     system: str = ""
     role: str = ""
     selected_variant_id: str | None = None
+    selected_source_id: str | None = None
     previous_variant_ids: list[str] = Field(default_factory=list, max_length=8)
+    previous_source_ids: list[str] = Field(default_factory=list, max_length=8)
     next_variant_ids: list[str] = Field(default_factory=list, max_length=3)
+    next_source_ids: list[str] = Field(default_factory=list, max_length=3)
 
 
 class SuggestionRequest(Input):
