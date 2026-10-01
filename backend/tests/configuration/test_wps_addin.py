@@ -5,7 +5,9 @@ from uuid import uuid4
 from sqlalchemy import select
 
 from presales.wps.auth import WpsAuth
+from presales.wps.feedback import CompletionFeedback
 from presales.wps.models import WpsAccessToken, WpsDiagnosticEvent, WpsSuggestionFeedback
+from presales.wps.schemas import SuggestionRequest
 
 
 def paired(client, actor="测试售前"):
@@ -639,6 +641,50 @@ def test_accepted_suggestion_feedback_is_idempotent_and_affects_ranking(client, 
     )
     assert collision.status_code == 422
     assert "反馈操作编号已被其他账号使用" in collision.text
+
+
+def test_typed_choice_does_not_train_blank_row_completion(client, catalog):
+    actor = "搜索反馈测试售前"
+    token, _ = paired(client, actor=actor)
+    headers = authorized(token)
+    profile = template(client, headers)
+    previous = catalog["variants"][0]
+    chosen = catalog["variants"][1]
+    payload = {
+        "operation_id": str(uuid4()),
+        "workbook_instance_id": "typed-feedback-workbook",
+        "template_profile_id": profile["id"],
+        "template_profile_revision": profile["revision"],
+        "sheet": "报价表",
+        "section": "会议系统",
+        "previous_variant_id": previous["id"],
+        "context_previous_variant_ids": [previous["id"]],
+        "context_next_variant_ids": [],
+        "suggested_variant_id": previous["id"],
+        "chosen_variant_id": chosen["id"],
+        "chosen_source_id": catalog["sources"][1]["id"],
+        "query_kind": "typed",
+    }
+
+    recorded = client.post("/api/wps/suggestion-feedback", headers=headers, json=payload)
+    assert recorded.status_code == 200, recorded.text
+    contextual_request = SuggestionRequest(
+        query="",
+        workbook_instance_id=payload["workbook_instance_id"],
+        template_profile_id=profile["id"],
+        template_profile_revision=profile["revision"],
+        context={
+            "sheet": payload["sheet"],
+            "section": payload["section"],
+            "previous_variant_ids": [previous["id"]],
+        },
+    )
+    typed_request = contextual_request.model_copy(update={"query": "服务器"})
+
+    with client.app.state.session_factory() as session:
+        feedback = CompletionFeedback(session)
+        assert feedback.scores(contextual_request, actor) == {}
+        assert feedback.scores(typed_request, actor) == {}
 
 
 def test_preview_commit_retry_and_stale_conflict(client, catalog):

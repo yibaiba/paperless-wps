@@ -16,6 +16,7 @@ MAX_LEARNED_SCORE = 360
 MAX_REJECTION_PENALTY = 180
 PREVIOUS_CONTEXT_LIMIT = 3
 NEXT_CONTEXT_LIMIT = 1
+CONTEXTUAL_QUERY_KIND = "contextual"
 
 
 def context_hash(sheet, section, previous=(), following=()):
@@ -78,6 +79,10 @@ class CompletionFeedback:
         return self._view(feedback)
 
     def scores(self, request, actor):
+        # Typed choices do not retain query features, so applying them to another
+        # query or to blank-row completion would teach the wrong transition.
+        if request.query.strip():
+            return {}
         previous = next(iter(request.context.previous_variant_ids), None)
         if not previous or not actor:
             return {}
@@ -85,6 +90,7 @@ class CompletionFeedback:
             select(WpsSuggestionFeedback).where(
                 WpsSuggestionFeedback.actor == actor,
                 WpsSuggestionFeedback.previous_variant_id == previous,
+                WpsSuggestionFeedback.query_kind == CONTEXTUAL_QUERY_KIND,
             )
         ).all()
         scores, reasons, reason_weights = {}, {}, {}
