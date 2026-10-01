@@ -23,12 +23,14 @@ import { ghostCompletion } from '../inlineCompletion';
 import type { InlineLayoutOptions, InlinePlacement, InlineLayoutResult } from '../inlineLayout';
 import {
   INLINE_CANDIDATE_LIMIT,
+  inlineWorkbookContextForQuery,
   inlineContextKey,
   readInlineWorkbookContext,
   startNextRowPrefetch,
 } from '../inlineSuggestionSession';
 import { LatestRequest } from '../latestRequest';
 import type { Candidate, DiagnosticEventInput, InlineEditorContext } from '../types';
+import { bindingForRow } from '../workbook.ts';
 
 const POSITION_POLL_MS = 300;
 const CANDIDATE_LIST_ID = 'product-candidates';
@@ -63,10 +65,18 @@ export function InlineEditor() {
   const prefetch = useRef(new CompletionPrefetch<Candidate[]>());
   const contextNonce = useRef(context?.nonce ?? 0);
   const windowChromeHeight = useRef(Math.max(0, window.outerHeight - window.innerHeight));
-  const workbookContext = useMemo(
+  const baseWorkbookContext = useMemo(
     () => context && readInlineWorkbookContext(host, context),
     [context, host],
   );
+  const workbookContext = useMemo(() => {
+    if (!context || !baseWorkbookContext || 'error' in baseWorkbookContext) {
+      return baseWorkbookContext;
+    }
+    return {
+      value: inlineWorkbookContextForQuery(context, baseWorkbookContext.value, query),
+    };
+  }, [baseWorkbookContext, context, query]);
   const diagnose = useCallback((value: DiagnosticEventInput) => {
     try { host.recordDiagnostic(value); }
     catch (reason) {
@@ -273,13 +283,18 @@ export function InlineEditor() {
         candidates,
         chosen: candidate,
       });
+      const currentMetadata = host.readMetadata();
+      const lineBinding = baseWorkbookContext && 'value' in baseWorkbookContext
+        ? bindingForRow(baseWorkbookContext.value.row, currentMetadata.line_bindings) ?? null
+        : null;
       const metadata = applyCandidate({
         host,
         profile: context.profile,
         cell: context.cell,
-        metadata: host.readMetadata(),
+        metadata: currentMetadata,
         candidate,
         section: workbookContext.value.product.section,
+        lineBinding,
       });
       if (feedback) {
         try {
@@ -325,7 +340,10 @@ export function InlineEditor() {
       });
       setError(reason instanceof Error ? reason.message : String(reason));
     }
-  }, [api, candidates, context, diagnose, host, phase, prefetchNextRow, query, workbookContext]);
+  }, [
+    api, baseWorkbookContext, candidates, context, diagnose, host, phase, prefetchNextRow, query,
+    workbookContext,
+  ]);
 
   const executeCompletion = useCallback((
     key: 'Tab' | 'Enter',

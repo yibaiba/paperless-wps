@@ -18,6 +18,7 @@ import type {
   ActiveCell, BindingState, Candidate, TemplateField, TemplateProfile,
   WorkbookMetadata,
 } from './types';
+import { bindingForRow } from './workbook.ts';
 
 type View = 'account' | 'suggestions' | 'mapping' | 'binding' | 'sync';
 const HOST_STATE_POLL_MS = 250;
@@ -151,8 +152,11 @@ export function App() {
       const section = currentRow.values.section?.trim() || host.readInheritedField(
         profile, { row: cell.row, field: 'section' },
       ).trim();
+      const lineBinding = bindingForRow(currentRow, metadata.line_bindings)
+        ?? metadata.line_bindings.find((item) => item.sheet === cell.sheet && item.row === cell.row)
+        ?? null;
       setMetadata(applyCandidate({
-        host, profile, cell, metadata, candidate, section,
+        host, profile, cell, metadata, candidate, section, lineBinding,
       }));
     } catch (reason) { setError(reason instanceof Error ? reason.message : String(reason)); }
   }, [cell, host, metadata, profile]);

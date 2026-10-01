@@ -1,4 +1,5 @@
 import type { ActiveCell, SheetRow, WorkbookMetadata } from './types';
+import { bindingForRow } from './workbook.ts';
 
 const MAX_PREVIOUS_VARIANTS = 8;
 const MAX_NEXT_VARIANTS = 3;
@@ -24,14 +25,20 @@ export function suggestionContext(options: SuggestionContextInput) {
   const { cell, row, metadata } = options;
   const sheetBindings = metadata.line_bindings.filter((item) => item.sheet === cell.sheet);
   const section = row.values.section?.trim() || options.inheritedSection?.trim() || '';
-  const contextBindings = bindingsForSection(sheetBindings, section);
-  const current = sheetBindings.find((item) => item.row === cell.row);
-  const previous = [...contextBindings]
+  const current = bindingForRow(row, sheetBindings);
+  const exact = sheetBindings.find((item) => item.row === cell.row);
+  const changedIdentity = Boolean(row.values.model?.trim() || row.values.name?.trim());
+  const stableBindings = exact?.anchor_fingerprint && exact !== current && changedIdentity
+    ? sheetBindings.filter((item) => item !== exact)
+    : sheetBindings;
+  const contextBindings = bindingsForSection(stableBindings, section);
+  const sequenceBindings = contextBindings.filter((item) => item !== current);
+  const previous = [...sequenceBindings]
     .filter((item) => item.row < cell.row)
     .sort((left, right) => right.row - left.row)
     .slice(0, MAX_PREVIOUS_VARIANTS)
     .map((item) => ({ variant_id: item.variant_id, source_id: item.source_id }));
-  const next = [...contextBindings]
+  const next = [...sequenceBindings]
     .filter((item) => item.row > cell.row)
     .sort((left, right) => left.row - right.row)
     .slice(0, MAX_NEXT_VARIANTS)

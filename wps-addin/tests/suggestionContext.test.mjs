@@ -29,7 +29,7 @@ test('suggestion context follows the nearest confirmed products above the active
 test('suggestion context identifies the current product and inherits a blank section', () => {
   const context = suggestionContext({
     cell: { sheet: '报价表', row: 12 },
-    row: { values: {} },
+    row: { sheet: '报价表', row: 12, values: {} },
     inheritedSection: '视频会议系统',
     metadata: { line_bindings: [
       { sheet: '报价表', row: 12, variant_id: 'current', source_id: 'current-source' },
@@ -99,4 +99,40 @@ test('legacy bindings without section metadata retain whole-sheet context', () =
   });
 
   assert.deepEqual(context.previous_variant_ids, ['legacy-voting', 'legacy-paperless']);
+});
+
+test('editing a confirmed product identity removes the stale row binding from context', () => {
+  const context = suggestionContext({
+    cell: { sheet: '报价表', row: 12 },
+    row: { values: { model: 'CAMERA-1', name: '摄像机' } },
+    metadata: { line_bindings: [{
+      line_id: 'old-line', sheet: '报价表', row: 12,
+      anchor_fingerprint: 'server-1\0服务器', variant_id: 'old-server', source_id: 'old-source',
+    }] },
+  });
+
+  assert.equal(context.selected_variant_id, undefined);
+  assert.deepEqual(context.sheet_variant_ids, []);
+});
+
+test('a uniquely moved product is current rather than duplicated as a neighbor', () => {
+  const context = suggestionContext({
+    cell: { sheet: '报价表', row: 12 },
+    row: { values: { model: 'SERVER-1', name: '服务器' } },
+    metadata: { line_bindings: [
+      {
+        line_id: 'deleted-line', sheet: '报价表', row: 12,
+        anchor_fingerprint: 'old-1\0旧产品', variant_id: 'deleted', source_id: 'deleted-source',
+      },
+      {
+        line_id: 'moved-line', sheet: '报价表', row: 13,
+        anchor_fingerprint: 'server-1\0服务器', variant_id: 'moved', source_id: 'moved-source',
+      },
+    ] },
+  });
+
+  assert.equal(context.selected_variant_id, 'moved');
+  assert.deepEqual(context.previous_variant_ids, []);
+  assert.deepEqual(context.next_variant_ids, []);
+  assert.deepEqual(context.sheet_variant_ids, ['moved']);
 });

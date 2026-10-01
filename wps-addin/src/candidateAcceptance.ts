@@ -16,6 +16,7 @@ interface CandidateAcceptance {
   metadata: WorkbookMetadata;
   candidate: Candidate;
   section?: string;
+  lineBinding?: LineBinding | null;
 }
 
 export function applyCandidate(options: CandidateAcceptance) {
@@ -25,8 +26,9 @@ export function applyCandidate(options: CandidateAcceptance) {
   host.writeCandidate(profile, cell.row, candidate);
   const row = host.readRows(profile).find((item) => item.row === cell.row);
   if (!row) throw new Error('写入后未找到当前产品行');
-  const previous = metadata.line_bindings.find((item) =>
+  const exact = metadata.line_bindings.find((item) =>
     item.sheet === row.sheet && item.row === row.row);
+  const previous = options.lineBinding === undefined ? exact : options.lineBinding ?? undefined;
   const binding: LineBinding = {
     line_id: previous?.line_id ?? crypto.randomUUID(),
     sheet: row.sheet,
@@ -43,7 +45,8 @@ export function applyCandidate(options: CandidateAcceptance) {
     profile_revision: profile.revision,
     line_bindings: [
       ...metadata.line_bindings.filter((item) => item.line_id !== binding.line_id
-        && !(item.sheet === binding.sheet && item.row === binding.row)),
+        && !(previous?.row === binding.row
+          && item.sheet === binding.sheet && item.row === binding.row)),
       binding,
     ],
   };

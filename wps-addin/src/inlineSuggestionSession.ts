@@ -1,8 +1,8 @@
 import type { WpsApi } from './api';
-import { CompletionPrefetch, completionPrefetchKey } from './completionPrefetch';
+import { CompletionPrefetch, completionPrefetchKey } from './completionPrefetch.ts';
 import type { HostAdapter } from './host';
-import { prioritizeInlineCandidates } from './inlineCandidates';
-import { suggestionContext } from './suggestionContext';
+import { prioritizeInlineCandidates } from './inlineCandidates.ts';
+import { suggestionContext } from './suggestionContext.ts';
 import type {
   Candidate, InlineEditorContext, SheetRow, WorkbookMetadata,
 } from './types';
@@ -41,6 +41,30 @@ export function readInlineWorkbookContext(
   }
 }
 
+export function inlineWorkbookContextForQuery(
+  context: InlineEditorContext,
+  workbook: InlineWorkbookContext,
+  query: string,
+) {
+  const inputField = inputFieldFor(context);
+  if (!inputField || workbook.row.values[inputField] === query) return workbook;
+  const row = {
+    ...workbook.row,
+    values: { ...workbook.row.values, [inputField]: query },
+  };
+  const inheritedSection = row.values.section?.trim() ? '' : workbook.product.section;
+  return {
+    ...workbook,
+    row,
+    product: suggestionContext({
+      cell: context.cell,
+      row,
+      metadata: workbook.metadata,
+      inheritedSection,
+    }),
+  };
+}
+
 export function inlineContextKey(context: InlineEditorContext, metadata: WorkbookMetadata) {
   return completionPrefetchKey({
     workbookInstanceId: metadata.workbook_instance_id,
@@ -60,9 +84,7 @@ export function startNextRowPrefetch(options: {
   prefetch: CompletionPrefetch<Candidate[]>;
 }) {
   const { api, host, context, metadata, prefetch } = options;
-  const inputField = Object.entries(context.profile.field_columns).find(
-    ([, column]) => column === context.cell.column,
-  )?.[0] as 'model' | 'name' | 'description' | undefined;
+  const inputField = inputFieldFor(context);
   if (!inputField) return;
   const nextRowNumber = context.cell.row + 1;
   const row = host.readRow(context.profile, nextRowNumber);
@@ -84,6 +106,12 @@ export function startNextRowPrefetch(options: {
     });
     return prioritizeInlineCandidates(result.items, INLINE_CANDIDATE_LIMIT);
   });
+}
+
+function inputFieldFor(context: InlineEditorContext) {
+  return Object.entries(context.profile.field_columns).find(
+    ([, column]) => column === context.cell.column,
+  )?.[0] as 'model' | 'name' | 'description' | undefined;
 }
 
 function inheritedSectionFor(
