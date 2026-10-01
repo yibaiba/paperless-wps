@@ -1,0 +1,24 @@
+F
+=================================== FAILURES ===================================
+_ test_explicit_accessory_model_resolves_choice_before_recommendation[required] _
+
+client = <starlette.testclient.TestClient object at 0x10be36660>
+catalog = {'imported': {'source_kind': 'excel', 'id': '91a3ea9e-9d74-4b40-87ff-3643db63ec96', 'filename': 'test.xlsx', 'created_...64b6-498b-a8bc-28cdb80e4437', 'revision': 1, 'updated_at': '2026-10-01T11:01:02.776874+00:00', 'actor': '测试维护者', ...}]}
+workbook = b'PK\x03\x04\x14\x00\x00\x00\x00\x00!\x98A]\xe3\xf5\x92]\xf6\x00\x00\x00\xf6\x00\x00\x00\x0f\x00\x00\x00xl/workbook.xm...\x01\x00\x00xl/worksheets/sheet1.xmlPK\x05\x06\x00\x00\x00\x00\x03\x00\x03\x00\xcb\x00\x00\x00\x96\x06\x00\x00\x00\x00'
+constraint = 'required'
+
+    @pytest.mark.parametrize("constraint", ["required", "excluded"])
+    def test_explicit_accessory_model_resolves_choice_before_recommendation(client, catalog, workbook, constraint):
+        draft, role, server_ids = two_server_candidates(client, catalog, workbook)
+        choice = {"required_variant_id": server_ids[1]} if constraint == "required" else {"excluded_variant_ids": [server_ids[0]]}
+        draft = with_preferences(client, draft, [dict(requirement_id=role["id"], **choice, evidence=AUTHOR["evidence"])])
+        proposal = plan(client, draft)
+>       assert not any(q["code"] == "recommendation_missing" for q in question_rows(client, draft, proposal))
+E       assert not True
+E        +  where True = any(<generator object test_explicit_accessory_model_resolves_choice_before_recommendation.<locals>.<genexpr> at 0x10c26b030>)
+
+backend/tests/configuration/test_accessory_variant_preferences.py:59: AssertionError
+=========================== short test summary info ============================
+FAILED backend/tests/configuration/test_accessory_variant_preferences.py::test_explicit_accessory_model_resolves_choice_before_recommendation[required]
+!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!
+1 failed in 0.65s

@@ -263,7 +263,13 @@ def test_shared_scope_resolves_all_consumers_without_leaking_other_scopes(revers
     )
     assert gap is None
     assert selection == dict(
-        source_id="chosen", allowed={"one-parent", "two-parent", "one-alias", "two-alias"}
+        source_id="chosen",
+        allowed={"one-parent", "two-parent", "one-alias", "two-alias"},
+        preferences=[
+            preferences[t["requirement"]["id"]]
+            for t in tasks
+            if t["requirement"]["id"] in {"one-alias", "two-alias"}
+        ],
     )
     assert sorted(tasks, key=lambda t: t["requirement"]["id"]) == sorted(
         original, key=lambda t: t["requirement"]["id"]

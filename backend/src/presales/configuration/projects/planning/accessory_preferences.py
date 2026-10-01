@@ -1,5 +1,6 @@
 """Resolve selection requirements only from roles fulfilled by this accessory need."""
 
+from .context import select_candidates
 from .questions import question
 
 
@@ -32,4 +33,25 @@ def accessory_selection(context, *, tasks, demand):
             evidence=preferences,
         )
         return None, dict(gap, status="conflict")
-    return dict(allowed=allowed, source_id=next(iter(sources), "")), None
+    return dict(allowed=allowed, source_id=next(iter(sources), ""), preferences=preferences), None
+
+
+def accessory_candidates(context, *, demand, preferences):
+    candidates = [
+        dict(variant=context.variants[i], status="pass", evidence=[])
+        for i in demand["rule"]["target_variant_ids"]
+        if i in context.variants
+        and context.variants[i].get("supply_status", "available") == "available"
+    ]
+    selected = select_candidates(candidates, preferences)
+    if candidates and not selected:
+        gap = question(
+            "accessory_candidate_conflict",
+            demand["id"],
+            "candidate",
+            "当前配套候选与对应角色明确指定或排除的型号、来源要求冲突，请核对需求",
+            recipient="customer",
+            evidence=preferences,
+        )
+        return [], dict(gap, status="conflict")
+    return selected, None
