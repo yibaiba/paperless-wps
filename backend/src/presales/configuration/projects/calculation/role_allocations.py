@@ -12,6 +12,18 @@ def allocation_checks(data, *, definitions, engine, fulfilled_ids=frozenset()):
         allocations = role_allocations(requirement, devices)
         if not allocations:
             continue
+        # Confirmed aliases refer to accessory allocations, not additional stock use.
+        if requirement["id"] in fulfilled_ids:
+            checks.extend(
+                device_allocation_checks(
+                    {
+                        a["device_id"]: [(requirement["id"], Decimal(a["quantity"]))]
+                        for a in allocations
+                    },
+                    devices,
+                )
+            )
+            continue
         for allocation in allocations:
             counts[allocation["device_id"]].append(
                 (requirement["id"], Decimal(allocation["quantity"]))
@@ -25,9 +37,6 @@ def allocation_checks(data, *, definitions, engine, fulfilled_ids=frozenset()):
             (r for r in definition.get("roles", []) if r["id"] == requirement.get("role_id")),
             {"id": requirement.get("role_id", "")},
         )
-        # A confirmed, actually linked role/need alias is counted by its accessory demand.
-        if requirement["id"] in fulfilled_ids:
-            continue
         checks.append(
             quantity_check(
                 requirement,

@@ -1,0 +1,36 @@
+.F
+=================================== FAILURES ===================================
+______ test_aliases_of_one_accessory_need_do_not_double_count_quantity[2] ______
+
+client = <starlette.testclient.TestClient object at 0x1105fb750>
+catalog = {'imported': {'source_kind': 'excel', 'id': 'fbfecd14-da7b-406c-b0ee-d7ee23f81088', 'filename': 'test.xlsx', 'created_...e295-4d0d-b65e-8be985a9b1bf', 'revision': 1, 'updated_at': '2026-10-01T23:23:08.905170+00:00', 'actor': '测试维护者', ...}]}
+quantity = '2'
+
+    @pytest.mark.parametrize("quantity", ["1", "2"])
+    def test_aliases_of_one_accessory_need_do_not_double_count_quantity(client, catalog, quantity):
+        draft = alias_draft(client, catalog, quantity)
+>       proposal = plan(client, draft)
+                   ^^^^^^^^^^^^^^^^^^^
+
+backend/tests/configuration/test_fulfilled_role_quantity_review.py:35:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+backend/tests/configuration/test_proposal_generation.py:198: in plan
+    return call(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+client = <starlette.testclient.TestClient object at 0x1105fb750>
+name = 'list_plan'
+payload = {'draft_id': '7c62ae54-0fe8-4f34-a549-cc4f1c869392', 'expected_revision': 3, 'operation_id': '6b8c20d5-0dca-4169-88df-ff7c1fab0cb6'}
+
+    def call(client, name, payload):
+        response = client.post("/api/list-tools/" + name, json=payload)
+>       assert response.status_code == 200, response.text
+E       AssertionError: {"detail":"1 validation error for Configuration\n  Value error, 共用设备请按单台实例维护，再关联多个角色 [type=value_error, input_value={'actor': '测试维护...5c59-af0b-27781a43a042'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/value_error"}
+E       assert 422 == 200
+E        +  where 422 = <Response [422 Unprocessable Content]>.status_code
+
+backend/tests/configuration/test_proposal_generation.py:8: AssertionError
+=========================== short test summary info ============================
+FAILED backend/tests/configuration/test_fulfilled_role_quantity_review.py::test_aliases_of_one_accessory_need_do_not_double_count_quantity[2]
+!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!
+1 failed, 1 passed in 1.12s

@@ -1,0 +1,47 @@
+.F                                                                       [100%]
+=================================== FAILURES ===================================
+______ test_fulfilled_role_aliases_do_not_reserve_same_accessory_twice[2] ______
+
+client = <starlette.testclient.TestClient object at 0x10a283390>
+catalog = {'imported': {'source_kind': 'excel', 'id': '74ca08dd-ceeb-4f2c-90dc-58694abf8867', 'filename': 'test.xlsx', 'created_...4612-4de9-9c56-dac52c21c8c5', 'revision': 1, 'updated_at': '2026-10-02T01:17:58.273613+00:00', 'actor': '测试维护者', ...}]}
+quantity = '2'
+
+    @pytest.mark.parametrize("quantity", ["1", "2"])
+    def test_fulfilled_role_aliases_do_not_reserve_same_accessory_twice(client, catalog, quantity):
+        draft = alias_draft(client, catalog, quantity)
+        draft = write(
+            client, draft, [dict(action="remove", collection="requirements", id="second-server-alias")]
+        )
+        draft = apply(client, draft, plan(client, draft))
+        data = read(client, draft)["configuration"]
+        role = next(r for r in data["requirements"] if r["role_id"] == "server")
+        identity = role["device_id"]
+        role.update(
+            device_id=None,
+            allocations=[
+                dict(device_id=identity, quantity=quantity, evidence="隔离已确认配套的角色引用")
+            ],
+        )
+        data["requirements"].append(dict(role, id="second-alias"))
+        response = client.post(BASE + "/check", json=dict(configuration=data))
+        assert response.status_code == 200, response.text
+        checked = response.json()
+        assert len(checked["configuration"]["accessory_allocations"]) == 1
+        assert not any(
+            c["kind"] == "accessory_allocation" and c["status"] == "conflict" for c in checked["checks"]
+        )
+        duplicates = [
+            c
+            for c in checked["checks"]
+            if c["kind"] == "role_allocation"
+            and c.get("device_id") == identity
+            and c["status"] == "conflict"
+        ]
+>       assert not duplicates, duplicates
+E       AssertionError: [{'kind': 'role_allocation', 'status': 'conflict', 'device_id': 'b112e08c-0e9c-570e-ad95-5a0b8fe866e2', 'requirement_ids': ['950acd72-c56e-501e-a08b-22a22a75af95', 'second-alias'], ...}]
+E       assert not [{'kind': 'role_allocation', 'status': 'conflict', 'device_id': 'b112e08c-0e9c-570e-ad95-5a0b8fe866e2', 'requirement_ids': ['950acd72-c56e-501e-a08b-22a22a75af95', 'second-alias'], ...}]
+
+backend/tests/configuration/test_alias_quantity_checks.py:39: AssertionError
+=========================== short test summary info ============================
+FAILED backend/tests/configuration/test_alias_quantity_checks.py::test_fulfilled_role_aliases_do_not_reserve_same_accessory_twice[2]
+1 failed, 1 passed in 1.16s

@@ -1,0 +1,45 @@
+{
+  "installed_version": "0.53.0",
+  "results": [
+    {
+      "mode": "per_unit",
+      "input": {
+        "quantity": "32",
+        "factor": "2"
+      },
+      "quantity": "64",
+      "engine": "GoRules ZEN 0.53.0",
+      "has_trace": true
+    },
+    {
+      "mode": "per_capacity",
+      "input": {
+        "quantity": "33",
+        "factor": "16"
+      },
+      "quantity": "3",
+      "engine": "GoRules ZEN 0.53.0",
+      "has_trace": true
+    },
+    {
+      "mode": "per_group",
+      "input": {
+        "quantity": "32",
+        "factor": "1"
+      },
+      "quantity": "1",
+      "engine": "GoRules ZEN 0.53.0",
+      "has_trace": true
+    },
+    {
+      "mode": "per_unit",
+      "input": {
+        "quantity": "0.1",
+        "factor": "0.2"
+      },
+      "quantity": "0.02",
+      "engine": "GoRules ZEN 0.53.0",
+      "has_trace": true
+    }
+  ]
+}

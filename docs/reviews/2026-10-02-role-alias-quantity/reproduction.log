@@ -1,0 +1,37 @@
+.F                                                                       [100%]
+=================================== FAILURES ===================================
+______ test_aliases_of_one_accessory_need_do_not_double_count_quantity[2] ______
+
+client = <starlette.testclient.TestClient object at 0x10e103390>
+catalog = {'imported': {'source_kind': 'excel', 'id': '7ace78d5-5946-43ed-8f17-08305cf1c961', 'filename': 'test.xlsx', 'created_...569c-46db-a5bf-c97199e29362', 'revision': 1, 'updated_at': '2026-10-01T23:25:07.856036+00:00', 'actor': '测试维护者', ...}]}
+quantity = '2'
+
+    @pytest.mark.parametrize("quantity", ["1", "2"])
+    def test_aliases_of_one_accessory_need_do_not_double_count_quantity(
+        client, catalog, quantity
+    ):
+        draft = alias_draft(client, catalog, quantity)
+>       proposal = plan(client, draft)
+                   ^^^^^^^^^^^^^^^^^^^
+
+backend/tests/configuration/test_fulfilled_role_quantity_review.py:62:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+backend/tests/configuration/test_proposal_generation.py:198: in plan
+    return call(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+client = <starlette.testclient.TestClient object at 0x10e103390>
+name = 'list_plan'
+payload = {'draft_id': '8986cdc8-416b-4e0a-a917-b04bd3017d44', 'expected_revision': 3, 'operation_id': '5e777448-d300-4aa2-92c5-f3149ef9a299'}
+
+    def call(client, name, payload):
+        response = client.post("/api/list-tools/" + name, json=payload)
+>       assert response.status_code == 200, response.text
+E       AssertionError: {"detail":"1 validation error for Configuration\n  Value error, 共用设备请按单台实例维护，再关联多个角色 [type=value_error, input_value={'actor': '测试维护...5c20-afd2-462ddb4c5c44'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/value_error"}
+E       assert 422 == 200
+E        +  where 422 = <Response [422 Unprocessable Content]>.status_code
+
+backend/tests/configuration/test_proposal_generation.py:8: AssertionError
+=========================== short test summary info ============================
+FAILED backend/tests/configuration/test_fulfilled_role_quantity_review.py::test_aliases_of_one_accessory_need_do_not_double_count_quantity[2]
+1 failed, 1 passed in 1.34s
