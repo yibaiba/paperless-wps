@@ -164,6 +164,26 @@ def test_feedback_prioritizes_the_confirmed_source_without_promoting_its_duplica
     assert ranked[1]["context_reasons"] == []
 
 
+def test_net_negative_feedback_is_not_presented_as_strong_learning_evidence():
+    target = variant("target", "CRIR-D-WE")
+    item = {**candidate(target["id"]), "source_id": "source-a"}
+    learned_scores = {
+        target["id"]: (-100, ""),
+        (target["id"], item["source_id"]): (25, "采用个人历史顺序"),
+    }
+
+    ranked = rank_candidates(
+        [item],
+        SuggestionRequest(),
+        {target["id"]: target},
+        learned_scores=learned_scores,
+    )
+
+    assert ranked[0]["context_reasons"] == []
+    assert ranked[0]["confidence"] == "low"
+    assert ranked[0]["_strong_completion_evidence"] is False
+
+
 def test_contextual_tab_requires_a_clear_margin_over_another_product():
     close = [
         {

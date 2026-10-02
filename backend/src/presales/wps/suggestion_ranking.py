@@ -111,7 +111,9 @@ def _learned_candidate_score(item, learned_scores):
     source_score, source_reason = learned_scores.get(
         (item["variant_id"], source_id), (0, "")
     )
-    return variant_score + source_score, source_reason or variant_reason
+    score = variant_score + source_score
+    reason = (source_reason or variant_reason) if score > 0 else ""
+    return score, reason
 
 
 def exclude_selected_models(items, identities, by_id):
