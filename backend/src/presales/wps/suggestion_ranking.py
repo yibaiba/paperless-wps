@@ -49,7 +49,7 @@ def rank_candidates(
     ranked = []
     for index, item in enumerate(items):
         variant = by_id[item["variant_id"]]
-        learned_score, learned_reason = (learned_scores or {}).get(item["variant_id"], (0, ""))
+        learned_score, learned_reason = _learned_candidate_score(item, learned_scores or {})
         context_score, reasons, transition_strong = _context_score(
             variant,
             request,
@@ -103,6 +103,15 @@ def rank_candidates(
         ranked.append((scope_order, score, -index, candidate))
     ranked.sort(key=lambda value: (value[0], value[1], value[2]), reverse=True)
     return [item for _, _, _, item in ranked]
+
+
+def _learned_candidate_score(item, learned_scores):
+    variant_score, variant_reason = learned_scores.get(item["variant_id"], (0, ""))
+    source_id = item.get("source_id")
+    source_score, source_reason = learned_scores.get(
+        (item["variant_id"], source_id), (0, "")
+    )
+    return variant_score + source_score, source_reason or variant_reason
 
 
 def exclude_selected_models(items, identities, by_id):

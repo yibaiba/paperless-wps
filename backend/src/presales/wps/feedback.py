@@ -121,10 +121,11 @@ class CompletionFeedback:
         scores, reasons, reason_weights = {}, {}, {}
         for row in self._latest_personal_rows(rows):
             weight, reason = self._scope(row, request, current_hash)
-            scores[row.chosen_variant_id] = scores.get(row.chosen_variant_id, 0) + weight
-            if weight > reason_weights.get(row.chosen_variant_id, -1):
-                reasons[row.chosen_variant_id] = reason
-                reason_weights[row.chosen_variant_id] = weight
+            chosen = (row.chosen_variant_id, row.chosen_source_id)
+            scores[chosen] = scores.get(chosen, 0) + weight
+            if weight > reason_weights.get(chosen, -1):
+                reasons[chosen] = reason
+                reason_weights[chosen] = weight
             if row.suggested_variant_id and row.suggested_variant_id != row.chosen_variant_id:
                 penalty = weight // 2
                 scores[row.suggested_variant_id] = scores.get(row.suggested_variant_id, 0) - penalty
@@ -158,7 +159,7 @@ class CompletionFeedback:
                 latest_by_actor[row.actor] = row
         voters = defaultdict(set)
         for row in latest_by_actor.values():
-            voters[row.chosen_variant_id].add(row.actor)
+            voters[(row.chosen_variant_id, row.chosen_source_id)].add(row.actor)
         return {
             identity: (TEAM_CONTEXT_FEEDBACK_SCORE, "采用团队确认的模板顺序")
             for identity, actors in voters.items()

@@ -739,7 +739,8 @@ def test_latest_personal_choice_replaces_an_old_choice_in_same_context(client, c
     with client.app.state.session_factory() as session:
         scores = CompletionFeedback(session).scores(request, actor)
 
-    assert scores[corrected["id"]] == (300, "采用当前工作簿上下文顺序")
+    corrected_key = (corrected["id"], catalog["sources"][1]["id"])
+    assert scores[corrected_key] == (300, "采用当前工作簿上下文顺序")
     assert scores[previous["id"]] == (-150, "")
 
 
@@ -788,7 +789,7 @@ def test_team_context_requires_two_other_people_in_same_template(client, catalog
         if index < len(actors):
             assert scores == {}
 
-    score, reason = scores[chosen["id"]]
+    score, reason = scores[(chosen["id"], catalog["sources"][1]["id"])]
     assert score == 140
     assert reason == "采用团队确认的模板顺序"
 

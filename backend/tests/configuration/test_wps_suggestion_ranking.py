@@ -143,6 +143,27 @@ def test_explicit_feedback_overrides_catalog_order_and_penalizes_skipped_choice(
     assert ranked[0]["context_reasons"][0] == "采用当前工作簿历史顺序"
 
 
+def test_feedback_prioritizes_the_confirmed_source_without_promoting_its_duplicates():
+    target = variant("target", "CRIR-D-WE")
+    variants = {target["id"]: target}
+    first = {**candidate(target["id"]), "source_id": "source-a"}
+    confirmed = {**candidate(target["id"]), "source_id": "source-b"}
+    learned_scores = {
+        (target["id"], confirmed["source_id"]): (300, "采用当前工作簿上下文顺序")
+    }
+
+    ranked = rank_candidates(
+        [first, confirmed],
+        SuggestionRequest(),
+        variants,
+        learned_scores=learned_scores,
+    )
+
+    assert ranked[0]["source_id"] == confirmed["source_id"]
+    assert ranked[0]["context_reasons"][0] == "采用当前工作簿上下文顺序"
+    assert ranked[1]["context_reasons"] == []
+
+
 def test_contextual_tab_requires_a_clear_margin_over_another_product():
     close = [
         {
