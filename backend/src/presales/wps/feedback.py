@@ -119,7 +119,7 @@ class CompletionFeedback:
 
     def _personal_scores(self, rows, request, current_hash):
         scores, reasons, reason_weights = {}, {}, {}
-        for row in rows:
+        for row in self._latest_personal_rows(rows):
             weight, reason = self._scope(row, request, current_hash)
             scores[row.chosen_variant_id] = scores.get(row.chosen_variant_id, 0) + weight
             if weight > reason_weights.get(row.chosen_variant_id, -1):
@@ -132,6 +132,21 @@ class CompletionFeedback:
             identity: (self._clamp(score), reasons.get(identity, ""))
             for identity, score in scores.items()
         }
+
+    @staticmethod
+    def _latest_personal_rows(rows):
+        latest = {}
+        for row in rows:
+            key = (
+                row.workbook_instance_id,
+                row.template_profile_id,
+                row.template_profile_revision,
+                row.context_hash,
+            )
+            current = latest.get(key)
+            if current is None or (row.created_at, row.id) > (current.created_at, current.id):
+                latest[key] = row
+        return latest.values()
 
     def _team_scores(self, rows, actor, request, current_hash):
         latest_by_actor = {}

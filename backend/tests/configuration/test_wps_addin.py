@@ -687,6 +687,62 @@ def test_typed_choice_does_not_train_blank_row_completion(client, catalog):
         assert feedback.scores(typed_request, actor) == {}
 
 
+def test_latest_personal_choice_replaces_an_old_choice_in_same_context(client, catalog):
+    actor = "反馈纠正测试售前"
+    token, _ = paired(client, actor=actor)
+    headers = authorized(token)
+    profile = template(client, headers)
+    previous = catalog["variants"][0]
+    corrected = catalog["variants"][1]
+    base_payload = {
+        "workbook_instance_id": "correction-workbook",
+        "template_profile_id": profile["id"],
+        "template_profile_revision": profile["revision"],
+        "sheet": "报价表",
+        "section": "会议系统",
+        "previous_variant_id": previous["id"],
+        "context_previous_variant_ids": [previous["id"]],
+        "context_next_variant_ids": [],
+        "query_kind": "contextual",
+    }
+    choices = [
+        {
+            "suggested_variant_id": corrected["id"],
+            "chosen_variant_id": previous["id"],
+            "chosen_source_id": catalog["sources"][0]["id"],
+        },
+        {
+            "suggested_variant_id": previous["id"],
+            "chosen_variant_id": corrected["id"],
+            "chosen_source_id": catalog["sources"][1]["id"],
+        },
+    ]
+    for choice in choices:
+        response = client.post(
+            "/api/wps/suggestion-feedback",
+            headers=headers,
+            json={"operation_id": str(uuid4()), **base_payload, **choice},
+        )
+        assert response.status_code == 200, response.text
+
+    request = SuggestionRequest(
+        query="",
+        workbook_instance_id=base_payload["workbook_instance_id"],
+        template_profile_id=profile["id"],
+        template_profile_revision=profile["revision"],
+        context={
+            "sheet": base_payload["sheet"],
+            "section": base_payload["section"],
+            "previous_variant_ids": [previous["id"]],
+        },
+    )
+    with client.app.state.session_factory() as session:
+        scores = CompletionFeedback(session).scores(request, actor)
+
+    assert scores[corrected["id"]] == (300, "采用当前工作簿上下文顺序")
+    assert scores[previous["id"]] == (-150, "")
+
+
 def test_team_context_requires_two_other_people_in_same_template(client, catalog):
     observer = "团队反馈观察者"
     observer_token, _ = paired(client, actor=observer)
