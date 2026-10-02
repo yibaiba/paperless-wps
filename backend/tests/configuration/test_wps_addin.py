@@ -687,6 +687,56 @@ def test_typed_choice_does_not_train_blank_row_completion(client, catalog):
         assert feedback.scores(typed_request, actor) == {}
 
 
+def test_team_context_requires_two_other_people_in_same_template(client, catalog):
+    observer = "团队反馈观察者"
+    observer_token, _ = paired(client, actor=observer)
+    profile = template(client, authorized(observer_token))
+    previous = catalog["variants"][0]
+    chosen = catalog["variants"][1]
+    request = SuggestionRequest(
+        query="",
+        workbook_instance_id="observer-workbook",
+        template_profile_id=profile["id"],
+        template_profile_revision=profile["revision"],
+        context={
+            "sheet": "报价表",
+            "section": "会议系统",
+            "previous_variant_ids": [previous["id"]],
+        },
+    )
+
+    actors = ["团队反馈甲", "团队反馈甲", "团队反馈乙"]
+    for index, actor in enumerate(actors, start=1):
+        token, _ = paired(client, actor=actor)
+        payload = {
+            "operation_id": str(uuid4()),
+            "workbook_instance_id": f"team-feedback-{index}",
+            "template_profile_id": profile["id"],
+            "template_profile_revision": profile["revision"],
+            "sheet": "报价表",
+            "section": "会议系统",
+            "previous_variant_id": previous["id"],
+            "context_previous_variant_ids": [previous["id"]],
+            "context_next_variant_ids": [],
+            "suggested_variant_id": previous["id"],
+            "chosen_variant_id": chosen["id"],
+            "chosen_source_id": catalog["sources"][1]["id"],
+            "query_kind": "contextual",
+        }
+        recorded = client.post(
+            "/api/wps/suggestion-feedback", headers=authorized(token), json=payload
+        )
+        assert recorded.status_code == 200, recorded.text
+        with client.app.state.session_factory() as session:
+            scores = CompletionFeedback(session).scores(request, observer)
+        if index < len(actors):
+            assert scores == {}
+
+    score, reason = scores[chosen["id"]]
+    assert score == 140
+    assert reason == "采用团队确认的模板顺序"
+
+
 def test_preview_commit_retry_and_stale_conflict(client, catalog):
     token, _ = paired(client)
     headers = authorized(token)

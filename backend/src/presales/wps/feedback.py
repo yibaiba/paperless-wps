@@ -1,3 +1,4 @@
+from collections import defaultdict
 from hashlib import sha256
 
 from sqlalchemy import select
@@ -12,6 +13,8 @@ TEMPLATE_CONTEXT_FEEDBACK_SCORE = 220
 WORKBOOK_FEEDBACK_SCORE = 70
 TEMPLATE_FEEDBACK_SCORE = 50
 ACTOR_FEEDBACK_SCORE = 25
+TEAM_CONTEXT_FEEDBACK_SCORE = 140
+MIN_TEAM_CONTEXT_ACTORS = 2
 MAX_LEARNED_SCORE = 360
 MAX_REJECTION_PENALTY = 180
 PREVIOUS_CONTEXT_LIMIT = 3
@@ -86,20 +89,36 @@ class CompletionFeedback:
         previous = next(iter(request.context.previous_variant_ids), None)
         if not previous or not actor:
             return {}
-        rows = self.session.scalars(
-            select(WpsSuggestionFeedback).where(
-                WpsSuggestionFeedback.actor == actor,
-                WpsSuggestionFeedback.previous_variant_id == previous,
-                WpsSuggestionFeedback.query_kind == CONTEXTUAL_QUERY_KIND,
-            )
-        ).all()
-        scores, reasons, reason_weights = {}, {}, {}
         current_hash = context_hash(
             request.context.sheet,
             request.context.section,
             request.context.previous_variant_ids,
             request.context.next_variant_ids,
         )
+        personal_rows = self.session.scalars(
+            select(WpsSuggestionFeedback).where(
+                WpsSuggestionFeedback.actor == actor,
+                WpsSuggestionFeedback.previous_variant_id == previous,
+                WpsSuggestionFeedback.query_kind == CONTEXTUAL_QUERY_KIND,
+            )
+        ).all()
+        team_rows = self.session.scalars(
+            select(WpsSuggestionFeedback).where(
+                WpsSuggestionFeedback.actor != actor,
+                WpsSuggestionFeedback.previous_variant_id == previous,
+                WpsSuggestionFeedback.query_kind == CONTEXTUAL_QUERY_KIND,
+                WpsSuggestionFeedback.template_profile_id == request.template_profile_id,
+                WpsSuggestionFeedback.template_profile_revision
+                == request.template_profile_revision,
+                WpsSuggestionFeedback.context_hash == current_hash,
+            )
+        ).all()
+        personal = self._personal_scores(personal_rows, request, current_hash)
+        team = self._team_scores(team_rows, actor, request, current_hash)
+        return self._merge_scores(personal, team)
+
+    def _personal_scores(self, rows, request, current_hash):
+        scores, reasons, reason_weights = {}, {}, {}
         for row in rows:
             weight, reason = self._scope(row, request, current_hash)
             scores[row.chosen_variant_id] = scores.get(row.chosen_variant_id, 0) + weight
@@ -113,6 +132,43 @@ class CompletionFeedback:
             identity: (self._clamp(score), reasons.get(identity, ""))
             for identity, score in scores.items()
         }
+
+    def _team_scores(self, rows, actor, request, current_hash):
+        latest_by_actor = {}
+        for row in rows:
+            if row.actor == actor or not self._same_template_context(row, request, current_hash):
+                continue
+            current = latest_by_actor.get(row.actor)
+            if current is None or (row.created_at, row.id) > (current.created_at, current.id):
+                latest_by_actor[row.actor] = row
+        voters = defaultdict(set)
+        for row in latest_by_actor.values():
+            voters[row.chosen_variant_id].add(row.actor)
+        return {
+            identity: (TEAM_CONTEXT_FEEDBACK_SCORE, "采用团队确认的模板顺序")
+            for identity, actors in voters.items()
+            if len(actors) >= MIN_TEAM_CONTEXT_ACTORS
+        }
+
+    @classmethod
+    def _merge_scores(cls, personal, team):
+        result = {}
+        for identity in personal.keys() | team.keys():
+            personal_score, personal_reason = personal.get(identity, (0, ""))
+            team_score, team_reason = team.get(identity, (0, ""))
+            result[identity] = (
+                cls._clamp(personal_score + team_score),
+                personal_reason or team_reason,
+            )
+        return result
+
+    @staticmethod
+    def _same_template_context(row, request, current_hash):
+        return (
+            row.context_hash == current_hash
+            and row.template_profile_id == request.template_profile_id
+            and row.template_profile_revision == request.template_profile_revision
+        )
 
     def _validate_products(self, data):
         variants = CatalogService(self.session).variants()
