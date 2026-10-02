@@ -87,8 +87,12 @@ export function completionCommand(options: {
   selection: CompletionSelection;
   hasGhost: boolean;
   query?: string;
+  busy?: boolean;
+  error?: string;
+  composing?: boolean;
 }): CompletionCommand {
-  if (options.candidates.length === 0) {
+  if (options.composing) return 'none';
+  if (options.busy || options.error || options.candidates.length === 0) {
     return options.key === 'Tab' ? 'native-tab' : 'none';
   }
   const needsChoice = candidateIsAmbiguous(

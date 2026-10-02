@@ -1,7 +1,68 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { runInNewContext } from 'node:vm';
 
 import { InlineDialogManager } from '../src/inlineDialog.ts';
+import { LatestRequest } from '../src/latestRequest.ts';
+
+function liveDialog() {
+  const storage = new Map();
+  const window = { focus: () => {}, PresalesInlineRefresh: () => {} };
+  const dialog = {
+    ID: 1,
+    Resize: () => {},
+    Move: () => {},
+    ExecuteJavaScript: (script) => runInNewContext(script, { window }),
+    Visible: false,
+  };
+  const app = {
+    Selection: { Left: 100, Top: 200, Width: 100, Height: 20 },
+    ActiveWindow: {
+      PointsToScreenPixelsX: (value) => value,
+      PointsToScreenPixelsY: (value) => value,
+    },
+    CreateWebDialog: () => dialog,
+    GetWebDialog: () => dialog,
+  };
+  const manager = new InlineDialogManager({
+    app,
+    href: 'http://127.0.0.1:3889/taskpane.html',
+    get: (key) => storage.get(key) ?? null,
+    set: (key, value) => storage.set(key, String(value)),
+  });
+  return { manager, window, dialog, app };
+}
+
+test('hiding a persistent dialog notifies its editor to cancel without taking focus', () => {
+  const { manager, window, dialog } = liveDialog();
+  const requests = new LatestRequest();
+  manager.show({ profile: { id: 'profile' }, cell: { row: 2 } });
+  const pending = requests.begin();
+  window.PresalesInlineRefresh = () => {
+    if (!manager.context()) requests.cancel();
+  };
+  window.focus = () => assert.fail('hidden editor must not take WPS focus');
+
+  manager.hide();
+
+  assert.equal(dialog.Visible, false);
+  assert.equal(pending.signal.aborted, true);
+  assert.equal(pending.isCurrent(), false);
+});
+
+test('a hidden dialog does not read WPS geometry after the workbook closes', () => {
+  const { manager, app } = liveDialog();
+  manager.show({ profile: { id: 'profile' }, cell: { row: 2 } });
+  manager.hide();
+  Object.defineProperty(app, 'Selection', {
+    get: () => assert.fail('hidden dialog must not access the current cell'),
+  });
+  Object.defineProperty(app, 'ActiveWindow', {
+    get: () => assert.fail('closed workbook has no active window'),
+  });
+
+  manager.layout({ candidateCount: 0, listVisible: false, showStatus: false });
+});
 
 test('inline dialog keeps a monotonic context nonce and follows the selected cell', () => {
   const storage = new Map();

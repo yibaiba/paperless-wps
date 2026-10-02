@@ -6,6 +6,20 @@ export interface RequestAttempt {
 export class LatestRequest {
   private sequence = 0;
   private controller?: AbortController;
+  private timer?: ReturnType<typeof setTimeout>;
+
+  schedule(delayMs: number, run: (request: RequestAttempt) => void): () => void {
+    // Invalidate the old request before debounce, not when the timer fires.
+    const request = this.begin();
+    this.timer = setTimeout(() => {
+      if (!request.isCurrent()) return;
+      this.timer = undefined;
+      run(request);
+    }, delayMs);
+    return () => {
+      if (request.isCurrent()) this.cancel();
+    };
+  }
 
   begin(): RequestAttempt {
     this.cancel();
@@ -20,6 +34,8 @@ export class LatestRequest {
 
   cancel() {
     this.sequence += 1;
+    clearTimeout(this.timer);
+    this.timer = undefined;
     this.controller?.abort();
     this.controller = undefined;
   }

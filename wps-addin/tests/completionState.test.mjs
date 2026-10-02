@@ -144,3 +144,29 @@ test('IME composition suppresses completion keys while Escape and arrows remain 
   assert.equal(completionKey('Escape', false), 'Escape');
   assert.equal(completionKey('ArrowDown', false), 'ArrowDown');
 });
+
+test('loading or failed queries cannot accept a previously selected candidate', () => {
+  const candidates = [candidate()];
+  const selection = { expanded: true, explicit: true, index: 0 };
+  for (const state of [{ busy: true }, { error: '读取当前工作簿失败' }]) {
+    assert.equal(completionCommand({
+      key: 'Tab', candidates, selection, hasGhost: true, ...state,
+    }), 'native-tab');
+    assert.equal(completionCommand({
+      key: 'Enter', candidates, selection, hasGhost: true, ...state,
+    }), 'none');
+  }
+});
+
+test('host-dispatched Tab and Enter do nothing during IME composition', () => {
+  const candidates = [candidate()];
+  for (const key of ['Tab', 'Enter']) {
+    assert.equal(completionCommand({
+      key,
+      candidates,
+      selection: { expanded: false, explicit: true, index: 0 },
+      hasGhost: true,
+      composing: true,
+    }), 'none');
+  }
+});

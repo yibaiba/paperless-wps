@@ -97,12 +97,15 @@ export function InlineEditor() {
       return;
     }
     if (next.nonce === contextNonce.current) return;
+    requests.current.cancel();
     contextNonce.current = next.nonce;
     setContext(next);
     setAnchorHeight(next.anchor.height);
     setQuery(next.cell.value);
     setCandidates([]);
     setSelection(EMPTY_SELECTION);
+    setBusy(false);
+    setComposing(false);
     setTabGeneration(0);
     accepting.current = false;
     setError('');
@@ -144,6 +147,9 @@ export function InlineEditor() {
       return undefined;
     }
     if ('error' in workbookContext) {
+      requests.current.cancel();
+      setCandidates([]);
+      setBusy(false);
       setError(workbookContext.error ?? '读取工作簿上下文失败');
       return undefined;
     }
@@ -157,11 +163,12 @@ export function InlineEditor() {
       setBusy(false);
       return undefined;
     }
-    const timer = window.setTimeout(async () => {
-      const request = requests.current.begin();
+    setCandidates([]);
+    setSelection(EMPTY_SELECTION);
+    setBusy(true);
+    setError('');
+    return requests.current.schedule(suggestionDelay(query), async (request) => {
       const started = performance.now();
-      setBusy(true);
-      setError('');
       diagnose({
         event_type: 'query_start',
         completion_phase: 'loading',
@@ -220,8 +227,7 @@ export function InlineEditor() {
       } finally {
         if (request.isCurrent()) setBusy(false);
       }
-    }, suggestionDelay(query));
-    return () => window.clearTimeout(timer);
+    });
   }, [api, composing, context, diagnose, query, workbookContext]);
 
   const selectedCandidate = candidates[selection.index];
@@ -249,15 +255,17 @@ export function InlineEditor() {
   }, []);
 
   useLayoutEffect(() => {
+    if (!context) return;
     applyLayout(host.layoutInlineEditor(layout));
-  }, [applyLayout, host, layout]);
+  }, [applyLayout, context, host, layout]);
 
   useEffect(() => {
+    if (!context) return undefined;
     const poll = window.setInterval(() => {
       applyLayout(host.layoutInlineEditor(layoutRef.current));
     }, POSITION_POLL_MS);
     return () => window.clearInterval(poll);
-  }, [applyLayout, host]);
+  }, [applyLayout, context, host]);
 
   const prefetchNextRow = useCallback((metadata: ReturnType<typeof applyCandidate>) => {
     if (!context) return;
@@ -272,6 +280,7 @@ export function InlineEditor() {
     operationId: string = crypto.randomUUID(),
   ) => {
     if (accepting.current || !context || !workbookContext || 'error' in workbookContext) return;
+    if (busy || error || composing || context.nonce !== contextNonce.current) return;
     accepting.current = true;
     try {
       const feedback = completionFeedbackPayload({
@@ -341,8 +350,8 @@ export function InlineEditor() {
       setError(reason instanceof Error ? reason.message : String(reason));
     }
   }, [
-    api, baseWorkbookContext, candidates, context, diagnose, host, phase, prefetchNextRow, query,
-    workbookContext,
+    api, baseWorkbookContext, busy, candidates, composing, context, diagnose, error, host, phase,
+    prefetchNextRow, query, workbookContext,
   ]);
 
   const executeCompletion = useCallback((
@@ -350,7 +359,7 @@ export function InlineEditor() {
     operationId: string = crypto.randomUUID(),
   ) => {
     const command = completionCommand({
-      key, candidates, selection, hasGhost: Boolean(ghost), query,
+      key, candidates, selection, hasGhost: Boolean(ghost), query, busy, error, composing,
     });
     if (command === 'expand') {
       if (key === 'Tab') diagnose({
@@ -374,11 +383,13 @@ export function InlineEditor() {
     }
     return command;
   }, [
-    accept, candidates, context, diagnose, ghost, host, phase, query, selectedCandidate, selection,
+    accept, busy, candidates, composing, context, diagnose, error, ghost, host, phase, query,
+    selectedCandidate, selection,
   ]);
 
   const dispatchTab = useCallback((expectedSessionId: string) => {
     if (!context || context.session_id !== expectedSessionId) return;
+    if (context.nonce !== contextNonce.current) return;
     try {
       const operationId = host.claimTab(context.session_id);
       if (!operationId) return;
@@ -397,7 +408,7 @@ export function InlineEditor() {
   useEffect(() => {
     if (!context) return undefined;
     const command = completionCommand({
-      key: 'Tab', candidates, selection, hasGhost: Boolean(ghost), query,
+      key: 'Tab', candidates, selection, hasGhost: Boolean(ghost), query, busy, error, composing,
     });
     const actionable = !busy && !error && !composing
       && (command === 'accept' || command === 'expand');
@@ -436,13 +447,14 @@ export function InlineEditor() {
     setQuery(value);
     setCandidates([]);
     setSelection(EMPTY_SELECTION);
+    setBusy(false);
     setError('');
     try { host.writeCellValue(context.cell, value); }
     catch (reason) { setError(reason instanceof Error ? reason.message : String(reason)); }
   }
 
   function handleKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
-    const key = completionKey(event.key, event.nativeEvent.isComposing);
+    const key = completionKey(event.key, composing || event.nativeEvent.isComposing);
     if (!key) return;
     if (key === 'ArrowDown' || key === 'ArrowUp') {
       if (candidates.length === 0) return;
@@ -457,7 +469,9 @@ export function InlineEditor() {
       host.hideInlineEditor();
       return;
     }
-    const command = completionCommand({ key, candidates, selection, hasGhost: Boolean(ghost), query });
+    const command = completionCommand({
+      key, candidates, selection, hasGhost: Boolean(ghost), query, busy, error, composing,
+    });
     if (command === 'none') return;
     event.preventDefault();
     if (key === 'Tab' && command !== 'native-tab' && context) {

@@ -13,9 +13,11 @@ const DIALOG_KEY = 'presales_inline_dialog_id';
 const DIALOG_GAP = 2;
 const DIALOG_RESIZE_EDGE = 2;
 const DIALOG_LOADING_TIMEOUT_MS = 0;
+const SYNC_INLINE_CONTEXT_SCRIPT =
+  'window.PresalesInlineRefresh && window.PresalesInlineRefresh()';
 const REFRESH_INLINE_EDITOR_SCRIPT = [
   'window.focus()',
-  'window.PresalesInlineRefresh && window.PresalesInlineRefresh()',
+  SYNC_INLINE_CONTEXT_SCRIPT,
 ].join(';');
 const CLOSE_INLINE_EDITOR_SCRIPT = 'window.close()';
 
@@ -84,12 +86,15 @@ export class InlineDialogManager {
   hide() {
     this.config.set(CONTEXT_KEY, '');
     const dialog = this.dialog(false);
-    if (dialog) dialog.Visible = false;
+    if (!dialog) return;
+    dialog.Visible = false;
+    dialog.ExecuteJavaScript(SYNC_INLINE_CONTEXT_SCRIPT);
   }
 
   dispose() { this.closeDialog(); }
 
   layout(options: Omit<InlineLayoutOptions, 'anchorWidth' | 'anchorHeight'>): InlineLayoutResult {
+    if (!this.context()) return { placement: 'below', anchor: { width: 1, height: 1 } };
     const dialog = this.dialog(false);
     if (!dialog) return { placement: 'below', anchor: { width: 1, height: 1 } };
     const anchor = this.anchor();
