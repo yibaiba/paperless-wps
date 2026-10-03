@@ -182,7 +182,10 @@ def test_inactive_combination_preserves_legacy_project_checks(client, catalog, c
     assert not combos(client, data)
 
 
-def test_mcp_proposal_generates_mandatory_optional_role_without_default_quantity(client, catalog):
+@pytest.mark.parametrize("newer_rule", [False, True])
+def test_mcp_proposal_generates_mandatory_optional_role_without_default_quantity(
+    client, catalog, newer_rule
+):
     from presales.configuration.definitions.schemas import KnowledgePackage, SystemDefinition
 
     from .test_evolution_versions import editable
@@ -247,6 +250,16 @@ def test_mcp_proposal_generates_mandatory_optional_role_without_default_quantity
     )
     assert response.status_code == 200, response.text
     package = response.json()
+    if newer_rule:
+        from presales.configuration.knowledge.schemas import KnowledgeInput
+
+        latest = editable(KnowledgeInput, combo)
+        latest["combination"]["mode"] = "exclude"
+        response = client.put(
+            BASE + "/knowledge/" + combo["id"],
+            json=dict(expected_revision=1, payload=latest),
+        )
+        assert response.status_code == 200, response.text
     draft = draft_for(client, definition, package)
     proposal = plan(client, draft)
     applied = apply(client, draft, proposal)
@@ -254,6 +267,10 @@ def test_mcp_proposal_generates_mandatory_optional_role_without_default_quantity
 
     result = read(client, applied)
     config = result["configuration"]
+    check = next(c for c in result["checked"]["checks"] if c.get("rule_id") == combo["id"])
+    assert (check["code"], check["rule_revision"], check["status"]) == (
+        "combination_require_all", 1, "pass"
+    )
     assert config["decision_runtime"] == "zen-v1"
     addon = next(r for r in config["requirements"] if r["role_id"] == "addon")
     assert addon["device_id"]

@@ -39,11 +39,6 @@ def combination_branches(context, data, *, tasks, processed=frozenset()):
     if pending is None:
         yield checked["configuration"], [], []
         return
-    rule = next(
-        r
-        for r in checked["configuration"]["knowledge_snapshot"]
-        if r["id"] == pending["rule_id"] and r["revision"] == pending["rule_revision"]
-    )
     key = (pending["rule_id"], pending["scope_id"])
     next_processed = processed | {key}
     if not pending["generation_enabled"]:
@@ -54,7 +49,8 @@ def combination_branches(context, data, *, tasks, processed=frozenset()):
         for g in pending["groups"]
         if g["state"] != "pass" and (key, g["target"]["id"]) not in processed
     ]
-    alternatives = groups if rule["combination"]["mode"] == "require_any" else groups[:1]
+    # Checks already resolve package-pinned revisions, which may differ from the global snapshot.
+    alternatives = groups if pending["code"] == "combination_require_any" else groups[:1]
     if not alternatives:
         yield data, [], []
         return
