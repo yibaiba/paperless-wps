@@ -13,6 +13,14 @@ from urllib.request import Request, urlopen
 ACCEPTANCE_CASES = 30
 ACCEPTANCE_TEMPLATES = 3
 REQUEST_TIMEOUT_SECONDS = 10
+DECISION_STATES = {
+    "ready",
+    "choice_required",
+    "confirmation_required",
+    "satisfied",
+    "no_match",
+    "dismissed",
+}
 
 
 def validate_manifest(manifest, *, root, acceptance):
@@ -37,10 +45,19 @@ def validate_manifest(manifest, *, root, acceptance):
                 raise ValueError("证据路径必须位于清单目录内")
             if hashlib.sha256(path.read_bytes()).hexdigest() != evidence["sha256"]:
                 raise ValueError(f"案例 {case['id']} 证据版本已变化")
-        if not case.get("expected_edits") and not case.get("expected_questions"):
+        if (
+            not case.get("expected_edits")
+            and not case.get("expected_questions")
+            and not case.get("expected_decision")
+        ):
             raise ValueError(f"案例 {case['id']} 必须指定期望编辑或明确待确认问题")
         if not case.get("evidence_confirmed") and case.get("expected_edits"):
             raise ValueError("未确认业务证据的案例只能期望待确认问题，不能预设采购答案")
+        if (
+            case.get("expected_decision")
+            and case["expected_decision"] not in DECISION_STATES
+        ):
+            raise ValueError("expected_decision 必须使用补全协议定义的决策状态")
         request_location(case.get("request", {}))
     selected = [
         c
@@ -74,35 +91,52 @@ def request_location(request):
         not isinstance(cell, dict)
         or not isinstance(cell.get("sheet"), str)
         or not cell["sheet"].strip()
-        or any(type(cell.get(key)) is not int or cell[key] < 1 for key in ("row", "column"))
+        or any(
+            type(cell.get(key)) is not int or cell[key] < 1 for key in ("row", "column")
+        )
         or not isinstance(request.get("query", ""), str)
     ):
-        raise ValueError("业务回放需要真实活动工作表、行列和文本查询，不能推测 Tab 目标")
+        raise ValueError(
+            "业务回放需要真实活动工作表、行列和文本查询，不能推测 Tab 目标"
+        )
     return cell
 
 
-def initial_tab_action(request, items):
+def initial_tab_action(request, items, result=None):
     """Mirror nextEditAction's initial, non-IME state; not a host write measurement."""
     cell = request_location(request)
     if not items:
         return "native"
-    if len(items) > 1:
+    result = result or {}
+    decision = result.get("decision") or {}
+    if decision.get("status") == "choice_required":
         return "expand"
-    item = items[0]
+    item = items[0]  # The UI initially highlights the first item, not an arbitrary ID.
+    primary = result.get("primary_suggestion_id") and result[
+        "primary_suggestion_id"
+    ] == item.get("id")
+    if len(items) > 1 and not primary:
+        return "expand"
     text = next(
         (p["after"] for p in item["patches"] if p["column"] == cell["column"]), None
     )
     if text is None:
         bindings = item["line_bindings"]
-        text = (bindings[0].get("confirmed_values", {}).get("name") if bindings else None)
+        text = bindings[0].get("confirmed_values", {}).get("name") if bindings else None
         if text is None:
             text = item.get("label", "")
     if not text or not text.lower().startswith(request.get("query", "").lower()):
         return "expand"
-    target = next(iter(item["patches"]), None)
-    if target and (target["sheet"], target["row"]) != (cell["sheet"], cell["row"]):
+    explicit_target = result.get("next_target") if primary else None
+    target = explicit_target or next(iter(item["patches"]), None)
+    if target and (
+        (target["sheet"], target["row"]) != (cell["sheet"], cell["row"])
+        or (explicit_target and target["column"] != cell["column"])
+    ):
         return "locate"
-    return "apply" if item["acceptance"] == "inline" and item["applicable"] else "preview"
+    return (
+        "apply" if item["acceptance"] == "inline" and item["applicable"] else "preview"
+    )
 
 
 def evaluate(case, result):
@@ -111,7 +145,10 @@ def evaluate(case, result):
     matches = [i["applicable"] and edit_signature(i) in expected for i in items]
     codes = {i.get("code") for i in result["issues"] if isinstance(i, dict)}
     questions_ok = set(case.get("expected_questions", [])) <= codes
-    action = initial_tab_action(case["request"], items)
+    decision_ok = not case.get("expected_decision") or (
+        (result.get("decision") or {}).get("status") == case["expected_decision"]
+    )
+    action = initial_tab_action(case["request"], items, result)
     top1 = bool(matches and matches[0])
     return {
         "id": case["id"],
@@ -120,7 +157,8 @@ def evaluate(case, result):
         "top3": any(matches[:3]),
         "initial_tab_action": action,
         "inline_error": action == "apply" and not top1,
-        "questions_ok": questions_ok,
+        "questions_ok": questions_ok and decision_ok,
+        "decision_ok": decision_ok,
         "unexpected_edit": not expected and any(i["applicable"] for i in items),
         "blank_decidable": bool(expected) and not case["request"].get("query", ""),
         "blank_covered": top1 and action == "apply",

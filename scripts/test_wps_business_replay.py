@@ -11,15 +11,25 @@ spec.loader.exec_module(replay)
 
 
 def request(**extra):
-    return {"active_cell": {"sheet": "报价表", "row": 3, "column": 2}, "query": "", **extra}
+    return {
+        "active_cell": {"sheet": "报价表", "row": 3, "column": 2},
+        "query": "",
+        **extra,
+    }
 
 
 def candidate(**extra):
     return {
         "line_bindings": [],
         "patches": [
-            {"sheet": "报价表", "row": 3, "column": 2, "field": "name",
-             "before": "", "after": "服务器"}
+            {
+                "sheet": "报价表",
+                "row": 3,
+                "column": 2,
+                "field": "name",
+                "before": "",
+                "after": "服务器",
+            }
         ],
         "business_operations": [],
         "applicable": True,
@@ -30,8 +40,11 @@ def candidate(**extra):
 
 def score(items, *, expected=None, **request_fields):
     return replay.evaluate(
-        {"id": "isolated-scorer-case", "request": request(**request_fields),
-         "expected_edits": [replay.edit_signature(expected or candidate())]},
+        {
+            "id": "isolated-scorer-case",
+            "request": request(**request_fields),
+            "expected_edits": [replay.edit_signature(expected or candidate())],
+        },
         {"items": items, "issues": []},
     )
 
@@ -53,7 +66,11 @@ def test_sequence_only_manifest_cannot_claim_real_acceptance(tmp_path):
 
 def test_abstention_is_not_counted_as_correct_product_accuracy():
     result = replay.evaluate(
-        {"id": "missing-evidence", "request": request(), "expected_questions": ["missing"]},
+        {
+            "id": "missing-evidence",
+            "request": request(),
+            "expected_questions": ["missing"],
+        },
         {"items": [], "issues": [{"code": "missing"}]},
     )
     assert not result["decidable"]
@@ -73,7 +90,9 @@ def test_correct_second_candidate_is_top3_not_gray_coverage_or_direct_write():
 
 
 def test_correct_first_of_multiple_candidates_still_requires_explicit_choice():
-    row = score([candidate(), candidate(business_operations=[{"action": "accessory_link"}])])
+    row = score(
+        [candidate(), candidate(business_operations=[{"action": "accessory_link"}])]
+    )
     assert row["top1"] and row["top3"]
     assert row["initial_tab_action"] == "expand"
     assert not row["blank_covered"]
@@ -99,7 +118,9 @@ def test_correct_but_offscreen_candidate_requires_location_not_gray_acceptance()
     assert not row["blank_covered"]
 
 
-@pytest.mark.parametrize("query,action", [("务器", "expand"), ("服", "apply"), ("服务器", "apply")])
+@pytest.mark.parametrize(
+    "query,action", [("务器", "expand"), ("服", "apply"), ("服务器", "apply")]
+)
 def test_prefix_matches_follow_initial_tab_semantics(query, action):
     row = score([candidate()], query=query)
     assert row["initial_tab_action"] == action
@@ -113,12 +134,61 @@ def test_inapplicable_candidate_and_no_match_cannot_count_as_coverage():
 
 
 def test_wrong_unique_direct_candidate_is_an_error():
-    row = score([candidate()], expected=candidate(business_operations=[{"action": "supply_set"}]))
+    row = score(
+        [candidate()],
+        expected=candidate(business_operations=[{"action": "supply_set"}]),
+    )
     assert row["initial_tab_action"] == "apply" and row["inline_error"]
     assert not replay.summary([{**row, "duration_ms": 10}])["passed"]
 
 
-@pytest.mark.parametrize("cell", [{}, {"sheet": "报价表", "row": True, "column": 2}, None])
+@pytest.mark.parametrize(
+    "cell", [{}, {"sheet": "报价表", "row": True, "column": 2}, None]
+)
 def test_missing_active_location_is_not_assumed_to_be_current_row(cell):
     with pytest.raises(ValueError, match="活动工作表"):
         replay.initial_tab_action(request(active_cell=cell), [candidate()])
+
+
+def test_explicit_primary_with_alternatives_counts_only_if_immediately_acceptable():
+    item = candidate(id="primary")
+    response = {
+        "items": [item, candidate(id="alternative")],
+        "issues": [],
+        "primary_suggestion_id": "primary",
+        "decision": {"status": "ready"},
+    }
+    case = {
+        "id": "primary",
+        "request": request(),
+        "expected_edits": [replay.edit_signature(item)],
+    }
+    assert replay.evaluate(case, response)["blank_covered"]
+    response["decision"] = {"status": "choice_required"}
+    assert not replay.evaluate(case, response)["blank_covered"]
+    response["decision"] = {"status": "ready"}
+    response["next_target"] = {"sheet": "报价表", "row": 3, "column": 4}
+    assert replay.evaluate(case, response)["initial_tab_action"] == "locate"
+
+
+def test_satisfied_case_cannot_be_passed_by_missing_evidence_response():
+    case = {"id": "stop", "request": request(), "expected_decision": "satisfied"}
+    result = {
+        "items": [],
+        "issues": [],
+        "decision": {"status": "confirmation_required"},
+    }
+    assert not replay.evaluate(case, result)["questions_ok"]
+    result["decision"]["status"] = "satisfied"
+    assert replay.evaluate(case, result)["questions_ok"]
+
+
+def test_out_of_order_primary_is_not_scored_as_an_invisible_direct_accept():
+    first, primary = candidate(id="first"), candidate(id="primary")
+    result = {
+        "items": [first, primary],
+        "primary_suggestion_id": "primary",
+        "decision": {"status": "ready"},
+        "issues": [],
+    }
+    assert replay.initial_tab_action(request(), result["items"], result) == "expand"

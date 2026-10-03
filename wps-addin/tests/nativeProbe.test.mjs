@@ -18,3 +18,20 @@ test('probe logs actual callbacks, never equates OnKey with native editing suppo
   assert.equal(JSON.stringify(report).includes('abc'), false);
   assert.equal(report.native_integration_enabled, false);
 });
+
+test('probe restores registered Tab on deactivation and exposes cleanup failure', () => {
+  const keys = [], listeners = new Map(); let failCleanup = false;
+  const app = { OnKey: (...args) => keys.push(args), ApiEvent: {
+    AddApiEventListener: (name, fn) => listeners.set(name, fn),
+    RemoveApiEventListener: (name) => {
+      if (failCleanup) throw new Error('host refused cleanup');
+      listeners.delete(name);
+    },
+  } };
+  const probe = new globalThis.NativeProbe(app, () => 'unit-time');
+  probe.start(); probe.arm(); listeners.get('WindowDeactivate')();
+  assert.deepEqual(keys.at(-1), ['{TAB}']);
+  failCleanup = true; assert.throws(() => probe.stop(), /事件清理失败/);
+  assert.equal(probe.report().events.at(-1).remaining_subscriptions, 6);
+  failCleanup = false; probe.stop(); assert.equal(listeners.size, 0);
+});
