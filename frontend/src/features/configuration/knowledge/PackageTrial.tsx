@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, Button, Collapse, Form, Modal, Select, Space, Table, Typography } from 'antd';
+import { Alert, Button, Collapse, Form, Modal, Select, Space, Table, Tag, Typography } from 'antd';
 import { useMutation } from '@tanstack/react-query';
 import type { Attribute, KnowledgePackage } from '../types';
 import { api } from '../../../shared/api';
@@ -11,9 +11,11 @@ type Condition = { field: string; operator: string; value: unknown; unit?: strin
 type Evidence = { id?: string; name: string; revision?: number; evidence: string; result: string;
   effect?: string; activation?: string; activation_conditions?: Condition[]; conditions?: Condition[] };
 type Trial = { status: 'pass' | 'conflict' | 'unknown'; notice: string; package_revision: number;
-  variant_revision: number; definition_status: string; coverage: { status: string; message: string };
+  package_status: KnowledgePackage['status']; variant_revision: number;
+  definition_revision: number; definition_status: KnowledgePackage['definition']['status'];
+  coverage: { status: string; message: string };
   evidence: Evidence[]; draft_relations: { id: string; name: string; evidence: string }[] };
-const resultLabels = { pass: '通过已知适用条件', conflict: '存在明确冲突', unknown: '资料不足，无法确认' };
+const resultLabels = { pass: '当前已确认的适用条件满足', conflict: '存在明确冲突', unknown: '资料不足，无法确认' };
 const showValue = (value: unknown) => value == null ? '未提供' : typeof value === 'string' ? value : JSON.stringify(value);
 const conditionLabels: Record<string, string> = { pass: '条件满足', fail: '条件不满足', conflict: '存在冲突', unknown: '资料不足', not_applicable: '未触发' };
 const conditionLabel = (value: string) => conditionLabels[value] ?? value;
@@ -57,8 +59,13 @@ function TrialDialog({ bundle, onClose }: { bundle: KnowledgePackage; onClose: (
       </Form>
       {trial.error ? <Alert type="error" title="试查失败" description={trial.error.message} /> : null}
       {result ? <>
+        <Space wrap aria-label="本次试查采用的资料状态">
+          <Tag color={result.package_status === 'published' ? 'blue' : 'gold'}>知识包 v{result.package_revision} · {result.package_status === 'published' ? '已发布' : '草稿，尚未发布'}</Tag>
+          <Tag color={result.definition_status === 'confirmed' ? 'blue' : 'gold'}>角色定义 v{result.definition_revision} · {result.definition_status === 'confirmed' ? '已确认' : '草稿，待确认'}</Tag>
+          <Typography.Text type="secondary">当前产品配置 v{result.variant_revision}</Typography.Text>
+        </Space>
+        {result.package_status === 'draft' ? <Alert type="warning" showIcon title="本次使用草稿知识包，仅供维护核对" description="即使已确认的适用条件满足，也不代表知识包已发布或整套方案已经验证。" /> : null}
         <Alert showIcon type={result.status === 'conflict' ? 'error' : result.status === 'pass' ? 'success' : 'warning'} title={resultLabels[result.status]} description={result.notice} />
-        <Typography.Text>知识包 v{result.package_revision} · 当前产品 v{result.variant_revision} · 角色定义{result.definition_status === 'confirmed' ? '已确认' : '仍为草稿'}</Typography.Text>
         <Typography.Paragraph>配套范围：{result.coverage.message}</Typography.Paragraph>
         {result.draft_relations.length ? <Alert type="warning" title={`${result.draft_relations.length} 条草稿适用关系未作为通过依据`} description={result.draft_relations.map(r => r.name).join('；')} /> : null}
         <Collapse items={result.evidence.map((e, index) => ({ key: String(index), label: `${e.name} · ${e.effect === 'deny' ? '禁止关系 · ' : ''}${conditionLabel(e.result)} ${e.revision ? `· v${e.revision}` : ''}`, children: <>
