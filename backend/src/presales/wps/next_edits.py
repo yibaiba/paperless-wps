@@ -1,4 +1,8 @@
-from presales.configuration.projects.planning.next_edits import NextEditContext, next_edit_options
+from presales.configuration.projects.planning.next_edits import (
+    NextEditContext,
+    next_edit_options,
+    removal_option,
+)
 
 from .business import workbook_projection
 from .next_edit_projection import project_next_edit
@@ -49,10 +53,28 @@ def completion_preview(sync, request):
         query=request.query,
         selected_variant_id=request.selected_variant_id or "",
         selected_source_id=request.selected_source_id or "",
+        system_id=scope.system_id,
     )
-    options, questions = next_edit_options(
-        context, checked, system_id=scope.system_id, requirement_id=scope.requirement_id
-    )
+    if request.intent == "remove":
+        line = next(
+            (
+                line
+                for line in request.lines
+                if line.sheet == request.active_cell.sheet and line.row == request.active_cell.row
+            ),
+            None,
+        )
+        if not line or not line.device_id:
+            raise ValueError("请先确认要移除的产品行身份")
+        options = [removal_option(context, checked, device_id=line.device_id)]
+        questions = []
+    else:
+        options, questions = next_edit_options(
+            context,
+            checked,
+            system_id=scope.system_id,
+            requirement_id=scope.requirement_id or recent_requirement(request, checked),
+        )
     items = [
         project_next_edit(option, request=request, profile=profile, projection=projection)
         for option in options
@@ -69,3 +91,20 @@ def completion_preview(sync, request):
         line_bindings=projection["line_bindings"],
         configuration=checked["configuration"],
     )
+
+
+def recent_requirement(request, checked):
+    requirements = [
+        r
+        for r in checked["configuration"]["requirements"]
+        if r["system_id"] == request.scope.system_id
+    ]
+    for edit in reversed(request.recent_edits):
+        if edit.kind in {"undo", "dismiss"}:
+            continue
+        for requirement in requirements:
+            if edit.requirement_id == requirement["id"] or (
+                edit.device_id and edit.device_id == requirement.get("device_id")
+            ):
+                return requirement["id"]
+    return None

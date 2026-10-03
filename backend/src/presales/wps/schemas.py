@@ -220,16 +220,18 @@ class SyncPreview(Input):
     template_profile_revision: int = Field(ge=1)
     known_device_ids: list[str] = Field(default_factory=list)
     lines: list[WorkbookLine]
+    removed_lines: list[WorkbookLine] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def unique_lines(self):
-        if self.schema_version == 1 and self.business_operations:
+        if self.schema_version == 1 and (self.business_operations or self.removed_lines):
             raise ValueError("业务关联修改需要工作簿协议 v2")
         if self.schema_version == 2 and self.expected_binding_revision is None:
             raise ValueError("业务工作簿需要绑定修订")
-        if self.schema_version == 2 and any(line.kind is None for line in self.lines):
+        all_lines = [*self.lines, *self.removed_lines]
+        if self.schema_version == 2 and any(line.kind is None for line in all_lines):
             raise ValueError("请明确每行是硬件、软件、授权还是配件")
-        if len({line.line_id for line in self.lines}) != len(self.lines):
+        if len({line.line_id for line in all_lines}) != len(all_lines):
             raise ValueError("工作簿行标识不能重复")
         if len(set(self.known_device_ids)) != len(self.known_device_ids):
             raise ValueError("已绑定设备标识不能重复")
@@ -245,3 +247,4 @@ class CompletionPreview(SyncPreview, CompletionLocation):
     schema_version: Literal[2] = 2
     selected_variant_id: str | None = None
     selected_source_id: str | None = None
+    intent: Literal["next", "remove"] = "next"

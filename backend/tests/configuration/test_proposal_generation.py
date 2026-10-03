@@ -22,9 +22,11 @@ def write(client, draft, operations):
     )
 
 
-def published(client, catalog, *, quantity=True, ranked=True, accessory=False):
+def published(
+    client, catalog, *, quantity=True, ranked=True, accessory=False, output_kind="hardware"
+):
     terminal, server = catalog["variants"][:2]
-    role = dict(id="terminal", name="终端", output_kind="hardware", required=True)
+    role = dict(id="terminal", name="终端", output_kind=output_kind, required=True)
     if quantity:
         role["quantity_basis"] = dict(
             status="confirmed",

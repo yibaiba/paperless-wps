@@ -2,6 +2,7 @@
 
 from uuid import NAMESPACE_URL, uuid5
 
+from presales.quotation.calculation import unit_price
 from presales.rules.calculation import digest
 
 PRODUCT_FIELDS = ("model", "name", "description", "unit", "brand", "price")
@@ -12,10 +13,32 @@ def project_next_edit(option, *, request, profile, projection):
     changes = option["changes"]
     devices = [c for c in changes if c["kind"] == "devices"]
     patches, bindings, errors, used = [], [], [], set()
+    removed_lines = []
     for change in devices:
         device = change["after"]
         if device is None:
-            errors.append("移除产品需要明确选择对应工作簿行")
+            target = find_target(change, request=request, used=used)
+            old = next((line for line in request.lines if line.device_id == change["id"]), None)
+            if not target or not old:
+                errors.append("移除产品需要明确选择对应工作簿行")
+                continue
+            removed_lines.append(old.model_dump(mode="json"))
+            for field in profile["managed_fields"]:
+                before = target.values.get(field, "")
+                if not before:
+                    continue
+                if field in target.formula_fields or field in target.merged_fields:
+                    errors.append(f"第 {target.row} 行 {field} 是公式或合并单元格")
+                patches.append(
+                    dict(
+                        sheet=target.sheet,
+                        row=target.row,
+                        column=profile["field_columns"][field],
+                        field=field,
+                        before=before,
+                        after="",
+                    )
+                )
             continue
         target = find_target(change, request=request, used=used)
         if target is None:
@@ -23,13 +46,22 @@ def project_next_edit(option, *, request, profile, projection):
             continue
         used.add((target.sheet, target.row))
         variant = device["variant_snapshot"]
+        price_selection = next(
+            (
+                p
+                for p in (option["configuration"].get("quotation") or {}).get("prices", [])
+                if p["device_id"] == device["id"]
+            ),
+            None,
+        )
+        price, _ = unit_price(device, price_selection)
         values = dict(
             model=variant["product"]["model"],
             name=variant["product"]["name"],
             description=variant.get("description", ""),
             unit=source_unit(device),
             brand=variant["product"].get("brand", ""),
-            price="",
+            price=str(price) if price is not None else "",
             quantity=str(device["quantity"]),
         )
         fields = [*profile["managed_fields"], "quantity"]
@@ -59,6 +91,14 @@ def project_next_edit(option, *, request, profile, projection):
                 )
             )
         old = next((line for line in request.lines if line.device_id == device["id"]), None)
+        written_values = dict(target.values)
+        written_values.update(
+            {
+                p["field"]: p["after"]
+                for p in patches
+                if (p["sheet"], p["row"]) == (target.sheet, target.row)
+            }
+        )
         bindings.append(
             dict(
                 line_id=old.line_id if old else option["line_ids"][device["id"]],
@@ -69,8 +109,10 @@ def project_next_edit(option, *, request, profile, projection):
                 source_id=device["source_id"],
                 kind=device["kind"],
                 section=target.values.get("section", ""),
-                confirmed_values=values,
-                anchor_fingerprint="\0".join([values["model"], values["name"]]).lower(),
+                confirmed_values=written_values,
+                anchor_fingerprint="\0".join(
+                    [written_values.get("model", ""), written_values.get("name", "")]
+                ).lower(),
                 requirement_id=next(
                     (
                         r["id"]
@@ -83,6 +125,7 @@ def project_next_edit(option, *, request, profile, projection):
         )
     operations = semantic_operations(option["configuration"], changes)
     issues = [*option["questions"], *errors]
+    issues.extend((option["checked"].get("quotation_output") or {}).get("issues", []))
     issue_baseline = {digest(c) for c in projection["checked"]["checks"] if c["status"] != "pass"}
     issues.extend(
         c
@@ -109,8 +152,10 @@ def project_next_edit(option, *, request, profile, projection):
         if isinstance(i, dict)
         and (
             i.get("status") == "conflict"
-            or i.get("device_id") in touched
-            or i.get("requirement_id") in linked
+            or (
+                i.get("kind") != "quotation"
+                and (i.get("device_id") in touched or i.get("requirement_id") in linked)
+            )
         )
     ]
     identity = digest([patches, bindings, operations])
@@ -120,17 +165,19 @@ def project_next_edit(option, *, request, profile, projection):
         label="应用当前方案的下一步修改",
         patches=patches,
         line_bindings=bindings,
+        removed_lines=removed_lines,
         business_operations=operations,
         inverse_business_operations=semantic_operations(
             projection["checked"]["configuration"],
             [dict(c, before=c["after"], after=c["before"]) for c in reversed(changes)],
         ),
         changes=changes,
-        evidence=option["evidence"],
+        evidence=[*option["evidence"], {"fixed_versions": projection["versions"]}],
         issues=issues,
         applicable=not errors and not option["questions"] and not blocking,
         acceptance="inline"
-        if len(devices) == 1
+        if not removed_lines
+        and len(devices) == 1
         and not any(p["field"] == "quantity" for p in patches)
         and not any(c["kind"] in {"accessory_allocations", "included_allocations"} for c in changes)
         else "preview",

@@ -108,6 +108,14 @@ class WorkbookSync:
             managed_device_ids=[item["device_id"] for item in line_bindings],
             line_bindings=line_bindings,
             last_synced_by=actor,
+            historical_line_devices={
+                **binding.payload.get("historical_line_devices", {}),
+                **{
+                    line["line_id"]: line["device_id"]
+                    for line in binding.payload.get("line_bindings", [])
+                },
+                **{line["line_id"]: line["device_id"] for line in line_bindings},
+            },
         )
         binding_view = self.entities.save(
             "wps_workbook_binding",
@@ -174,20 +182,30 @@ class WorkbookSync:
         managed = set(state["binding"].payload.get("managed_device_ids", []))
         existing_ids = {d["id"] for d in state["configuration"]["devices"]}
         allowed_ids = managed | existing_ids if request.schema_version == 2 else managed
-        for line in request.lines:
+        visible_ids = {line.line_id for line in request.lines}
+        removed_ids = set()
+        seen_ids = set()
+        for line in [*request.lines, *request.removed_lines]:
             device_id = self._device_id(request.binding_id, line)
             local_id = str(
                 uuid5(NAMESPACE_URL, f"presales-wps-device:{request.binding_id}:{line.line_id}")
             )
             local_new = request.schema_version == 2 and line.device_id == local_id
-            if line.device_id and line.device_id not in allowed_ids and not local_new:
+            restored = request.schema_version == 2 and line.device_id == state[
+                "binding"
+            ].payload.get("historical_line_devices", {}).get(line.line_id)
+            if line.device_id and line.device_id not in allowed_ids and not (local_new or restored):
                 raise ValueError(f"第 {line.row} 行引用了不属于此工作簿的设备")
             variant = variants.get(line.variant_id)
             if variant is None or line.source_id not in variant["source_ids"]:
                 raise ValueError(f"第 {line.row} 行产品配置与资料来源不匹配")
-            current_ids.add(device_id)
-            if any(item["device_id"] == device_id for item in line_bindings):
+            if line.line_id in visible_ids:
+                current_ids.add(device_id)
+            else:
+                removed_ids.add(device_id)
+            if device_id in seen_ids:
                 raise ValueError("同一设备不能重复绑定到两个产品行，请用用途分配表达共享")
+            seen_ids.add(device_id)
             raw.extend(self._line_operations(line, device_id, variant))
             previous = next(
                 (d for d in state["configuration"]["devices"] if d["id"] == device_id), None
@@ -212,10 +230,11 @@ class WorkbookSync:
                     }
                 )
             raw.extend(supply_operations(line, device_id=device_id, version=request.schema_version))
-            line_bindings.append(self._line_binding(line, device_id))
-        for device_id in sorted(managed - current_ids):
-            raw.append({"action": "remove", "collection": "devices", "id": device_id})
+            if line.line_id in visible_ids:
+                line_bindings.append(self._line_binding(line, device_id))
         raw.extend(op.model_dump(mode="json") for op in request.business_operations)
+        for device_id in sorted((managed | removed_ids) - current_ids):
+            raw.append({"action": "remove", "collection": "devices", "id": device_id})
         return OPERATIONS.validate_python(raw), line_bindings
 
     def _proposed(self, state, operations):

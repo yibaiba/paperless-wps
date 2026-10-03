@@ -5,8 +5,17 @@ from .test_proposal_generation import published
 from .test_wps_business_context import entity_versions, setup_workbook
 
 
-def completion_body(client, catalog, *, quantity=True, accessory=True):
-    definition, package = published(client, catalog, quantity=quantity, accessory=accessory)
+def completion_body(
+    client, catalog, *, quantity=True, accessory=True, ranked=True, output_kind="hardware"
+):
+    definition, package = published(
+        client,
+        catalog,
+        quantity=quantity,
+        accessory=accessory,
+        ranked=ranked,
+        output_kind=output_kind,
+    )
     headers, _, _, body = setup_workbook(client, catalog)
     body.update(
         lines=[],
@@ -126,7 +135,15 @@ def sync_body(body):
         k: v
         for k, v in body.items()
         if k
-        not in {"local_revision", "query", "scope", "active_cell", "target_cells", "recent_edits"}
+        not in {
+            "local_revision",
+            "query",
+            "scope",
+            "active_cell",
+            "target_cells",
+            "recent_edits",
+            "intent",
+        }
     }
 
 
@@ -214,7 +231,82 @@ def test_room_role_and_active_range_are_separate_identities(client, catalog):
     assert all(
         op["value"]["system_id"] == "system"
         for op in result["items"][0]["business_operations"]
-        if op["action"] == "requirement_put" and op["value"].get("device_id")
+        if op["action"] == "requirement_put"
     )
     body["active_cell"]["row"] = 90
     assert client.post("/api/wps/completion/preview", headers=headers, json=body).status_code == 422
+
+
+def test_removing_unsynced_product_clears_only_managed_fields(client, catalog):
+    headers, body = completion_body(client, catalog)
+    item = preview(client, headers, body)["items"][0]
+    body = accept(body, item)
+    body["active_cell"] = dict(
+        sheet="报价表",
+        row=3,
+        column=2,
+        values=item["line_bindings"][0]["confirmed_values"] | {"note": "保留备注", "price": "88"},
+    )
+    body["intent"] = "remove"
+    removal = preview(client, headers, body)["items"][0]
+    assert removal["applicable"], removal["issues"]
+    assert removal["acceptance"] == "preview"
+    assert removal["removed_lines"]
+    assert all(p["field"] not in {"note", "quantity", "section"} for p in removal["patches"])
+    assert all(p["after"] == "" for p in removal["patches"])
+    body["lines"] = []
+    body["removed_lines"] = removal["removed_lines"]
+    body["business_operations"].extend(removal["business_operations"])
+    response = client.post("/api/wps/sync/preview", headers=headers, json=sync_body(body))
+    assert response.status_code == 200, response.text
+    assert not any(c["kind"] == "devices" and c["after"] for c in response.json()["changes"])
+
+
+def test_explicit_candidate_choice_resolves_missing_ranking_without_guessing(client, catalog):
+    headers, body = completion_body(client, catalog, accessory=False, ranked=False)
+    result = preview(client, headers, body)
+    assert len(result["items"]) >= 2
+    assert all(not item["applicable"] for item in result["items"])
+    selected = result["items"][0]["line_bindings"][0]
+    body.update(
+        selected_variant_id=selected["variant_id"], selected_source_id=selected["source_id"]
+    )
+    chosen = preview(client, headers, body)
+    assert len(chosen["items"]) == 1
+    assert chosen["items"][0]["applicable"], chosen["items"][0]["issues"]
+
+
+def test_next_edit_keeps_user_price_for_unchanged_identity(client, catalog):
+    headers, body = completion_body(client, catalog, accessory=False)
+    body = accept(body, preview(client, headers, body)["items"][0])
+    body["active_cell"] = dict(
+        sheet="报价表",
+        row=3,
+        column=2,
+        values={
+            **{
+                key: str(value)
+                for key, value in body["lines"][0].items()
+                if key in {"model", "name", "quantity"}
+            },
+            "price": "88",
+        },
+    )
+    body["lines"][0]["quantity"] = "2"
+    body["lines"][0]["price"] = "88"
+    body["active_cell"]["values"]["quantity"] = "2"
+    result = preview(client, headers, body)
+    item = result["items"][0]
+    assert item["line_bindings"][0]["confirmed_values"]["price"] == "88"
+    assert all(p["field"] != "price" for p in item["patches"])
+
+
+def test_confirmed_software_role_requires_its_hardware_not_catalog_adjacency(client, catalog):
+    headers, body = completion_body(client, catalog, output_kind="software")
+    software = preview(client, headers, body)["items"][0]
+    assert software["line_bindings"][0]["kind"] == "software"
+    body = accept(body, software)
+    hardware = preview(client, headers, body)["items"][0]
+    assert hardware["line_bindings"][0]["kind"] == "hardware"
+    assert hardware["line_bindings"][0]["variant_id"] == catalog["variants"][1]["id"]
+    assert any(op["action"] == "accessory_link" for op in hardware["business_operations"])

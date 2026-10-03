@@ -20,10 +20,17 @@ class NextEditContext(PlanningContext):
     query: str = ""
     selected_variant_id: str = ""
     selected_source_id: str = ""
+    system_id: str = ""
 
     def __post_init__(self):
         super().__post_init__()
         self.variants = {key: self.scoped_variant(value) for key, value in self.variants.items()}
+        if self.selected_variant_id:
+            self.variants = {
+                key: value
+                for key, value in self.variants.items()
+                if key == self.selected_variant_id
+            }
 
     def scoped_variant(self, variant):
         allowed = (self.allowed_sources or {}).get(variant["id"], [])
@@ -68,17 +75,33 @@ class NextEditContext(PlanningContext):
         )
 
 
-def next_edit_options(context, checked, *, system_id, requirement_id=None):
+def scoped_roles(context):
     data, tasks, questions = prepare_roles(context)
+    original_ids = {r["id"] for r in context.configuration["requirements"]}
+    data["requirements"] = [
+        r
+        for r in data["requirements"]
+        if r["system_id"] == context.system_id or r["id"] in original_ids
+    ]
+    tasks = [t for t in tasks if t["system"]["id"] == context.system_id]
+    return data, tasks, questions
+
+
+def next_edit_options(context, checked, *, system_id, requirement_id=None):
+    data, tasks, questions = scoped_roles(context)
     tasks = [t for t in tasks if t["system"]["id"] == system_id]
     tasks.sort(key=lambda t: t["requirement"]["id"] != requirement_id)
-    if context.query or context.selected_variant_id:
+    if context.query:
         selected = next((t for t in tasks if t["requirement"]["id"] == requirement_id), None)
         if selected is None:
             return [], [dict(code="role_required", message="请明确当前行的业务角色")]
         return list(typed_options(context, data, selected)), questions
     scoped = {t["requirement"]["id"] for t in tasks}
-    for demand in checked["suggestions"]:
+    demands = sorted(
+        checked["suggestions"],
+        key=lambda d: requirement_id not in d.get("consumer_requirement_ids", []),
+    )
+    for demand in demands:
         if not scoped.intersection(demand.get("consumer_requirement_ids", [])):
             continue
         if not demand.get("selected") or demand["status"] != "pass":
@@ -169,7 +192,7 @@ def typed_options(context, data, task):
 
 def make_option(context, proposed, *, gaps, evidence):
     checked = context.repository.check(Configuration.model_validate(deepcopy(proposed)))
-    _, tasks, _ = prepare_roles(context)
+    _, tasks, _ = scoped_roles(context)
     tasks = [
         t
         for t in tasks
@@ -188,3 +211,17 @@ def make_option(context, proposed, *, gaps, evidence):
         "questions": [*gaps, *fulfillment_gaps],
         "evidence": evidence,
     }
+
+
+def removal_option(context, checked, *, device_id):
+    from ..services.device_removal import remove_devices
+
+    proposed = remove_devices(context.configuration, {device_id}, demands=checked["suggestions"])
+    result = context.repository.check(Configuration.model_validate(proposed))
+    return dict(
+        configuration=result["configuration"],
+        checked=result,
+        changes=configuration_diff(context.configuration, result["configuration"]),
+        questions=[],
+        evidence=[dict(reason="用户明确预览移除此产品及其用途分配", device_id=device_id)],
+    )
