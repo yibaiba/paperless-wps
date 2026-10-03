@@ -11,7 +11,15 @@ from .context import PlanningContext
 from .devices import put_device
 from .fulfillment import bind_fulfilled_roles, fulfillment_devices
 from .quantities import role_quantity
-from .roles import prepare_roles, role_branches
+from .roles import locked_role, prepare_roles, role_branches
+
+
+def existing_device_ids(configuration):
+    return {
+        a["device_id"]
+        for a in configuration["supply_allocations"]
+        if a["source"] == "existing" and Decimal(a["quantity"]) > 0
+    }
 
 
 @dataclass
@@ -57,11 +65,7 @@ class NextEditContext(PlanningContext):
 
     def preference(self, requirement_id):
         preference = super().preference(requirement_id)
-        existing = {
-            a["device_id"]
-            for a in self.configuration["supply_allocations"]
-            if a["source"] == "existing" and Decimal(a["quantity"]) > 0
-        }
+        existing = existing_device_ids(self.configuration)
         reusable = {
             d["id"]
             for d in self.configuration["devices"]
@@ -152,6 +156,13 @@ def role_options(context, data, task):
         quantity, gap, evidence = role_quantity(
             task["role"], task["system"], configuration=data, engine=context.repository.engine
         )
+        if not gap and current["id"] in existing_device_ids(data):
+            # Required seats do not change confirmed physical stock or its manual assignment.
+            result, gaps, reasons = locked_role(
+                data, current, requirement=requirement, quantity=quantity, evidence=evidence
+            )
+            yield make_option(context, result, gaps=gaps, evidence=reasons)
+            return
         locked = (current.get("generated_origin") or {}).get("quantity_locked")
         if not gap and quantity and quantity != Decimal(current["quantity"]) and not locked:
             changed = dict(current, quantity=str(quantity))

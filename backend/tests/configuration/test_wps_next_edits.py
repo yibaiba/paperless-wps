@@ -220,6 +220,12 @@ def test_existing_hardware_is_offered_for_reuse_without_new_purchase(client, cat
     )
     assert not any(op["action"] == "supply_set" for op in item["business_operations"])
 
+    fulfilled = accept(body, item)
+    continued = preview(client, headers, fulfilled)
+    assert not continued["items"], continued["items"]
+    assert len(continued["configuration"]["devices"]) == 1
+    assert continued["configuration"]["supply_allocations"][0]["source"] == "existing"
+
 
 def test_room_role_and_active_range_are_separate_identities(client, catalog):
     headers, body = completion_body(client, catalog)
@@ -299,6 +305,8 @@ def test_next_edit_keeps_user_price_for_unchanged_identity(client, catalog):
     item = result["items"][0]
     assert item["line_bindings"][0]["confirmed_values"]["price"] == "88"
     assert all(p["field"] != "price" for p in item["patches"])
+    assert item["applicable"], item["issues"]
+    assert any(p["field"] == "quantity" and p["after"] == "3" for p in item["patches"])
 
 
 def test_confirmed_software_role_requires_its_hardware_not_catalog_adjacency(client, catalog):
