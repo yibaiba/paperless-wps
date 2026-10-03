@@ -253,3 +253,65 @@ test('old group cannot undo into a new project binding with the same revision', 
   assert.equal(f.cells.get(1), 'new');
   assert.equal(f.journals.get('op').state, 'applied');
 });
+
+test('a stale metadata-only undo callback consumes the synced inverse only once', () => {
+  const f = fixture();
+  f.suggestion.patches = [];
+  f.suggestion.line_bindings = [];
+  const inverse = { action: 'supply_set', device_id: 'd', allocations: [] };
+  f.suggestion.business_operations = [{ ...inverse, allocations: [{ id: 'purchase' }] }];
+  f.suggestion.inverse_business_operations = [inverse];
+  applyNextEdit({ ...f, operationId: 'op' });
+  const staleCallbackJournal = f.journals.get('op');
+  const meta = f.host.readMetadata();
+  f.host.writeMetadata({ ...meta, binding: { binding_revision: 2, base_revision: 1 },
+    business: { ...meta.business, operations: [] } });
+  restoreJournal(f.host, staleCallbackJournal);
+  const once = f.host.readMetadata();
+  restoreJournal(f.host, staleCallbackJournal);
+  assert.deepEqual(f.host.readMetadata(), once);
+  assert.deepEqual(once.business.operations, [inverse]);
+  assert.equal(f.journals.get('op').state, 'undone');
+});
+
+test('stale undo callback resumes durable recovery instead of appending another inverse', () => {
+  const f = fixture();
+  const inverse = { action: 'supply_set', device_id: 'd', allocations: [] };
+  f.suggestion = { ...f.suggestion, patches: [], line_bindings: [],
+    business_operations: [inverse], inverse_business_operations: [inverse] };
+  applyNextEdit({ ...f, operationId: 'op' });
+  const originalCallback = f.journals.get('op');
+  const meta = f.host.readMetadata();
+  f.host.writeMetadata({ ...meta, binding: { binding_revision: 2 },
+    business: { ...meta.business, operations: [] } });
+  const write = f.host.writeJournal;
+  f.host.writeJournal = (journal) => {
+    if (journal.state === 'undone') throw new Error('undo receipt failed');
+    write(journal);
+  };
+  assert.throws(() => restoreJournal(f.host, originalCallback), /receipt failed/);
+  const recovered = f.host.readMetadata();
+  f.host.writeJournal = write;
+  restoreJournal(f.host, originalCallback);
+  assert.deepEqual(f.host.readMetadata(), recovered);
+  assert.deepEqual(recovered.business.operations, [inverse]);
+  assert.equal(f.journals.get('op').state, 'undone');
+});
+
+test('duplicate undo callback leaves later manual content untouched', () => {
+  const f = fixture();
+  applyNextEdit({ ...f, operationId: 'op' });
+  const originalCallback = f.journals.get('op');
+  restoreJournal(f.host, originalCallback);
+  f.cells.set(1, 'later manual value');
+  const current = f.host.readMetadata();
+  restoreJournal(f.host, originalCallback);
+  assert.equal(f.cells.get(1), 'later manual value');
+  assert.deepEqual(f.host.readMetadata(), current);
+});
+
+test('recovery cannot manufacture success when its persistent journal is missing', () => {
+  const f = fixture();
+  assert.throws(() => restoreJournal(f.host, { operation_id: 'missing' }), /日志不存在/);
+  assert.equal(f.cells.get(1), 'old');
+});

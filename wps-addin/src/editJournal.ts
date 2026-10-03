@@ -100,11 +100,15 @@ export function applyNextEdit(options: {
   }
 }
 
-export function restoreJournal(host: JournalHost, journal: WorkbookEditJournal, undo = true) {
+export function restoreJournal(host: JournalHost, requested: WorkbookEditJournal, undo = true) {
+  // UI callbacks may retain an applied snapshot after undo or recovery has already persisted.
+  const journal = host.journals().find((entry) => entry.operation_id === requested.operation_id);
+  if (!journal) throw new Error('编辑日志不存在，无法确认撤销或恢复状态');
   const metadata = host.readMetadata();
   if (journal.binding_id !== metadata.binding?.binding_id) {
     throw new Error('此编辑日志属于其他项目绑定，不能在重新绑定后撤销；原日志保留');
   }
+  if (journal.state === 'undone' || journal.state === 'restored') return metadata;
   if (metadata.pending_sync) throw new Error('请先恢复未完成的同步回执，再撤销本地修改');
   if (undo && !journal.recovery) checkCells(host, journal.patches, 'after');
   const recovery = journal.recovery ?? {
