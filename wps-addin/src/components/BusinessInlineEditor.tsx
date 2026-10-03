@@ -10,7 +10,7 @@ import { WpsHostAdapter } from '../host';
 import { LatestRequest } from '../latestRequest';
 import { nextEditAction, nextEditText } from '../nextEditState';
 import { handleInlineTab } from '../nativeTab';
-import { assertWorkbookSession, captureWorkbookSession } from '../workbookSession';
+import { assertInlineSession, assertWorkbookSession, captureWorkbookSession, writeInlineInput } from '../workbookSession';
 import { WorkbookRowIndex } from '../workbookRowIndex';
 import { NextEditPreview, issueText } from './NextEditPreview';
 
@@ -79,6 +79,7 @@ export function BusinessInlineEditor() {
       businessDiagnostic(host, { event_type: 'query_start', template_profile_id: context.profile.id,
         template_profile_revision: context.profile.revision });
       try {
+        assertInlineSession(host, context);
         const session = captureWorkbookSession(host);
         const metadata = host.readMetadata();
         if (!metadata.binding) throw new Error('请先绑定项目');
@@ -112,7 +113,7 @@ export function BusinessInlineEditor() {
     if (!context || processing.current) return;
     processing.current = true; changing.current = true;
     try {
-      if (host.workbookKey() !== context.workbook_key) throw new Error('工作簿已切换，请重新预览');
+      assertInlineSession(host, context);
       applyNextEdit({ host, suggestion, operationId });
       suggestion.patches.forEach((p) => index?.refresh(p.row));
       setPreview(false); setResult(undefined); requests.current.cancel(); host.restoreNativeTab();
@@ -139,6 +140,7 @@ export function BusinessInlineEditor() {
     const request = requests.current.begin();
     setBusy(true); setError(''); host.restoreNativeTab();
     try {
+      assertInlineSession(host, context);
       const session = captureWorkbookSession(host);
       const value = await api.completionPreview({ ...completionRequest({ host, profile: context.profile,
         metadata: host.readMetadata(), cell: context.cell, index, query }),
@@ -199,7 +201,10 @@ export function BusinessInlineEditor() {
         onChange={(e) => {
           requests.current.cancel(); host.restoreNativeTab(); setResult(undefined); setPreview(false); setExpanded(false);
           setQuery(e.target.value); changing.current = true;
-          try { host.writeCellValue(context.cell, e.target.value); index?.refresh(context.cell.row); setWriteError(''); }
+          try {
+            writeInlineInput({ host, context, value: e.target.value });
+            index?.refresh(context.cell.row); setWriteError('');
+          }
           catch (reason) { setWriteError(String(reason)); }
           finally { changing.current = false; }
         }} onKeyDown={(e) => {
@@ -217,7 +222,9 @@ export function BusinessInlineEditor() {
           }
           if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'z') {
             e.preventDefault();
-            try { const journal = host.journals().filter((j) => j.state === 'applied').at(-1);
+            try {
+              assertInlineSession(host, context);
+              const journal = host.journals().filter((j) => j.state === 'applied').at(-1);
               if (journal) { restoreJournal(host, journal); setEpoch((v) => v + 1); }
             } catch (reason) { setError(String(reason)); }
           }

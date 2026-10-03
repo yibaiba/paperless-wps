@@ -16,6 +16,8 @@
 
 下一步预览使用共享检查器的业务依赖闭包：当前系统、共享设备关联的系统、配套分配及规则明确声明的房间/项目范围。显式修改的房间、设备和分配身份也纳入检查；项目级规则存在时仍可能涉及全项目，不以裁剪依赖换取通过。返回的 `evaluation_scope` 明确本次检查范围，`configuration` 保留完整临时配置；局部通过不代表全项目通过，正式同步仍全量检查。隔离 HTTP 测试验证增加 1,000 个无关系统后，每次候选检查仍只接收相关系统；这不是实际 API p95 测量。
 
+检查范围保留编辑前依赖，再与编辑后关系合并；共享设备、配套分配被移除后，原关联房间仍显示缺项。局部预览不重新绘制全项目图，原图保留至正式全量处理。
+
 ## 业务同步协议 v2
 
 `GET /api/wps/bindings/{binding_id}/context` 读取固定基线与定义。同步请求增加 `schema_version: 2`、`expected_binding_revision` 与明确的 `business_operations`。产品行必须填写真实 kind；省略供货分配表示保留原状态，新设备供货未知，不能默认采购。角色、系统设置和配套关联通过既有类型验证及项目检查重新计算。v1 请求不能改写已经提交为 v2 的绑定。
@@ -47,6 +49,8 @@
 异步操作核对物理工作簿与项目绑定。即使复制文件保留相同 workbook_instance_id/binding_id，切换文件后也不把原请求回执写入副本；原文件保留 pending_sync，返回后重试原操作恢复。未完成回执或日志恢复前不能重新绑定。
 
 v1 候选兼容路径同样执行会话校验。切换物理工作簿时取消请求、清空候选与模板；响应到达和接受前再次校验来源，旧候选不能写入新文件。
+
+业务确认、人工身份设置、设置保存和插件撤销在写入入口校验页面所属文件与绑定，不能仅依赖页面卸载时机。内联输入本身也校验创建浮层时的文件与绑定，即使副本的业务修订和单元格原值完全相同，旧浮层输入仍不能写入副本。
 
 无候选、加载或错误状态的浮层 Tab 先关闭窗口、恢复 OnKey、激活工作簿，再通过 WPS SendKeys 交还宿主处理；不使用 Range.Offset 模拟原生 Tab。Shift+Tab 同样交还，IME 期间不处理补全键。启动检测包含 SendKeys 与窗口 Activate 能力，具体构建的焦点与原生导航仍须真机验证。依据：[OnKey](https://open.wps.cn/documents/app-integration-dev/wps365/client/wpsoffice/jsapi/et/Application/member/OnKey)、[SendKeys](https://open.wps.cn/documents/app-integration-dev/wps365/client/wpsoffice/jsapi/et/Application/member/SendKeys)、[Activate](https://open.wps.cn/documents/app-integration-dev/wps365/client/wpsoffice/jsapi/et/Window/member/Activate)。
 

@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import { applyNextEdit, restoreJournal } from '../src/editJournal.ts';
 import { MetadataRecords, readMetadataRecords, writeMetadataRecords } from '../src/metadataRecords.ts';
 import { rowBusinessOperations } from '../src/businessRowOperations.ts';
+import { captureWorkbookSession, inWorkbookSession } from '../src/workbookSession.ts';
 
 function fixture() {
   let metadata = { schema_version: 2, workbook_instance_id: 'book', line_bindings: [],
@@ -36,6 +37,26 @@ test('group apply is idempotent and undo restores cells plus identity', () => {
   assert.equal(f.cells.get(1), 'old');
   assert.deepEqual(f.host.readMetadata().line_bindings, []);
   assert.equal(f.host.readMetadata().business.recent_edits.at(-1).kind, 'undo');
+});
+
+test('an old preview or undo callback cannot mutate an identical workbook copy', () => {
+  const f = fixture(); let filename = 'original.xlsx';
+  f.host.workbookKey = () => filename;
+  const session = captureWorkbookSession(f.host);
+  const apply = () => inWorkbookSession(f.host, { session,
+    run: () => applyNextEdit({ ...f, operationId: 'bound-operation' }) });
+  filename = 'copy.xlsx';
+  assert.throws(apply, /工作簿或项目绑定/);
+  assert.equal(f.journals.size, 0);
+  assert.equal(f.cells.get(1), 'old');
+  filename = 'original.xlsx'; apply();
+  const undo = () => inWorkbookSession(f.host, { session,
+    run: () => restoreJournal(f.host, f.journals.get('bound-operation')) });
+  filename = 'copy.xlsx';
+  assert.throws(undo, /工作簿或项目绑定/);
+  assert.equal(f.cells.get(1), 'new');
+  filename = 'original.xlsx'; undo();
+  assert.equal(f.cells.get(1), 'old');
 });
 
 test('partial writes roll back and never report success', () => {

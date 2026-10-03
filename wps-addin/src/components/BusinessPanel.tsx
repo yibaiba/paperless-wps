@@ -10,7 +10,7 @@ import { BusinessSettings } from './BusinessSettings';
 import { JournalPanel } from './JournalPanel';
 import { NextEditPreview, issueText } from './NextEditPreview';
 import { BusinessRowPanel } from './BusinessRowPanel';
-import { assertWorkbookSession, captureWorkbookSession } from '../workbookSession';
+import { assertWorkbookSession, captureWorkbookSession, inWorkbookSession } from '../workbookSession';
 
 export function BusinessPanel({ api, host, profile, metadata, onChanged }: {
   api: WpsApi; host: HostAdapter; profile: TemplateProfile; metadata: WorkbookMetadata;
@@ -20,6 +20,7 @@ export function BusinessPanel({ api, host, profile, metadata, onChanged }: {
   const [result, setResult] = useState<CompletionPreviewResult>();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [session] = useState(() => captureWorkbookSession(host));
   const index = useMemo(() => new WorkbookRowIndex(host, profile), [host, profile]);
   useEffect(() => host.onSheetChange((event) => { index.changed(event); setResult(undefined); }), [host, index]);
   useEffect(() => { setResult(undefined); }, [metadata]);
@@ -35,7 +36,7 @@ export function BusinessPanel({ api, host, profile, metadata, onChanged }: {
   async function preview(intent: 'next' | 'remove' = 'next') {
     setBusy(true); setError(''); setResult(undefined);
     try {
-      const session = captureWorkbookSession(host);
+      assertWorkbookSession(host, session);
       const cell = host.activeCell();
       const value = await api.completionPreview({ ...completionRequest({ host, profile,
         metadata: host.readMetadata(), cell, index, query: '' }), intent });
@@ -62,7 +63,8 @@ export function BusinessPanel({ api, host, profile, metadata, onChanged }: {
     {result && !result.items.length && <p>当前没有可应用的下一步。请处理上方待确认项；需求已满足时不会继续推荐采购。</p>}
     {result?.items.map((item) => <NextEditPreview key={item.id} suggestion={item} onApply={() => {
       try {
-        const next = applyNextEdit({ host, suggestion: item, operationId: crypto.randomUUID() });
+        const next = inWorkbookSession(host, { session,
+          run: () => applyNextEdit({ host, suggestion: item, operationId: crypto.randomUUID() }) });
         onChanged(next); setResult(undefined);
       } catch (reason) { setError(String(reason)); }
     }} />)}

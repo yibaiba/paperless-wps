@@ -18,6 +18,7 @@ import {
   type CompletionSelection,
 } from '../completionState';
 import { WpsHostAdapter } from '../host';
+import { assertInlineSession, writeInlineInput } from '../workbookSession';
 import { prioritizeInlineCandidates } from '../inlineCandidates';
 import { ghostCompletion } from '../inlineCompletion';
 import type { InlineLayoutOptions, InlinePlacement, InlineLayoutResult } from '../inlineLayout';
@@ -283,7 +284,7 @@ export function InlineEditor() {
     if (busy || error || composing || context.nonce !== contextNonce.current) return;
     accepting.current = true;
     try {
-      if (host.workbookKey() !== context.workbook_key) throw new Error('工作簿已切换，请重新输入');
+      assertInlineSession(host, context);
       const feedback = completionFeedbackPayload({
         operationId,
         context,
@@ -449,7 +450,7 @@ export function InlineEditor() {
     setSelection(EMPTY_SELECTION);
     setBusy(false);
     setError('');
-    try { host.writeCellValue(context.cell, value); }
+    try { writeInlineInput({ host, context, value }); }
     catch (reason) { setError(reason instanceof Error ? reason.message : String(reason)); }
   }
 

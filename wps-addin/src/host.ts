@@ -316,7 +316,8 @@ export class WpsHostAdapter implements HostAdapter {
     const issues = this.inlineCapabilityIssues();
     if (issues.length) throw new Error(`当前 WPS 缺少内联补全能力：${issues.join('、')}`);
     const workbook = this.requireWorkbook();
-    this.inlineDialog.show({ profile, cell, workbook_key: text(workbook.FullName ?? workbook.Name) });
+    this.inlineDialog.show({ profile, cell, workbook_key: text(workbook.FullName ?? workbook.Name),
+      binding_id: this.readMetadata().binding?.binding_id });
   }
 
   hideInlineEditor() {

@@ -109,6 +109,7 @@ export interface InlineEditorContext {
   nonce: number;
   session_id: string;
   workbook_key?: string;
+  binding_id?: string;
   profile: TemplateProfile;
   cell: ActiveCell;
   anchor: { width: number; height: number };

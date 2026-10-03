@@ -9,7 +9,7 @@ import { BusinessPrefetch, businessPrefetchKey } from '../src/businessPrefetch.t
 import { ambiguousStructuralIdentities, scanWorkbook } from '../src/workbook.ts';
 import { completionRequest } from '../src/businessWorkbook.ts';
 import { handleInlineTab, returnNativeTab } from '../src/nativeTab.ts';
-import { assertWorkbookSession, captureWorkbookSession, inWorkbookSession } from '../src/workbookSession.ts';
+import { assertWorkbookSession, captureWorkbookSession, inWorkbookSession, writeInlineInput } from '../src/workbookSession.ts';
 import { LatestRequest } from '../src/latestRequest.ts';
 import { applyCandidate } from '../src/candidateAcceptance.ts';
 
@@ -48,6 +48,21 @@ test('legacy late response and acceptance cannot write to a switched workbook', 
     host, cell: { row: 8 }, profile: { sheet_selector: 'A' }, candidate: {}, metadata: {},
   }) }), /工作簿或项目绑定/);
   assert.equal(writes, 0);
+});
+
+test('inline input handler rejects a stale file or project binding before writing', () => {
+  let filename = 'A.xlsx', bindingId = 'binding-A'; const writes = [];
+  const host = { workbookKey: () => filename,
+    readMetadata: () => ({ binding: { binding_id: bindingId } }),
+    writeCellValue: (cell, value) => writes.push([cell, value]) };
+  const context = { workbook_key: filename, binding_id: bindingId, cell: { row: 4, column: 2 } };
+  filename = 'B.xlsx';
+  assert.throws(() => writeInlineInput({ host, context, value: '软件' }), /工作簿或项目绑定/);
+  filename = 'A.xlsx'; bindingId = 'binding-B';
+  assert.throws(() => writeInlineInput({ host, context, value: '软件' }), /工作簿或项目绑定/);
+  assert.equal(writes.length, 0);
+  bindingId = 'binding-A'; writeInlineInput({ host, context, value: '软件' });
+  assert.deepEqual(writes, [[context.cell, '软件']]);
 });
 test('next edit locates offscreen changes and requires preview for quantities', () => {
   assert.equal(nextEditAction(base), 'apply');

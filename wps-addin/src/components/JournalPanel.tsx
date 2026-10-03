@@ -2,17 +2,19 @@ import { useState } from 'react';
 import { restoreJournal } from '../editJournal';
 import type { HostAdapter } from '../host';
 import type { WorkbookMetadata } from '../types';
+import { captureWorkbookSession, inWorkbookSession } from '../workbookSession';
 
 export function JournalPanel({ host, onChanged }: {
   host: HostAdapter; onChanged: (metadata: WorkbookMetadata) => void;
 }) {
   const [error, setError] = useState('');
+  const [session] = useState(() => captureWorkbookSession(host));
   const journals = host.journals();
   const pending = journals.filter((j) => j.state === 'prepared' || j.state === 'recovery_required');
   const latest = journals.filter((j) => j.state === 'applied').at(-1);
   const restore = (journal: typeof journals[number], undo: boolean) => {
     setError('');
-    try { onChanged(restoreJournal(host, journal, undo)); }
+    try { onChanged(inWorkbookSession(host, { session, run: () => restoreJournal(host, journal, undo) })); }
     catch (reason) { setError(String(reason)); }
   };
   return <section aria-label="插件撤销与恢复">

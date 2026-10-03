@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { BusinessOperation, WorkbookBusinessContext } from '../businessTypes';
 import type { HostAdapter } from '../host';
 import type { TemplateProfile, WorkbookMetadata } from '../types';
+import { assertWorkbookSession, captureWorkbookSession } from '../workbookSession';
 
 export function BusinessSettings({ context, host, metadata, profile, onSaved }: {
   context: WorkbookBusinessContext; host: HostAdapter; metadata: WorkbookMetadata;
@@ -19,6 +20,7 @@ export function BusinessSettings({ context, host, metadata, profile, onSaved }: 
   const [purchase, setPurchase] = useState(false);
   const [evidence, setEvidence] = useState('');
   const [error, setError] = useState('');
+  const [session] = useState(() => captureWorkbookSession(host));
   const packages = context.definitions.packages;
   const existingSystem = context.configuration.systems.find((s) => s.id === systemId);
   const selected = packages.find((p) => p.id === (existingSystem?.knowledge_package_id ?? packageId));
@@ -42,6 +44,7 @@ export function BusinessSettings({ context, host, metadata, profile, onSaved }: 
   function save() {
     setError('');
     try {
+      assertWorkbookSession(host, session);
       const actual = host.readMetadata();
       if (actual.pending_sync || host.journals().some((j) => ['prepared', 'recovery_required'].includes(j.state))) {
         throw new Error('请先恢复未完成的操作，再修改业务设置');

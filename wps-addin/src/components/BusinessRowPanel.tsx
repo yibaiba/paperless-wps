@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import type { WpsApi } from '../api';
 import type { NextEditSuggestion, ProductKind, WorkbookBusinessContext } from '../businessTypes';
 import { rowBusinessOperations } from '../businessRowOperations';
-import { assertWorkbookSession, captureWorkbookSession } from '../workbookSession';
+import { assertWorkbookSession, captureWorkbookSession, inWorkbookSession } from '../workbookSession';
 import { applyNextEdit } from '../editJournal';
 import { deviceIdForLine } from '../businessIdentity';
 import type { HostAdapter } from '../host';
@@ -28,6 +28,7 @@ export function BusinessRowPanel({ api, host, profile, metadata, context, onChan
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [preview, setPreview] = useState<NextEditSuggestion>();
+  const [session] = useState(() => captureWorkbookSession(host));
   useEffect(() => host.onSelectionChange(() => {
     setCell(host.activeCell()); setCandidates([]); setSelected(''); setKind(''); setRole('');
     setDeviceId(''); setSupply(''); setPreview(undefined);
@@ -41,7 +42,7 @@ export function BusinessRowPanel({ api, host, profile, metadata, context, onChan
   async function identify() {
     setBusy(true); setError('');
     try {
-      const session = captureWorkbookSession(host);
+      assertWorkbookSession(host, session);
       const row = host.readRow(profile, cell.row);
       const result = await api.suggestions({ query: row.values.model || row.values.name || '',
         template_profile_id: profile.id, template_profile_revision: profile.revision,
@@ -58,7 +59,7 @@ export function BusinessRowPanel({ api, host, profile, metadata, context, onChan
   async function confirm() {
     setError(''); setBusy(true); setPreview(undefined);
     try {
-      const session = captureWorkbookSession(host);
+      assertWorkbookSession(host, session);
       const revision = host.businessRevision();
       if (!metadata.business || !scope || !system) throw new Error('先明确当前行所在业务区');
       const row = host.readRow(profile, cell.row);
@@ -150,7 +151,11 @@ export function BusinessRowPanel({ api, host, profile, metadata, context, onChan
     {error && <div className="error" role="alert">{error}</div>}
     <button onClick={confirm} disabled={busy}>预览当前行身份与业务设置</button>
     {preview && <NextEditPreview suggestion={preview} onApply={() => {
-      try { onChanged(applyNextEdit({ host, suggestion: preview, operationId: crypto.randomUUID() })); setPreview(undefined); }
+      try {
+        onChanged(inWorkbookSession(host, { session,
+          run: () => applyNextEdit({ host, suggestion: preview, operationId: crypto.randomUUID() }) }));
+        setPreview(undefined);
+      }
       catch (reason) { setError(String(reason)); }
     }} />}
   </details>;
