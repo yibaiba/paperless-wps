@@ -15,6 +15,7 @@ from .definition_snapshot import project_knowledge, resolve_definitions
 class CandidateCombinations:
     def __init__(self, repository, request):
         self.repository = repository
+        self.decisions = repository.decisions if request.decision_runtime == "zen-v1" else None
         configuration = request.configuration
         requirement = next(
             (r for r in configuration.requirements if r.id == request.requirement_id), None
@@ -86,7 +87,7 @@ class CandidateCombinations:
             variants=variants,
             catalog_variants=self.catalog,
             engine=self.repository.engine,
-            decisions=self.repository.decisions,
+            decisions=self.decisions,
         )
         suggestions, _ = included_fulfillment(data, suggestions)
         checks = combination_checks(
@@ -95,7 +96,7 @@ class CandidateCombinations:
             suggestions=suggestions,
             definitions=self.definitions,
             engine=self.repository.engine,
-            decisions=self.repository.decisions,
+            decisions=self.decisions,
         )
         statuses = {c["status"] for c in checks} | {candidate["status"]}
         status = (

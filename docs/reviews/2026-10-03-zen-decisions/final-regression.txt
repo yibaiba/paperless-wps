@@ -1,0 +1,82 @@
+FILES tests/configuration/decisions/test_runtime.py, tests/configuration/test_accessory_demands.py, tests/configuration/test_accessory_source_preferences.py, tests/configuration/test_accessory_variant_preferences.py, tests/configuration/test_alias_quantity_checks.py, tests/configuration/test_catalog.py
+........................................................................ [ 86%]
+...........                                                              [100%]
+83 passed in 15.62s
+
+FILES tests/configuration/test_catalog_search_matching.py, tests/configuration/test_catalog_updates.py, tests/configuration/test_check_classification.py, tests/configuration/test_concurrency.py, tests/configuration/test_core_review_fixes.py, tests/configuration/test_customer_constraint_fixes.py
+..................................                                       [100%]
+34 passed in 10.80s
+
+FILES tests/configuration/test_decision_versions.py, tests/configuration/test_device_removal_projection.py, tests/configuration/test_drawing.py, tests/configuration/test_evolution.py, tests/configuration/test_evolution_contracts.py, tests/configuration/test_evolution_sharing.py
+...........................                                              [100%]
+27 passed in 8.11s
+
+FILES tests/configuration/test_evolution_versions.py, tests/configuration/test_excel_workflow.py, tests/configuration/test_extraction.py, tests/configuration/test_feature_scope_lifecycle.py, tests/configuration/test_feature_scope_removal.py, tests/configuration/test_fulfilled_role_quantity_review.py
+.............................................                            [100%]
+45 passed in 12.85s
+
+FILES tests/configuration/test_import_merges.py, tests/configuration/test_included_content.py, tests/configuration/test_included_review.py, tests/configuration/test_inspection_profiles.py, tests/configuration/test_interpretation_lifecycle.py, tests/configuration/test_knowledge.py
+..........................................                               [100%]
+42 passed in 12.06s
+
+FILES tests/configuration/test_knowledge_reconciliation.py, tests/configuration/test_list_concurrency.py, tests/configuration/test_list_edges.py, tests/configuration/test_list_mcp.py, tests/configuration/test_list_snapshots.py, tests/configuration/test_maintenance_tasks.py
+.........................                                                [100%]
+25 passed in 8.29s
+
+FILES tests/configuration/test_manual_relationship_fixes.py, tests/configuration/test_mcp_protocol.py, tests/configuration/test_migration.py, tests/configuration/test_package_changes.py, tests/configuration/test_package_knowledge_scope.py, tests/configuration/test_package_readiness.py
+.......................                                                  [100%]
+23 passed in 17.47s
+
+FILES tests/configuration/test_package_trials.py, tests/configuration/test_price_adoption.py, tests/configuration/test_price_concurrency.py, tests/configuration/test_price_review_regressions.py, tests/configuration/test_project_output.py, tests/configuration/test_projects.py
+...............................                                          [100%]
+31 passed in 8.97s
+
+FILES tests/configuration/test_proposal_concurrency.py, tests/configuration/test_proposal_evolution.py, tests/configuration/test_proposal_generation.py, tests/configuration/test_proposal_prices_and_cycles.py, tests/configuration/test_proposal_protection.py, tests/configuration/test_proposal_protocol.py
+.......................                                                  [100%]
+23 passed in 19.99s
+
+FILES tests/configuration/test_proposal_review.py, tests/configuration/test_quantity_review_fixes.py, tests/configuration/test_quotation_details.py, tests/configuration/test_quote_formula_scaling.py, tests/configuration/test_readiness.py, tests/configuration/test_regeneration_fixes.py
+......................................                                   [100%]
+38 passed in 26.97s
+
+FILES tests/configuration/test_requirement_setup.py, tests/configuration/test_reuse_boundary_review.py, tests/configuration/test_review_regressions.py, tests/configuration/test_role_partial_reuse.py, tests/configuration/test_scoped_quantity_setup.py, tests/configuration/test_scoped_requirement_edits.py
+...................................                                      [100%]
+35 passed in 16.05s
+
+FILES tests/configuration/test_search.py, tests/configuration/test_second_review_fixes.py, tests/configuration/test_selection_binding_review.py, tests/configuration/test_sheet_edits.py, tests/configuration/test_source_partial_reuse.py, tests/configuration/test_web_draft_concurrency.py
+........................................                                 [100%]
+40 passed in 17.12s
+
+FILES tests/configuration/test_web_draft_edges.py, tests/configuration/test_web_drafts.py, tests/configuration/test_wps_addin.py, tests/configuration/test_wps_completion_benchmark.py, tests/configuration/test_wps_completion_planner.py, tests/configuration/test_wps_suggestion_ranking.py
+.......................................................                  [100%]
+55 passed in 9.43s
+
+FILES tests/configuration/test_zen_combinations.py, tests/configuration/test_zen_protocol.py, tests/paperless/test_catalog.py, tests/paperless/test_configuration.py, tests/paperless/test_rules.py, tests/test_attribute_concurrency.py
+Previous six-file batch exceeded 60s total hard timeout; no successful result claimed. Split the workbook-heavy batch below, retaining the same item/batch 60s limits.
+FILES tests/configuration/test_zen_combinations.py
+...............                                                          [100%]
+15 passed in 3.89s
+
+FILES tests/configuration/test_zen_protocol.py
+.                                                                        [100%]
+1 passed in 4.08s
+
+FILES tests/paperless/test_catalog.py
+....                                                                     [100%]
+4 passed in 10.28s
+
+FILES tests/paperless/test_configuration.py
+.....                                                                    [100%]
+5 passed in 13.97s
+
+FILES tests/paperless/test_rules.py
+.........                                                                [100%]
+9 passed in 22.13s
+
+FILES tests/test_attribute_concurrency.py, tests/test_attributes.py, tests/test_catalog.py, tests/test_drawio.py, tests/test_projects.py, tests/test_review_concurrency.py
+..................................                                       [100%]
+34 passed in 4.10s
+
+FILES tests/test_reviews.py, tests/test_rule_validation.py, tests/test_rules.py, tests/test_rules_concurrency.py, tests/test_topology.py, tests/test_topology_concurrency.py
+...................................................                      [100%]
+51 passed in 5.85s

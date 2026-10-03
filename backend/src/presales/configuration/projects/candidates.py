@@ -59,16 +59,9 @@ def candidate_results(data, *, session, search=None, catalog=None, decisions=Non
         if data.calculation_version != 3 or decisions is None:
             raise ValueError("ZEN 决策服务未配置或计算语义不匹配")
         if data.decision_bundle_id:
-            from ..decisions.snapshots import resolve_bundle
+            from .services.candidate_versions import validate_bundle
 
-            stored = Entities(session).get(data.decision_bundle_id, kind="decision_bundle").payload
-            bundle, _ = resolve_bundle(
-                session,
-                stored["rules"],
-                identity=data.decision_bundle_id,
-                compiler=decisions.bundle,
-            )
-            decisions.load(bundle)
+            validate_bundle(data, knowledge=knowledge, session=session, decisions=decisions)
         options["decisions"] = decisions
     if data.calculation_version < 3 and any(
         r.get("schema_version", 1) > 1 and role_matches(r, requirement) for r in knowledge
@@ -81,7 +74,7 @@ def candidate_results(data, *, session, search=None, catalog=None, decisions=Non
         }
         for v in variants
     ]
-    if data.configuration is not None and data.decision_runtime == "zen-v1":
+    if data.configuration is not None and data.calculation_version == 3:
         from .repository import ProjectConfigurations
         from .services.candidate_combinations import CandidateCombinations
 

@@ -76,6 +76,18 @@ def evaluate_trial(package, variant, data, *, decisions=None):
 def run_trial(session, identity, data, *, decisions=None):
     decisions = decisions.request() if decisions else None
     package = view(Entities(session).get(identity, kind="knowledge_package"))
+    if package.get("decision_bundle_id"):
+        from ..decisions.snapshots import resolve_bundle
+
+        if decisions is None:
+            raise ValueError("ZEN 决策服务未配置")
+        bundle, _ = resolve_bundle(
+            session,
+            package["rules"],
+            identity=package["decision_bundle_id"],
+            compiler=decisions.bundle,
+        )
+        decisions.load(bundle)
     variants = CatalogService(session).variants(ids=[data.variant_id])
     if not variants:
         raise ValueError("试查的产品配置不存在")

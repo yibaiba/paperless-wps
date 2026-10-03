@@ -129,6 +129,57 @@ def test_legacy_cannot_silently_ignore_combinations(client, catalog, config):
     response = client.post(BASE + "/check", json=dict(configuration=data))
     assert response.status_code == 422
     assert "ZEN" in response.text
+    response = client.post(
+        BASE + "/candidates",
+        json=dict(
+            configuration=data,
+            requirement_id="r1",
+            calculation_version=3,
+            decision_runtime="python-v3",
+            system="无纸化",
+            role="main",
+            role_id="main",
+            system_definition_id=data["systems"][0]["definition_id"],
+            include_all=True,
+        ),
+    )
+    assert response.status_code == 422 and "ZEN" in response.text
+
+
+def test_unrelated_combinations_do_not_block_legacy_single_role_trials(client, catalog, config):
+    setup(client, catalog, config)
+    response = client.post(
+        BASE + "/candidates",
+        json=dict(system="其他系统", role="其他角色", include_all=True),
+    )
+    assert response.status_code == 200, response.text
+    assert response.json() and all(c["status"] == "unknown" for c in response.json())
+
+
+def test_untriggered_combination_does_not_require_legacy_project_upgrade(client, catalog, config):
+    data, _ = setup(client, catalog, config)
+    data["decision_runtime"] = "python-v3"
+    data["devices"][0].update(
+        variant_id=catalog["variants"][1]["id"], source_id=catalog["sources"][1]["id"]
+    )
+    checked = post(client, "/check", dict(configuration=data))
+    assert not any(c["kind"] == "combination" for c in checked["checks"])
+    assert checked["configuration"]["decision_runtime"] == "python-v3"
+
+
+def test_inactive_combination_preserves_legacy_project_checks(client, catalog, config):
+    from presales.configuration.knowledge.schemas import KnowledgeInput
+
+    data, rule = setup(client, catalog, config)
+    payload = {k: v for k, v in rule.items() if k in KnowledgeInput.model_fields}
+    payload["activation_conditions"] = [dict(field="project.os", operator="eq", value="Linux")]
+    response = client.put(
+        BASE + "/knowledge/" + rule["id"], json=dict(expected_revision=1, payload=payload)
+    )
+    assert response.status_code == 200, response.text
+    data["decision_runtime"] = "python-v3"
+    data["requirements"][0]["environment"] = [dict(key="os", kind="text", value="Windows")]
+    assert not combos(client, data)
 
 
 def test_mcp_proposal_generates_mandatory_optional_role_without_default_quantity(client, catalog):
@@ -276,3 +327,36 @@ def test_combination_recognizes_role_fulfilled_by_existing_accessory(client, cat
     )
     assert result["state"] == "pass" and result["present"]
     assert len(config["accessory_allocations"]) == 1
+
+
+@pytest.mark.parametrize("split,expected", [(False, "conflict"), (True, "pass")])
+def test_combination_counts_role_allocation_not_device_stock(
+    client, catalog, config, split, expected
+):
+    from presales.configuration.definitions.schemas import SystemDefinition
+
+    from .test_evolution_versions import editable
+
+    data, _ = setup(client, catalog, config)
+    definition = client.get(BASE + "/definitions").json()["definitions"][0]
+    payload = editable(SystemDefinition, definition)
+    payload["roles"][1]["quantity_basis"]["factor"] = "2"
+    updated = client.put(
+        BASE + "/definitions/" + definition["id"], json=dict(expected_revision=1, payload=payload)
+    )
+    assert updated.status_code == 200, updated.text
+    add_target(data, catalog, assign=False)
+    data["devices"][-1]["quantity"] = "1" if split else "2"
+    data["requirements"][1]["allocations"] = [
+        dict(device_id="addon-device", quantity="1", evidence="显式分配")
+    ]
+    if split:
+        data["devices"].append(dict(data["devices"][-1], id="second-addon"))
+        data["requirements"][1]["allocations"].append(
+            dict(device_id="second-addon", quantity="1", evidence="分配剩余需求")
+        )
+    result = combos(client, data)[0]
+    assert result["status"] == expected
+    assert sum(int(a["quantity"]) for a in result["groups"][0]["allocations"]) == (
+        2 if split else 1
+    )

@@ -128,6 +128,29 @@ def test_duplicate_inputs_do_not_use_last_value(client, catalog):
     )
 
 
+@pytest.mark.parametrize("field", ["engine_version", "compiler_version", "hash"])
+def test_published_trial_validates_fixed_decision_bundle(client, catalog, field):
+    from presales.configuration.models import Entity
+
+    from .test_proposal_generation import published
+
+    _, package = published(client, catalog)
+    payload = dict(
+        expected_revision=package["revision"],
+        role_id="terminal",
+        variant_id=catalog["variants"][0]["id"],
+    )
+    path = BASE + "/knowledge-packages/" + package["id"] + "/trial"
+    normal = client.post(path, json=payload)
+    assert normal.status_code == 200 and normal.json()["status"] == "pass", normal.text
+    with client.app.state.session_factory() as session:
+        record = session.get(Entity, package["decision_bundle_id"])
+        record.payload = dict(record.payload, **{field: "unavailable"})
+        session.commit()
+    invalid = client.post(path, json=payload)
+    assert invalid.status_code == 422 and "不能静默重编译" in invalid.text
+
+
 def test_missing_feature_role_carries_correct_action(client, catalog, config):
     from .test_evolution import ready_project
 

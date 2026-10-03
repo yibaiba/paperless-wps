@@ -30,7 +30,7 @@ class ListService:
         )
 
     def _create(self, request):
-        data = empty_configuration()
+        data = empty_configuration(decision_runtime="zen-v1")
         if request.project_id:
             data = saved_revision(
                 self.repository, project_id=request.project_id, revision=request.revision
@@ -150,7 +150,11 @@ class ListService:
         config = checked["configuration"]
         baseline = record.payload["configuration"]
         if record.payload["project_id"]:
-            baseline = empty_configuration()
+            from presales.configuration.projects.runtime_defaults import project_runtime
+
+            baseline = empty_configuration(
+                decision_runtime=project_runtime(self.session, record.payload["project_id"])
+            )
             if record.payload["base_revision"] > 0:
                 baseline = saved_revision(
                     self.repository,

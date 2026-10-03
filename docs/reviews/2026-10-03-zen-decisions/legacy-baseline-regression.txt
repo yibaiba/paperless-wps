@@ -1,0 +1,54 @@
+.....F.......                                                            [100%]
+=================================== FAILURES ===================================
+______ test_unconfigured_legacy_project_requires_explicit_runtime_upgrade ______
+
+client = <starlette.testclient.TestClient object at 0x1109ed130>
+catalog = {'imported': {'source_kind': 'excel', 'id': '2f9c129f-d0b7-4619-bf7b-e05939a4ece6', 'filename': 'test.xlsx', 'created_...d253-48f0-a3e1-bd97bac5251a', 'revision': 1, 'updated_at': '2026-10-03T00:59:57.295191+00:00', 'actor': '测试维护者', ...}]}
+project = {'id': 'd747f871-132c-4bfe-85f2-ced034d7d90e', 'name': '隔离验证项目', 'created_at': '2026-10-03T00:59:57.304171+00:00'}
+
+    def test_unconfigured_legacy_project_requires_explicit_runtime_upgrade(client, catalog, project):
+        from presales.storage import Project
+
+        with client.app.state.session_factory() as session:
+            old = Project(name="升级前创建的项目")
+            session.add(old)
+            session.commit()
+            identity = old.id
+        legacy = client.get(BASE + "/projects/" + identity).json()
+        assert legacy["configuration"]["decision_runtime"] == "python-v3"
+        from .test_list_mcp import call, mutation
+
+>       draft = call(
+            client,
+            "list_create",
+            dict(
+                project_id=identity,
+                name="旧项目草稿",
+                actor="测试",
+                evidence="隔离验证",
+                operation_id=identity,
+            ),
+        )
+
+tests/configuration/test_decision_versions.py:128:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+client = <starlette.testclient.TestClient object at 0x1109ed130>
+name = 'list_create'
+data = {'project_id': '165b0222-d64b-4152-a0d1-ee4c9c642785', 'name': '旧项目草稿', 'actor': '测试', 'evidence': '隔离验证', ...}
+
+    def call(client, name, data):
+        response = client.post("/api/list-tools/" + name, json=data)
+>       assert response.status_code == 200, response.text
+E       AssertionError: {"detail":"1 validation error for CreateList\n  Value error, 复制项目需要同时指定项目 ID 和保存修订 [type=value_error, input_value={'project_id': '165b0222-...4152-a0d1-ee4c9c642785'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/value_error"}
+E       assert 422 == 200
+E        +  where 422 = <Response [422 Unprocessable Content]>.status_code
+
+tests/configuration/test_list_mcp.py:12: AssertionError
+=========================== short test summary info ============================
+FAILED tests/configuration/test_decision_versions.py::test_unconfigured_legacy_project_requires_explicit_runtime_upgrade
+1 failed, 12 passed in 7.74s
+
+Corrected regression setup: create revision-zero project through web draft API, then check/read through shared MCP service.
+................                                                         [100%]
+16 passed in 8.88s

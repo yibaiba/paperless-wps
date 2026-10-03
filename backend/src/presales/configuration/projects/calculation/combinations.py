@@ -5,10 +5,11 @@ from decimal import Decimal
 from presales.rules.calculation import digest
 
 from ...decisions.combination import combination_result
-from ...knowledge.combination_schemas import missing_combination
+from ...knowledge.combination_schemas import missing_combination, require_combination_runtime
 from ...knowledge.evaluator import context_for, scope_matches
 from ...knowledge.semantics import condition_result, scope_is_reviewed
 from ..planning.quantities import role_quantity
+from ..role_allocations import logical_requirements
 from .demands import applicable_roles, direct_owners, expand_owners
 from .role_allocations import role_allocations
 
@@ -19,8 +20,6 @@ def combination_checks(data, *, variants, suggestions, definitions, engine, deci
         for r in data["knowledge_snapshot"]
         if r["kind"] == "combination" and r["status"] != "disabled"
     ]
-    if rules and decisions is None:
-        raise ValueError("组合知识需要 ZEN 决策，请先预览运行时升级")
     systems = {s["id"]: s for s in data["systems"]}
     owners = direct_owners(data)
     while True:
@@ -57,6 +56,7 @@ def combination_checks(data, *, variants, suggestions, definitions, engine, deci
             ]
             if all(a == "fail" for a in activation):
                 continue
+            require_combination_runtime([rule], enabled=decisions is not None)
             missing = missing_combination(rule)
             unreviewed = any(not scope_is_reviewed(rule, variants[d]) for d, _ in triggers_in_scope)
             status = combination_result(decisions, mode=rule["combination"]["mode"], groups=groups)
@@ -171,7 +171,7 @@ def target_state(data, *, target, scope, scope_id, suggestions, definitions, eng
         return base
     states, allocations, alias_present = [], [], False
     devices = {d["id"]: d for d in data["devices"]}
-    for requirement in requirements:
+    for requirement in logical_requirements(requirements):
         assigned = [
             a
             for a in role_allocations(requirement, devices)

@@ -39,3 +39,8 @@ def missing_combination(value):
         if not target.get("role_id") and not target.get("need_key"):
             missing.append("combination.targets." + target["id"] + ".need")
     return missing
+
+
+def require_combination_runtime(rules, *, enabled):
+    if not enabled and any(r["kind"] == "combination" and r["status"] != "disabled" for r in rules):
+        raise ValueError("组合知识需要 ZEN 决策，请先预览运行时升级")

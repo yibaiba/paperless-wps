@@ -50,6 +50,10 @@ class ProjectRepository:
     def create(self, name: str) -> dict:
         project = Project(name=name)
         self.session.add(project)
+        self.session.flush()
+        from presales.configuration.projects.runtime_defaults import register_new_project
+
+        register_new_project(self.session, project.id)
         self.session.commit()
         return {"id": project.id, "name": project.name, "created_at": project.created_at}
 

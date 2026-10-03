@@ -72,3 +72,19 @@ def restore_requirement_ids(value, aliases, *, key=""):
     ):
         return aliases.get(value, value)
     return value
+
+
+def logical_requirements(requirements):
+    """Rejoin calculation-only role slices before testing one logical role's quantity."""
+    grouped = {}
+    for requirement in requirements:
+        parent = requirement.get("allocation_parent_id")
+        if not parent:
+            grouped[requirement["id"]] = requirement
+            continue
+        if parent not in grouped:
+            grouped[parent] = dict(requirement, id=parent, device_id=None, allocations=[])
+        grouped[parent]["allocations"].append(
+            dict(device_id=requirement["device_id"], quantity=requirement["allocated_quantity"])
+        )
+    return list(grouped.values())

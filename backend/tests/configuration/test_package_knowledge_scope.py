@@ -1,5 +1,7 @@
 from copy import deepcopy
 
+import pytest
+
 from presales.configuration.knowledge.package_scope import package_allows
 from presales.configuration.knowledge.semantics import shared_roles_match
 from presales.configuration.projects.services.definition_snapshot import project_knowledge
@@ -8,7 +10,8 @@ from .conftest import knowledge, post
 from .test_proposal_generation import published
 
 
-def test_mixed_package_and_legacy_systems_keep_separate_rules(client, catalog, config):
+@pytest.mark.parametrize("runtime", ["python-v3", "zen-v1"])
+def test_mixed_package_and_legacy_systems_keep_separate_rules(client, catalog, config, runtime):
     definition, package = published(client, catalog)
     outside = knowledge(
         client,
@@ -32,7 +35,7 @@ def test_mixed_package_and_legacy_systems_keep_separate_rules(client, catalog, c
         quantity_review="confirmed",
         quantity_evidence="隔离数量依据",
     )
-    config.update(calculation_version=3)
+    config.update(calculation_version=3, decision_runtime=runtime)
     config["systems"] = [
         dict(
             id="packaged",
@@ -65,6 +68,36 @@ def test_mixed_package_and_legacy_systems_keep_separate_rules(client, catalog, c
     snapshot = checked["configuration"]["knowledge_snapshot"]
     assert outside["id"] in {r["id"] for r in snapshot}
     assert all("_knowledge_packages" not in r for r in snapshot)
+    for system in checked["configuration"]["systems"]:
+        candidates = post(
+            client,
+            "/candidates",
+            dict(
+                configuration=checked["configuration"],
+                requirement_id=system["id"],
+                system=system["kind"],
+                role="终端",
+                role_id="terminal",
+                system_definition_id=definition["id"],
+                knowledge_package_id=system["knowledge_package_id"],
+                include_all=True,
+            ),
+        )
+        chosen = next(c for c in candidates if c["variant"]["id"] == catalog["variants"][0]["id"])
+        assert chosen["status"] == compatibility[system["id"]]["status"]
+    incompatible = client.post(
+        "/api/configuration/candidates",
+        json=dict(
+            configuration=checked["configuration"],
+            requirement_id="packaged",
+            system=definition["name"],
+            role="终端",
+            role_id="terminal",
+            system_definition_id=definition["id"],
+            knowledge_package_id="",
+        ),
+    )
+    assert incompatible.status_code == 422 and "候选知识包与项目系统不一致" in incompatible.text
 
 
 def test_pinned_revision_and_explicit_common_membership_are_scoped():

@@ -178,8 +178,29 @@ class CandidateRequest(Input):
     def semantic_query(self):
         if bool(self.configuration) != bool(self.requirement_id):
             raise ValueError("项目候选检查需要同时提供配置及角色需求标识")
-        if self.configuration and self.configuration.decision_runtime != self.decision_runtime:
-            raise ValueError("候选运行时与项目固定运行时不一致")
+        if self.configuration:
+            for field in (
+                "calculation_version",
+                "decision_runtime",
+                "decision_bundle_id",
+                "knowledge_snapshot_id",
+                "definition_snapshot_id",
+            ):
+                actual = getattr(self.configuration, field)
+                if field not in self.model_fields_set:
+                    setattr(self, field, actual)
+                elif getattr(self, field) != actual:
+                    raise ValueError("候选版本与项目固定版本不一致：" + field)
+            requirement = next(
+                (r for r in self.configuration.requirements if r.id == self.requirement_id), None
+            )
+            if requirement is None:
+                raise ValueError("候选检查引用的项目角色不存在")
+            system = next(s for s in self.configuration.systems if s.id == requirement.system_id)
+            if "knowledge_package_id" not in self.model_fields_set:
+                self.knowledge_package_id = system.knowledge_package_id
+            elif self.knowledge_package_id != system.knowledge_package_id:
+                raise ValueError("候选知识包与项目系统不一致")
         if (
             self.mode != "all"
             and not self.include_all

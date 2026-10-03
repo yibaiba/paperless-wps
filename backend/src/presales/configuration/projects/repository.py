@@ -21,10 +21,10 @@ from .schemas import Configuration
 from .snapshots import SnapshotResolver
 
 
-def empty_configuration():
+def empty_configuration(*, decision_runtime="python-v3"):
     return dict(
         calculation_version=3,
-        decision_runtime="zen-v1",
+        decision_runtime=decision_runtime,
         decision_bundle_id=None,
         actor="",
         evidence="",
@@ -108,7 +108,11 @@ class ProjectConfigurations:
                 )
             )
         )
-        configuration = empty_configuration()
+        from .runtime_defaults import project_runtime
+
+        configuration = empty_configuration(
+            decision_runtime=project_runtime(self.session, project_id)
+        )
         readiness = project_readiness(configuration, [], [])
         return dict(
             project_id=project_id,
