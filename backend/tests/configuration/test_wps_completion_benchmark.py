@@ -8,7 +8,8 @@ from presales.wps.suggestions import finalize_completion_readiness
 FIXTURE = Path(__file__).parents[1] / "fixtures" / "wps_completion_benchmark.json"
 
 
-def test_confirmed_template_sequences_meet_cursor_completion_targets():
+def test_catalog_sequence_fixture_regression():
+    # These cases derive from catalog order, not independent business ground truth.
     sequences = json.loads(FIXTURE.read_text())["sequences"]
     variants = _variants(sequences)
     by_id = {variant["id"]: variant for variant in variants}

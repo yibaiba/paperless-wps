@@ -7,10 +7,11 @@ test('accepting an inline candidate writes product identity into workbook metada
   let saved;
   const host = {
     writeCandidate: () => undefined,
-    readRows: () => [{
+    readRow: (_profile, row) => ({
       sheet: '报价表', row: 4, values: { model: 'M-1', name: '产品' },
       formula_fields: [], merged_fields: [],
-    }],
+    }),
+    readRows: () => { throw new Error('单行接受不得读取整表'); },
     writeMetadata: (value) => { saved = value; },
   };
   const metadata = { schema_version: 1, workbook_instance_id: 'w1', line_bindings: [] };
@@ -38,10 +39,10 @@ test('replacing a product preserves the confirmed business line identity', () =>
   };
   const host = {
     writeCandidate: () => undefined,
-    readRows: () => [{
+    readRow: () => ({
       sheet: '报价表', row: 4, values: { model: 'NEW-1', name: '新产品' },
       formula_fields: [], merged_fields: [],
-    }],
+    }),
     writeMetadata: (value) => { saved = value; },
   };
 
@@ -72,10 +73,10 @@ test('accepting on a moved row does not overwrite the displaced binding', () => 
   };
   const host = {
     writeCandidate: () => undefined,
-    readRows: () => [{
+    readRow: () => ({
       sheet: '报价表', row: 4, values: { model: 'NEW-1', name: '新产品' },
       formula_fields: [], merged_fields: [],
-    }],
+    }),
     writeMetadata: (value) => { saved = value; },
   };
 

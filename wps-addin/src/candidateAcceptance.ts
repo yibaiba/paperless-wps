@@ -4,7 +4,7 @@ import type {
 import { rowAnchor } from './workbook.ts';
 
 export interface CandidateWriter {
-  readRows(profile: TemplateProfile): SheetRow[];
+  readRow(profile: TemplateProfile, row: number): SheetRow;
   writeCandidate(profile: TemplateProfile, row: number, candidate: Candidate): void;
   writeMetadata(value: WorkbookMetadata): void;
 }
@@ -24,8 +24,7 @@ export function applyCandidate(options: CandidateAcceptance) {
     host, profile, cell, metadata, candidate,
   } = options;
   host.writeCandidate(profile, cell.row, candidate);
-  const row = host.readRows(profile).find((item) => item.row === cell.row);
-  if (!row) throw new Error('写入后未找到当前产品行');
+  const row = host.readRow(profile, cell.row);
   const exact = metadata.line_bindings.find((item) =>
     item.sheet === row.sheet && item.row === row.row);
   const previous = options.lineBinding === undefined ? exact : options.lineBinding ?? undefined;
