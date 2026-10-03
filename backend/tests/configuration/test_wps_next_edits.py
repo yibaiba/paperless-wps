@@ -310,3 +310,27 @@ def test_confirmed_software_role_requires_its_hardware_not_catalog_adjacency(cli
     assert hardware["line_bindings"][0]["kind"] == "hardware"
     assert hardware["line_bindings"][0]["variant_id"] == catalog["variants"][1]["id"]
     assert any(op["action"] == "accessory_link" for op in hardware["business_operations"])
+
+
+def test_replacement_cannot_carry_an_unmanaged_old_price_into_new_identity(client, catalog):
+    headers, body = completion_body(client, catalog, accessory=False)
+    first = preview(client, headers, body)["items"][0]
+    body = accept(body, first)
+    binding = first["line_bindings"][0]
+    body["active_cell"] = dict(
+        sheet="报价表",
+        row=3,
+        column=2,
+        values={**binding["confirmed_values"], "price": "88"},
+    )
+    body["lines"][0]["price"] = "88"
+    body["scope"]["requirement_id"] = binding["requirement_id"]
+    body["query"] = "SERVER"
+    body["selected_variant_id"] = catalog["variants"][1]["id"]
+    body["selected_source_id"] = catalog["sources"][1]["id"]
+    result = preview(client, headers, body)
+    assert result["items"], result
+    item = result["items"][0]
+    assert not item["applicable"]
+    assert any("旧单价不受插件管理" in i for i in item["issues"] if isinstance(i, str))
+    assert not any(p["field"] == "price" for p in item["patches"])

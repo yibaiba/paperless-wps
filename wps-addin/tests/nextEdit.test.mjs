@@ -7,9 +7,26 @@ import { recoverSyncReceipt } from '../src/syncRecovery.ts';
 import { deviceIdForLine } from '../src/businessIdentity.ts';
 import { BusinessPrefetch, businessPrefetchKey } from '../src/businessPrefetch.ts';
 import { ambiguousStructuralIdentities, scanWorkbook } from '../src/workbook.ts';
+import { completionRequest } from '../src/businessWorkbook.ts';
+import { handleInlineTab, returnNativeTab } from '../src/nativeTab.ts';
+import { assertWorkbookSession, captureWorkbookSession } from '../src/workbookSession.ts';
 
 const base = { cell: { sheet: 'quote', row: 3 }, ready: true, composing: false, explicit: false, count: 1,
   suggestion: { patches: [{ sheet: 'quote', row: 3 }], applicable: true, acceptance: 'inline' } };
+
+test('copied bindings cannot receive an asynchronous receipt intended for another file', () => {
+  let filename = '/quotes/original.xlsx';
+  const metadata = { workbook_instance_id: 'copied', binding: { binding_id: 'same-binding' }, pending_sync: { operation_id: 'pending' } };
+  const host = { workbookKey: () => filename, readMetadata: () => metadata };
+  const session = captureWorkbookSession(host);
+  filename = '/quotes/copy.xlsx';
+  assert.throws(() => assertWorkbookSession(host, session), /工作簿或项目绑定已切换/);
+  assert.equal(metadata.pending_sync.operation_id, 'pending');
+  filename = '/quotes/original.xlsx';
+  assert.doesNotThrow(() => assertWorkbookSession(host, session));
+  metadata.binding.binding_id = 'rebound';
+  assert.throws(() => assertWorkbookSession(host, session), /项目绑定/);
+});
 test('next edit locates offscreen changes and requires preview for quantities', () => {
   assert.equal(nextEditAction(base), 'apply');
   assert.equal(nextEditAction({ ...base, composing: true }), 'native');
@@ -97,4 +114,41 @@ test('duplicate products after structural edits require explicit identity confir
   const result = scanWorkbook([{ sheet: 'q', row: 3, values: { model: 'same', name: 'name', quantity: '1' }, formula_fields: [] }],
     { ...metadata, business: { unresolved_line_ids: ids } });
   assert.equal(result.lines.length, 0); assert.match(result.unresolved[0], /重复身份/);
+});
+
+test('full completion request searches a filled 1000-row area without sequential host reads', () => {
+  const rows = Array.from({ length: 1000 }, (_, i) => ({ sheet: 'q', row: i + 2,
+    values: { model: `m${i}`, name: `n${i}`, quantity: '1' }, formula_fields: [], merged_fields: [] }));
+  const metadata = { schema_version: 2, profile_revision: 1,
+    binding: { binding_id: 'b', binding_revision: 1, draft_revision: 1, base_revision: 0, managed_device_ids: [] },
+    line_bindings: rows.map((row) => ({ line_id: String(row.row), sheet: 'q', row: row.row,
+      variant_id: 'v', source_id: 's', kind: 'software', confirmed_values: row.values,
+      anchor_fingerprint: `${row.values.model}\0${row.values.name}` })),
+    business: { local_revision: 0, scopes: [{ sheet: 'q', start_row: 2, end_row: 1002, system_id: 's' }], operations: [], recent_edits: [] } };
+  let reads = 0, scans = 0;
+  const host = { readRow: (_, row) => { reads++; return rows[row - 2] ?? {
+    sheet: 'q', row, values: {}, formula_fields: [], merged_fields: [] }; },
+    readRows: () => { scans++; return rows; }, businessRevision: () => 0 };
+  const profile = { sheet_selector: 'q' };
+  const index = new WorkbookRowIndex(host, profile);
+  for (let i = 0; i < 20; i++) {
+    const request = completionRequest({ host, index, profile, metadata,
+      cell: { sheet: 'q', row: i + 2, column: 1 }, query: `m${i}` });
+    assert.ok(request.target_cells.some((c) => c.row === 1002));
+  }
+  assert.equal(scans, 1); assert.equal(reads, 40);
+});
+
+test('non-ready and Shift Tab restore focus and use the WPS keyboard path, not Offset', () => {
+  const calls = [];
+  const native = (shift) => returnNativeTab({ shift, hide: () => calls.push('hide'), app: {
+    OnKey: (key) => calls.push(['restore', key]), ActiveWindow: { Activate: () => calls.push('focus') },
+    SendKeys: (...args) => calls.push(['send', ...args]),
+  } });
+  const complete = () => assert.fail('no candidate must never complete');
+  for (let i = 0; i < 100; i++) handleInlineTab({ ready: false, shift: false, complete, native });
+  handleInlineTab({ ready: true, shift: true, complete, native });
+  assert.deepEqual(calls.slice(0, 4), ['hide', ['restore', '{TAB}'], 'focus', ['send', '{TAB}', true]]);
+  assert.deepEqual(calls.at(-1), ['send', '+{TAB}', true]);
+  assert.equal(calls.filter((c) => Array.isArray(c) && c[0] === 'send').length, 101);
 });

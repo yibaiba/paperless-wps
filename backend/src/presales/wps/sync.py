@@ -45,6 +45,7 @@ class WorkbookSync:
             "line_bindings": line_bindings,
             "has_changes": bool(changes),
             "operation_count": len(operations),
+            "configuration": proposed["configuration"],
         }
 
     def commit(self, request: SyncCommit, *, actor: str):

@@ -79,6 +79,7 @@ export interface WorkbookEditJournal {
   after: Pick<WorkbookMetadata, 'line_bindings' | 'business'>;
   error?: string;
   binding_revision?: number;
+  binding_id?: string;
   inverse_business_operations?: BusinessOperation[];
   recovery?: { intent: 'undo' | 'rollback'; before: WorkbookMetadata; after: WorkbookMetadata };
 }

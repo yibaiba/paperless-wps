@@ -3,14 +3,15 @@ import { useEffect, useState } from 'react';
 
 import type { WpsApi } from '../api';
 import type { HostAdapter } from '../host';
-import type { BindingState, ProjectSummary, TemplateProfile, WorkbookMetadata } from '../types';
+import type { ProjectSummary, TemplateProfile, WorkbookMetadata } from '../types';
+import { assertWorkbookSession, captureWorkbookSession } from '../workbookSession';
 
 export function BindingPanel({ api, host, profile, metadata, onBound }: {
   api: WpsApi;
   host: HostAdapter;
   profile: TemplateProfile;
   metadata: WorkbookMetadata;
-  onBound: (binding: BindingState) => void;
+  onBound: (metadata: WorkbookMetadata) => void;
 }) {
   const [mode, setMode] = useState<'new' | 'existing'>('new');
   const [name, setName] = useState('WPS 现场项目');
@@ -19,11 +20,16 @@ export function BindingPanel({ api, host, profile, metadata, onBound }: {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
-  useEffect(() => { api.projects().then((value) => setProjects(value.items)).catch(() => undefined); }, [api]);
+  useEffect(() => { api.projects().then((value) => setProjects(value.items)).catch((reason) => setError(String(reason))); }, [api]);
 
   async function bind() {
     setBusy(true); setError('');
     try {
+      const session = captureWorkbookSession(host);
+      const revision = host.businessRevision();
+      if (host.readMetadata().pending_sync || host.journals().some((j) => ['prepared', 'recovery_required'].includes(j.state))) {
+        throw new Error('请先恢复未完成的同步回执或编辑日志，再重新绑定');
+      }
       const selected = projects.find((item) => item.id === projectId);
       if (mode === 'existing' && !selected) throw new Error('请选择需要绑定的项目');
       const result = await api.bind({
@@ -34,15 +40,19 @@ export function BindingPanel({ api, host, profile, metadata, onBound }: {
         template_profile_revision: profile.revision,
         operation_id: crypto.randomUUID(),
       });
-      const productBindings = metadata.line_bindings.map(({ device_id: _, ...item }) => item);
-      host.writeMetadata({
+      assertWorkbookSession(host, session);
+      if (host.businessRevision() !== revision) throw new Error('绑定期间工作簿已编辑，请重新绑定；未覆盖本地修改');
+      const productBindings = metadata.line_bindings.map(({ device_id: _, requirement_id: __, ...item }) => item);
+      const next = {
         ...metadata,
         profile_id: profile.id,
         profile_revision: profile.revision,
         binding: result,
         line_bindings: productBindings,
-      });
-      onBound(result);
+        business: undefined,
+      };
+      host.writeMetadata(next);
+      onBound(next);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : String(reason));
     } finally { setBusy(false); }

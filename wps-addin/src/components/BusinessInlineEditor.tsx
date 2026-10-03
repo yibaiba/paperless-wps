@@ -9,6 +9,8 @@ import { applyNextEdit, restoreJournal } from '../editJournal';
 import { WpsHostAdapter } from '../host';
 import { LatestRequest } from '../latestRequest';
 import { nextEditAction, nextEditText } from '../nextEditState';
+import { handleInlineTab } from '../nativeTab';
+import { assertWorkbookSession, captureWorkbookSession } from '../workbookSession';
 import { WorkbookRowIndex } from '../workbookRowIndex';
 import { NextEditPreview, issueText } from './NextEditPreview';
 
@@ -77,6 +79,7 @@ export function BusinessInlineEditor() {
       businessDiagnostic(host, { event_type: 'query_start', template_profile_id: context.profile.id,
         template_profile_revision: context.profile.revision });
       try {
+        const session = captureWorkbookSession(host);
         const metadata = host.readMetadata();
         if (!metadata.binding) throw new Error('请先绑定项目');
         const key = businessPrefetchKey({ context, binding: metadata.binding,
@@ -87,6 +90,7 @@ export function BusinessInlineEditor() {
         const value = cached ? cached.value : await api.completionPreview(completionRequest({ host,
           profile: context.profile, metadata, cell: context.cell, index, query }), request.signal);
         if (!request.isCurrent()) return;
+        assertWorkbookSession(host, session);
         if (value.local_revision !== host.businessRevision()) { setEpoch((v) => v + 1); return; }
         setResult(value);
         versions.current = value.versions;
@@ -108,6 +112,7 @@ export function BusinessInlineEditor() {
     if (!context || processing.current) return;
     processing.current = true; changing.current = true;
     try {
+      if (host.workbookKey() !== context.workbook_key) throw new Error('工作簿已切换，请重新预览');
       applyNextEdit({ host, suggestion, operationId });
       suggestion.patches.forEach((p) => index?.refresh(p.row));
       setPreview(false); setResult(undefined); requests.current.cancel(); host.restoreNativeTab();
@@ -123,7 +128,7 @@ export function BusinessInlineEditor() {
         (signal) => api.completionPreview(payload, signal));
       }
       refresh();
-    } catch (reason) { setError(String(reason)); }
+    } catch (reason) { setWriteError(String(reason)); }
     finally { processing.current = false; changing.current = false; }
   }, [api, context, host, index, refresh]);
   useEffect(() => () => { prefetch.current.clear(); requests.current.cancel(); }, []);
@@ -134,10 +139,12 @@ export function BusinessInlineEditor() {
     const request = requests.current.begin();
     setBusy(true); setError(''); host.restoreNativeTab();
     try {
+      const session = captureWorkbookSession(host);
       const value = await api.completionPreview({ ...completionRequest({ host, profile: context.profile,
         metadata: host.readMetadata(), cell: context.cell, index, query }),
         selected_variant_id: binding.variant_id, selected_source_id: binding.source_id }, request.signal);
       if (!request.isCurrent()) return;
+      assertWorkbookSession(host, session);
       if (value.local_revision !== host.businessRevision()) throw new Error('选择期间工作簿已变化，请重新查询');
       setResult(value); setSelected(0); setExplicit(true); setPreview(true);
     } catch (reason) { if (request.isCurrent()) setError(String(reason)); }
@@ -145,10 +152,10 @@ export function BusinessInlineEditor() {
   }
 
   const tab = useCallback(() => {
-    if (!context) return;
+    if (!context || composing) return;
     const action = nextEditAction({ suggestion: item, cell: context.cell, ready,
       composing, explicit, count: result?.items.length ?? 0 });
-    if (action === 'native') return;
+    if (action === 'native') { host.returnNativeTab(false); return; }
     const operationId = host.claimTab(context.session_id);
     if (!operationId || !item) return;
     if (action === 'apply') { apply(item, operationId); return; }
@@ -200,7 +207,9 @@ export function BusinessInlineEditor() {
           if (e.key === 'Escape') { e.preventDefault(); host.hideInlineEditor(); }
           if (e.key === 'Tab') {
             e.preventDefault();
-            if (ready) tab(); else { host.hideInlineEditor(); host.moveSelection(0, e.shiftKey ? -1 : 1); }
+            try { handleInlineTab({ ready, shift: e.shiftKey, complete: tab,
+              native: (shift) => host.returnNativeTab(shift) }); }
+            catch (reason) { host.reportBackgroundError(`原生 Tab 交还失败：${reason}`); setError(String(reason)); }
           }
           if (['ArrowDown', 'ArrowUp'].includes(e.key) && result?.items.length) {
             e.preventDefault(); setExpanded(true); setExplicit(true);

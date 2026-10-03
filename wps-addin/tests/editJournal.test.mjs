@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { applyNextEdit, restoreJournal } from '../src/editJournal.ts';
 import { MetadataRecords, readMetadataRecords, writeMetadataRecords } from '../src/metadataRecords.ts';
+import { rowBusinessOperations } from '../src/businessRowOperations.ts';
 
 function fixture() {
   let metadata = { schema_version: 2, workbook_instance_id: 'book', line_bindings: [],
@@ -187,4 +188,47 @@ test('metadata write failure rolls back every cell and retains explicit outcome'
   assert.equal(f.cells.get(1), 'old');
   assert.equal(f.cells.get(2), 'old name');
   assert.equal(f.journals.get('op').state, 'restored');
+});
+
+test('second supply undo after sync restores the first local allocation, including receipt retry', () => {
+  const f = fixture();
+  const existing = { id: 'stock', device_id: 'd', source: 'existing', quantity: '2', evidence: '已确认库存' };
+  const first = { ...f.suggestion, patches: [], business_operations: [
+    { action: 'supply_set', device_id: 'd', allocations: [existing] },
+  ] };
+  applyNextEdit({ host: f.host, suggestion: first, operationId: 'first' });
+  // This configuration is the HTTP preview of the first local group, not the fixed baseline.
+  const { operations, inverse } = rowBusinessOperations({
+    configuration: { requirements: [], supply_allocations: [existing] },
+    requirementId: 'r', systemId: 's', deviceId: 'd', environmentKey: '', environmentValue: '',
+    supply: 'purchase', quantity: '2', evidence: '改为采购', allocationId: 'purchase',
+  });
+  const second = { ...first, id: 'second', local_revision: 1,
+    business_operations: operations, inverse_business_operations: inverse };
+  applyNextEdit({ host: f.host, suggestion: second, operationId: 'second' });
+  const meta = f.host.readMetadata();
+  f.host.writeMetadata({ ...meta, binding: { binding_revision: 2, base_revision: 1 },
+    business: { ...meta.business, operations: [] } });
+  const write = f.host.writeJournal;
+  f.host.writeJournal = (value) => {
+    if (value.state === 'undone') throw new Error('回执失败');
+    write(value);
+  };
+  assert.throws(() => restoreJournal(f.host, f.journals.get('second')), /回执失败/);
+  f.host.writeJournal = write;
+  restoreJournal(f.host, f.journals.get('second'), false);
+  assert.deepEqual(f.host.readMetadata().business.operations, [
+    { action: 'supply_set', device_id: 'd', allocations: [existing] },
+  ]);
+  assert.equal(f.host.readMetadata().binding.base_revision, 1);
+});
+
+test('old group cannot undo into a new project binding with the same revision', () => {
+  const f = fixture();
+  f.host.writeMetadata({ ...f.host.readMetadata(), binding: { binding_id: 'old', binding_revision: 1 } });
+  applyNextEdit({ ...f, operationId: 'op' });
+  f.host.writeMetadata({ ...f.host.readMetadata(), binding: { binding_id: 'new', binding_revision: 1 } });
+  assert.throws(() => restoreJournal(f.host, f.journals.get('op')), /其他项目绑定/);
+  assert.equal(f.cells.get(1), 'new');
+  assert.equal(f.journals.get('op').state, 'applied');
 });

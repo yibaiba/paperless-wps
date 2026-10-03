@@ -16,10 +16,11 @@ import { LatestRequest } from './latestRequest';
 import { matchingProfile } from './template';
 import { suggestionContext } from './suggestionContext';
 import type {
-  ActiveCell, BindingState, Candidate, TemplateField, TemplateProfile,
+  ActiveCell, Candidate, TemplateField, TemplateProfile,
   WorkbookMetadata,
 } from './types';
 import { bindingForRow } from './workbook.ts';
+import { assertWorkbookSession, captureWorkbookSession } from './workbookSession';
 
 type View = 'account' | 'suggestions' | 'mapping' | 'binding' | 'business' | 'sync';
 const HOST_STATE_POLL_MS = 250;
@@ -46,6 +47,7 @@ export function App() {
 
   const loadProfiles = useCallback(async () => {
     if (!token) return;
+    const session = captureWorkbookSession(host);
     const values = await api.templates();
     let bound = values.find((item) => item.id === metadata.profile_id
       && item.revision === metadata.profile_revision);
@@ -54,9 +56,11 @@ export function App() {
     }
     const all = bound && !values.some((item) => item.id === bound.id
       && item.revision === bound.revision) ? [...values, bound] : values;
+    assertWorkbookSession(host, session);
     setProfiles(all);
     const matched = bound ?? await matchingProfile(all, (item) =>
       Promise.resolve(host.readHeader(item.sheet_selector, item.header_row)));
+    assertWorkbookSession(host, session);
     setProfile(matched);
     if (!matched) setView('mapping');
   }, [api, host, metadata.profile_id, metadata.profile_revision, token]);
@@ -66,7 +70,9 @@ export function App() {
   useEffect(() => {
     const bindingId = metadata.binding?.binding_id;
     if (!token || !bindingId) return;
+    const session = captureWorkbookSession(host);
     api.binding(bindingId).then((binding) => {
+      assertWorkbookSession(host, session);
       if (binding.binding_revision <= (metadata.binding?.binding_revision ?? 0)) return;
       if (metadata.schema_version === 2) {
         throw new Error('项目绑定已有新版本，请在同步面板恢复本次回执或核对冲突；未覆盖本地业务修改');
@@ -146,7 +152,6 @@ export function App() {
     const removeWorkbookClose = host.onWorkbookBeforeClose(() => host.hideInlineEditor());
     const removeWorkbookActivate = host.onWorkbookActivate(() => {
       host.hideInlineEditor(); setMetadata(host.readMetadata());
-      queryCellRef.current(true);
     });
     queryCellRef.current(true);
     return () => {
@@ -261,19 +266,19 @@ export function App() {
   }
 
   function saveProfile(value: TemplateProfile) {
+    if (host.readMetadata().pending_sync) throw new Error('请先恢复同步回执，再修改模板映射');
     const next = { ...metadata, profile_id: value.id, profile_revision: value.revision };
     host.writeMetadata(next); setMetadata(next); setProfile(value);
     setProfiles((items) => [...items.filter((item) => item.id !== value.id), value]);
     setView('suggestions');
   }
 
-  function saveBinding(value: BindingState) {
-    const productBindings = metadata.line_bindings.map(({ device_id: _, ...item }) => item);
-    const next = { ...metadata, binding: value, line_bindings: productBindings, business: undefined };
-    host.writeMetadata(next); setMetadata(next); setView('sync');
+  function saveBinding(value: WorkbookMetadata) {
+    setMetadata(value); setView('sync');
   }
 
   function selectProfile(value?: TemplateProfile) {
+    if (host.readMetadata().pending_sync) { setError('请先恢复同步回执，再修改模板映射'); return; }
     const next = {
       ...metadata,
       profile_id: value?.id,
@@ -319,13 +324,13 @@ export function App() {
     </section> : null}
     {view === 'suggestions' && profile && metadata.schema_version !== 2 ? <SuggestionPanel cell={cell} candidates={candidates} busy={busy} error={error} onAccept={accept} /> : null}
     {((view === 'suggestions' && metadata.schema_version === 2) || view === 'business') && profile
-      ? <BusinessPanel api={api} host={host} profile={profile} metadata={metadata} onChanged={setMetadata} /> : null}
+      ? <BusinessPanel key={host.workbookKey()} api={api} host={host} profile={profile} metadata={metadata} onChanged={setMetadata} /> : null}
     {view === 'suggestions' && !profile ? <div className="empty">请先完成模板映射，才能识别产品列</div> : null}
-    {view === 'mapping' ? <MappingPanel host={host} api={api} profiles={profiles}
+    {view === 'mapping' ? <MappingPanel key={host.workbookKey()} host={host} api={api} profiles={profiles}
       profile={profile} onSelected={selectProfile} onSaved={saveProfile} /> : null}
-    {view === 'binding' && profile ? <BindingPanel api={api} host={host} profile={profile} metadata={metadata} onBound={saveBinding} /> : null}
+    {view === 'binding' && profile ? <BindingPanel key={host.workbookKey()} api={api} host={host} profile={profile} metadata={metadata} onBound={saveBinding} /> : null}
     {view === 'binding' && !profile ? <div className="empty">请先保存模板映射</div> : null}
-    {view === 'sync' && profile ? <SyncPanel api={api} host={host} profile={profile} metadata={metadata} onSynced={setMetadata} /> : null}
+    {view === 'sync' && profile ? <SyncPanel key={host.workbookKey()} api={api} host={host} profile={profile} metadata={metadata} onSynced={setMetadata} /> : null}
     {view === 'sync' && !profile ? <div className="empty">请先保存模板映射</div> : null}
   </main>;
 }

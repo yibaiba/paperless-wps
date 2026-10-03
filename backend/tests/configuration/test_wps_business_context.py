@@ -116,3 +116,24 @@ def test_v2_rejects_missing_type_stale_binding_and_knowledge_refresh(client, cat
     body["expected_binding_revision"] -= 1
     body["business_operations"] = [{"action": "knowledge_refresh", "upgrade": True}]
     assert client.post("/api/wps/sync/preview", headers=headers, json=body).status_code == 422
+
+
+def test_preview_returns_projected_local_supply_without_mutating_baseline(client, catalog):
+    headers, _, bound, body = setup_workbook(client, catalog)
+    first = client.post("/api/wps/sync/preview", headers=headers, json=body).json()
+    device = first["line_bindings"][0]["device_id"]
+    allocation = dict(
+        id="stock", device_id=device, source="existing", quantity="2", evidence="确认库存"
+    )
+    body["business_operations"] = [
+        dict(action="supply_set", device_id=device, allocations=[allocation])
+    ]
+    versions = entity_versions(client)
+    response = client.post("/api/wps/sync/preview", headers=headers, json=body)
+    assert response.status_code == 200, response.text
+    assert response.json()["configuration"]["supply_allocations"] == [allocation]
+    assert entity_versions(client) == versions
+    baseline = client.get(
+        f"/api/wps/bindings/{bound['binding_id']}/context", headers=headers
+    ).json()
+    assert baseline["configuration"]["supply_allocations"] == []

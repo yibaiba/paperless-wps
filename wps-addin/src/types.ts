@@ -185,6 +185,7 @@ export interface SheetRow {
 export interface ProjectSummary { id: string; name: string; revision: number }
 
 export interface SyncPreviewResult {
+  configuration?: import('./businessTypes').WorkbookBusinessContext['configuration'];
   preview_fingerprint: string;
   changes: Array<{ kind: string; id: string; before: unknown; after: unknown }>;
   issues: Array<Record<string, unknown>>;

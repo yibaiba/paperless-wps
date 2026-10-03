@@ -70,6 +70,7 @@ export function applyNextEdit(options: {
     state: 'prepared', patches: suggestion.patches, before: snapshot(metadata, changedIds),
     after: { ...after, line_bindings: suggestion.line_bindings },
     binding_revision: metadata.binding?.binding_revision ?? 0,
+    binding_id: metadata.binding?.binding_id,
     inverse_business_operations: suggestion.inverse_business_operations ?? [],
   };
   host.writeJournal(journal);
@@ -101,6 +102,9 @@ export function applyNextEdit(options: {
 
 export function restoreJournal(host: JournalHost, journal: WorkbookEditJournal, undo = true) {
   const metadata = host.readMetadata();
+  if (journal.binding_id !== metadata.binding?.binding_id) {
+    throw new Error('此编辑日志属于其他项目绑定，不能在重新绑定后撤销；原日志保留');
+  }
   if (metadata.pending_sync) throw new Error('请先恢复未完成的同步回执，再撤销本地修改');
   if (undo && !journal.recovery) checkCells(host, journal.patches, 'after');
   const recovery = journal.recovery ?? {

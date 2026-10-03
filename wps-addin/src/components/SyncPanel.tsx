@@ -8,6 +8,7 @@ import { scanWorkbook } from '../workbook';
 import { businessSyncRequest } from '../businessWorkbook';
 import { recoverSyncReceipt } from '../syncRecovery';
 import { businessDiagnostic } from '../businessDiagnostics';
+import { assertWorkbookSession, captureWorkbookSession, isWorkbookSession } from '../workbookSession';
 import type { SyncPreviewResult, TemplateProfile, WorkbookMetadata } from '../types';
 
 export function SyncPanel({ api, host, profile, metadata, onSynced }: {
@@ -40,8 +41,10 @@ export function SyncPanel({ api, host, profile, metadata, onSynced }: {
   async function loadPreview() {
     setBusy(true); setError(''); setPreview(undefined); setOperationId('');
     try {
+      const session = captureWorkbookSession(host);
       const revision = host.businessRevision();
       const result = await api.preview(request());
+      assertWorkbookSession(host, session);
       if (host.businessRevision() !== revision) throw new Error('工作簿在预览期间变化，请重新预览');
       setPreview(result);
       setPreviewRevision(revision);
@@ -54,6 +57,7 @@ export function SyncPanel({ api, host, profile, metadata, onSynced }: {
   async function commit() {
     if ((!preview || !operationId) && !metadata.pending_sync) return;
     setBusy(true); setError('');
+    const session = captureWorkbookSession(host);
     try {
       let current = host.readMetadata();
       if (!current.pending_sync) {
@@ -65,6 +69,7 @@ export function SyncPanel({ api, host, profile, metadata, onSynced }: {
         host.writeMetadata(current); onSynced(current);
       }
       const result = await api.commit(current.pending_sync!.request);
+      assertWorkbookSession(host, session);
       const next = recoverSyncReceipt(host.readMetadata(), result);
       host.writeMetadata(next);
       onSynced(next);
@@ -77,7 +82,7 @@ export function SyncPanel({ api, host, profile, metadata, onSynced }: {
       setPreview(undefined);
       setOperationId('');
     } catch (reason) {
-      if (reason instanceof ApiError && [409, 422].includes(reason.status)) {
+      if (reason instanceof ApiError && [409, 422].includes(reason.status) && isWorkbookSession(host, session)) {
         const current = { ...host.readMetadata(), pending_sync: undefined };
         host.writeMetadata(current); onSynced(current);
       }

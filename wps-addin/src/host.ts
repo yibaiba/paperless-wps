@@ -11,6 +11,7 @@ import { enqueueFeedback, parseFeedbackOutbox, removeFeedback } from './feedback
 import { InlineDialogManager } from './inlineDialog.ts';
 import type { InlineLayoutOptions, InlineLayoutResult } from './inlineLayout.ts';
 import { WpsTabCoordinator } from './tabCoordinator.ts';
+import { returnNativeTab } from './nativeTab.ts';
 import { ambiguousStructuralIdentities, assertWritableTargets } from './workbook.ts';
 
 declare global {
@@ -30,6 +31,7 @@ const CONTEXT_LOOKBACK_ROWS = 100;
 
 export interface HostAdapter {
   ready(): boolean;
+  workbookKey(): string;
   token(): string | null;
   saveToken(value: string): void;
   account(): string | null;
@@ -74,6 +76,7 @@ export interface HostAdapter {
   removeSuggestionFeedback(operationId: string): void;
   writeCellValue(cell: ActiveCell, value: string): void;
   moveSelection(rowOffset: number, columnOffset: number): void;
+  returnNativeTab(shift: boolean): void;
   onSheetChange(callback: (event: SheetChange) => void): () => void;
   businessRevision(): number;
   onSelectionChange(callback: () => void): () => void;
@@ -128,6 +131,11 @@ export class WpsHostAdapter implements HostAdapter {
 
   ready() { return Boolean(this.app?.ActiveWorkbook); }
 
+  workbookKey() {
+    const workbook = this.requireWorkbook();
+    return text(workbook.FullName ?? workbook.Name);
+  }
+
   token() { return this.credentials.token(); }
 
   saveToken(value: string) { this.credentials.saveToken(value); }
@@ -149,7 +157,7 @@ export class WpsHostAdapter implements HostAdapter {
       sheet: text(sheet.Name),
       row: Number(range.Row),
       column: Number(range.Column),
-      value: text(range.Text ?? range.Value2),
+      value: text(range.Value2 ?? range.Text),
       formula: text(range.Formula),
       merged: Boolean(range.MergeCells),
     };
@@ -316,6 +324,10 @@ export class WpsHostAdapter implements HostAdapter {
     this.inlineDialog.hide();
   }
 
+  returnNativeTab(shift: boolean) {
+    returnNativeTab({ app: this.app, hide: () => this.hideInlineEditor(), shift });
+  }
+
   inlineCapabilityIssues() {
     const issues = [
       ...this.tabCoordinator.capabilityIssues(),
@@ -323,6 +335,8 @@ export class WpsHostAdapter implements HostAdapter {
     ];
     if (typeof this.app?.CreateWebDialog !== 'function') issues.push('CreateWebDialog');
     if (typeof this.app?.GetWebDialog !== 'function') issues.push('GetWebDialog');
+    if (typeof this.app?.SendKeys !== 'function') issues.push('Application.SendKeys');
+    if (typeof this.app?.ActiveWindow?.Activate !== 'function') issues.push('Window.Activate');
     if (typeof this.app?.ApiEvent?.AddApiEventListener !== 'function'
       || typeof this.app?.ApiEvent?.RemoveApiEventListener !== 'function') {
       issues.push('ApiEvent');
@@ -450,7 +464,7 @@ export class WpsHostAdapter implements HostAdapter {
     const fields = Object.entries(profile.field_columns) as Array<[TemplateField, number]>;
     for (const [field, column] of fields) {
       const cell = sheet.Cells.Item(row, column);
-      values[field] = text(cell.Text ?? cell.Value2);
+      values[field] = text(cell.Value2 ?? cell.Text);
       if (text(cell.Formula).startsWith('=')) formulaFields.push(field);
       if (cell.MergeCells) mergedFields.push(field);
     }

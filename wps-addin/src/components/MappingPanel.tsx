@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { WpsApi } from '../api';
 import type { HostAdapter } from '../host';
 import { validateMappedHeaders, validateMapping } from '../mappingValidation';
+import { assertWorkbookSession, captureWorkbookSession } from '../workbookSession';
 import type {
   CatalogScope, CatalogScopePreview, ManagedField, SheetRow, TemplateField, TemplateProfile,
 } from '../types';
@@ -107,6 +108,7 @@ export function MappingPanel({ host, api, profiles, profile, onSelected, onSaved
   async function save() {
     setBusy(true); setError('');
     try {
+      const session = captureWorkbookSession(host);
       if (previewSignature !== draftSignature) throw new Error('字段映射变化后需要重新预览');
       if (!scope) throw new Error('请选择该模板对应的产品来源范围');
       const result = await api.saveTemplate({
@@ -119,6 +121,7 @@ export function MappingPanel({ host, api, profiles, profile, onSelected, onSaved
         header_values: headers,
         catalog_scope: scope,
       });
+      assertWorkbookSession(host, session);
       onSaved(result);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : String(reason));

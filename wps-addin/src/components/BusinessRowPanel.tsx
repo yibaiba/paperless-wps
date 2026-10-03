@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import type { WpsApi } from '../api';
-import type { BusinessOperation, NextEditSuggestion, ProductKind, WorkbookBusinessContext } from '../businessTypes';
+import type { NextEditSuggestion, ProductKind, WorkbookBusinessContext } from '../businessTypes';
+import { rowBusinessOperations } from '../businessRowOperations';
+import { assertWorkbookSession, captureWorkbookSession } from '../workbookSession';
 import { applyNextEdit } from '../editJournal';
 import { deviceIdForLine } from '../businessIdentity';
 import type { HostAdapter } from '../host';
@@ -39,10 +41,12 @@ export function BusinessRowPanel({ api, host, profile, metadata, context, onChan
   async function identify() {
     setBusy(true); setError('');
     try {
+      const session = captureWorkbookSession(host);
       const row = host.readRow(profile, cell.row);
       const result = await api.suggestions({ query: row.values.model || row.values.name || '',
         template_profile_id: profile.id, template_profile_revision: profile.revision,
         current_row: row.values });
+      assertWorkbookSession(host, session);
       const active = host.activeCell();
       if (active.sheet !== cell.sheet || active.row !== cell.row) throw new Error('选区已变化，请重新解析当前行');
       setCandidates(result.items); setSelected('');
@@ -54,6 +58,7 @@ export function BusinessRowPanel({ api, host, profile, metadata, context, onChan
   async function confirm() {
     setError(''); setBusy(true); setPreview(undefined);
     try {
+      const session = captureWorkbookSession(host);
       const revision = host.businessRevision();
       if (!metadata.business || !scope || !system) throw new Error('先明确当前行所在业务区');
       const row = host.readRow(profile, cell.row);
@@ -66,40 +71,35 @@ export function BusinessRowPanel({ api, host, profile, metadata, context, onChan
       }
       const chosenRole = pkg?.definition.roles.find((r) => r.id === role);
       const requirementId = old?.requirement_id ?? crypto.randomUUID();
-      const operations: BusinessOperation[] = [];
-      const inverse: BusinessOperation[] = [];
       const lineId = old?.line_id ?? crypto.randomUUID();
       const linkedDevice = deviceId || old?.device_id || (hasProduct
         ? await deviceIdForLine(metadata.binding!.binding_id, lineId) : undefined);
+      assertWorkbookSession(host, session);
       const existingDevice = context.configuration.devices.find((d) => d.id === linkedDevice);
       if (existingDevice && product && (existingDevice.variant_id !== product.variant_id || existingDevice.source_id !== product.source_id)) {
         throw new Error('已有设备配置/来源与当前行不同，请选择一致身份；换型请走下一步预览');
-      }
-      if (chosenRole) {
-        const before = context.configuration.requirements.find((r) => r.id === requirementId);
-        const environment = before?.environment ?? [];
-        const value = { ...before, id: requirementId, system_id: system.id, role_id: role, role: chosenRole.name,
-          device_id: linkedDevice ?? null,
-          environment: environmentKey.trim() ? [...environment.filter((a) => a.key !== environmentKey.trim()),
-            { key: environmentKey.trim(), kind: 'text', value: environmentValue, unit: '' }] : environment,
-        };
-        operations.push({ action: 'requirement_put', value });
-        inverse.push(before ? { action: 'requirement_put', value: before }
-          : { action: 'remove', collection: 'requirements', id: requirementId });
-      }
-      if (supply) {
-        if (!linkedDevice || !evidence.trim()) throw new Error('供货分配需要明确设备身份与依据');
-        const before = context.configuration.supply_allocations.filter((a) => a.device_id === linkedDevice);
-        operations.push({ action: 'supply_set', device_id: linkedDevice, allocations: [{
-          id: crypto.randomUUID(), device_id: linkedDevice, source: supply, quantity: row.values.quantity, evidence,
-        }] });
-        inverse.push({ action: 'supply_set', device_id: linkedDevice, allocations: before });
       }
       const binding = hasProduct && product && productKind ? { ...old, line_id: lineId,
         sheet: cell.sheet, row: cell.row, variant_id: product.variant_id, source_id: product.source_id,
         kind: productKind, device_id: linkedDevice, requirement_id: chosenRole ? requirementId : old?.requirement_id,
         confirmed_values: row.values, anchor_fingerprint: [row.values.model ?? '', row.values.name ?? ''].join('\0').toLocaleLowerCase(),
       } : undefined;
+      const proposed = { ...metadata, line_bindings: [
+        ...metadata.line_bindings.filter((line) => line.line_id !== lineId), ...(binding ? [binding] : []),
+      ], business: { ...metadata.business,
+        unresolved_line_ids: metadata.business.unresolved_line_ids?.filter((id) => id !== lineId) } };
+      let configuration = context.configuration;
+      if (chosenRole || supply) {
+        const scan = scanWorkbook(host.readRows(profile), proposed);
+        if (scan.unresolved.length) throw new Error(`${scan.unresolved.join('；')}。可先仅确认产品身份，再设置用途与供货。`);
+        const before = await api.preview(businessSyncRequest(proposed, scan.lines));
+        assertWorkbookSession(host, session);
+        if (!before.configuration) throw new Error('后端未返回当前业务配置，请升级后端后重试');
+        configuration = before.configuration;
+      }
+      const { operations, inverse } = rowBusinessOperations({ configuration, requirementId,
+        systemId: system.id, deviceId: linkedDevice, role: chosenRole, environmentKey, environmentValue,
+        supply, quantity: row.values.quantity ?? '', evidence, allocationId: crypto.randomUUID() });
       const active = host.activeCell();
       if (active.sheet !== cell.sheet || active.row !== cell.row) throw new Error('选区已变化，请重新确认当前行');
       const suggestion: NextEditSuggestion = {
@@ -114,13 +114,12 @@ export function BusinessRowPanel({ api, host, profile, metadata, context, onChan
         context_fingerprint: context.fingerprint, local_revision: revision,
       };
       if (operations.length) {
-        const proposed = { ...metadata, line_bindings: [
-          ...metadata.line_bindings.filter((line) => line.line_id !== lineId), ...(binding ? [binding] : []),
-        ], business: { ...metadata.business, operations: [...metadata.business.operations, ...operations],
-          unresolved_line_ids: metadata.business.unresolved_line_ids?.filter((id) => id !== lineId) } };
-        const scan = scanWorkbook(host.readRows(profile), proposed);
+        const after = { ...proposed, business: { ...proposed.business,
+          operations: [...proposed.business.operations, ...operations] } };
+        const scan = scanWorkbook(host.readRows(profile), after);
         if (scan.unresolved.length) throw new Error(`${scan.unresolved.join('；')}。可先仅确认产品身份，再设置用途与供货。`);
-        const checked = await api.preview(businessSyncRequest(proposed, scan.lines));
+        const checked = await api.preview(businessSyncRequest(after, scan.lines));
+        assertWorkbookSession(host, session);
         suggestion.changes.push(...checked.changes);
         suggestion.issues = checked.issues;
         suggestion.applicable = !checked.issues.some((issue) => typeof issue === 'object' && issue !== null

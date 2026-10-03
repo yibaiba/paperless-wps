@@ -10,6 +10,7 @@ import { BusinessSettings } from './BusinessSettings';
 import { JournalPanel } from './JournalPanel';
 import { NextEditPreview, issueText } from './NextEditPreview';
 import { BusinessRowPanel } from './BusinessRowPanel';
+import { assertWorkbookSession, captureWorkbookSession } from '../workbookSession';
 
 export function BusinessPanel({ api, host, profile, metadata, onChanged }: {
   api: WpsApi; host: HostAdapter; profile: TemplateProfile; metadata: WorkbookMetadata;
@@ -21,6 +22,7 @@ export function BusinessPanel({ api, host, profile, metadata, onChanged }: {
   const [error, setError] = useState('');
   const index = useMemo(() => new WorkbookRowIndex(host, profile), [host, profile]);
   useEffect(() => host.onSheetChange((event) => { index.changed(event); setResult(undefined); }), [host, index]);
+  useEffect(() => { setResult(undefined); }, [metadata]);
   useEffect(() => {
     let current = true;
     setResult(undefined);
@@ -33,9 +35,11 @@ export function BusinessPanel({ api, host, profile, metadata, onChanged }: {
   async function preview(intent: 'next' | 'remove' = 'next') {
     setBusy(true); setError(''); setResult(undefined);
     try {
+      const session = captureWorkbookSession(host);
       const cell = host.activeCell();
       const value = await api.completionPreview({ ...completionRequest({ host, profile,
         metadata: host.readMetadata(), cell, index, query: '' }), intent });
+      assertWorkbookSession(host, session);
       if (value.local_revision !== host.businessRevision()) throw new Error('工作簿在计算时发生变化，请重新预览');
       setResult(value);
     } catch (reason) { setError(String(reason)); }

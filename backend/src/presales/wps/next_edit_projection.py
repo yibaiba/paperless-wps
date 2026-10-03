@@ -64,6 +64,18 @@ def project_next_edit(option, *, request, profile, projection):
             price=str(price) if price is not None else "",
             quantity=str(device["quantity"]),
         )
+        identity_changed = not change["before"] or any(
+            change["before"][key] != device[key] for key in ("variant_id", "source_id")
+        )
+        if (
+            identity_changed
+            and target.values.get("price", "").strip()
+            and "price" not in profile["managed_fields"]
+        ):
+            errors.append(
+                f"第 {target.row} 行旧单价不受插件管理，"
+                "换型前请清除旧单价或将价格列设为受管列后重新预览"
+            )
         fields = [*profile["managed_fields"], "quantity"]
         for field in dict.fromkeys(fields):
             before, after = target.values.get(field, ""), values[field]

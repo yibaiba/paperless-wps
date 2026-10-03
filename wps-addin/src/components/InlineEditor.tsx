@@ -378,8 +378,7 @@ export function InlineEditor() {
       });
       accept(selectedCandidate, key === 'Tab', operationId);
     } else if (command === 'native-tab') {
-      host.hideInlineEditor();
-      host.moveSelection(0, 1);
+      host.returnNativeTab(false);
     }
     return command;
   }, [
@@ -456,6 +455,9 @@ export function InlineEditor() {
   function handleKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
     const key = completionKey(event.key, composing || event.nativeEvent.isComposing);
     if (!key) return;
+    if (key === 'Tab' && event.shiftKey) {
+      event.preventDefault(); host.returnNativeTab(true); return;
+    }
     if (key === 'ArrowDown' || key === 'ArrowUp') {
       if (candidates.length === 0) return;
       event.preventDefault();

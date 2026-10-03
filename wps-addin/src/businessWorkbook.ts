@@ -48,12 +48,14 @@ export function completionRequest(options: {
   if (scanned.unresolved.length) throw new Error(scanned.unresolved.join('；'));
   const targetRows = new Set(scanned.lines.filter((b) => b.sheet === scope.sheet
     && b.row >= scope.start_row && b.row <= scope.end_row).map((b) => b.row));
+  const cached = new Map(index.read().map((row) => [row.row, row]));
   // Only seek the next free product row; never scan the entire used sheet after each Tab.
   for (let row = cell.row + 1; row <= scope.end_row; row += 1) {
-    const next = host.readRow(profile, row);
+    if (cached.has(row)) continue;
+    const next = index.refresh(row);
+    cached.set(row, next);
     if (!next.values.model?.trim() && !next.values.name?.trim()) { targetRows.add(row); break; }
   }
-  const cached = new Map(index.read().map((row) => [row.row, row]));
   const target_cells = [...targetRows].filter((row) => row !== cell.row).map((row) => ({
     ...(cached.get(row) ?? index.refresh(row)), column: cell.column,
   }));

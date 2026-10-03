@@ -7,6 +7,8 @@ test('WPS adapter addresses cells through the collection Item method', async () 
   const values = new Map([
     ['1:1', { Text: '产品型号', Formula: '', MergeCells: false }],
     ['2:1', { Text: 'OLD', Formula: '', MergeCells: false, Value2: 'OLD' }],
+    ['2:2', { Text: '3,000', Formula: '', MergeCells: false, Value2: 3000 }],
+    ['2:3', { Text: '¥12.00', Formula: '', MergeCells: false, Value2: 12 }],
   ]);
   const sheet = {
     Name: '报价表',
@@ -34,6 +36,10 @@ test('WPS adapter addresses cells through the collection Item method', async () 
   };
   const { WpsHostAdapter } = await import('../src/host.ts');
   const host = new WpsHostAdapter();
+  const row = host.readRow({ sheet_selector: '报价表', field_columns: { quantity: 2, price: 3 } }, 2);
+  assert.equal(row.values.quantity, '3000');
+  assert.equal(row.values.price, '12');
+  assert.equal(row.values.price, host.readCell({ sheet: '报价表', row: 2, column: 3 }).value);
   assert.deepEqual(host.readHeader('报价表', 1), ['产品型号']);
   host.writeCandidate({
     sheet_selector: '报价表', managed_fields: ['model'], field_columns: { model: 1 },
