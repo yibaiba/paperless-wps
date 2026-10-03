@@ -18,6 +18,7 @@ class ProjectChanges:
             request.configuration,
             refresh=request.refresh_knowledge,
             upgrade=request.upgrade_calculation,
+            upgrade_decisions=request.upgrade_decisions,
         )
         if request.cleanup_allocations:
             cleaned = preview_cleanup(checked)

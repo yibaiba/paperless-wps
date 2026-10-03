@@ -15,8 +15,17 @@ def refresh_knowledge(data, operation, *, repository):
         expected = operation.expected_variant_revisions.get(device["variant_id"])
         if expected and device["variant_snapshot"]["revision"] != expected:
             raise RuleConflict("产品在预览后再次变化，请重新预览再应用")
-        product = device['variant_snapshot']['product']
-        expected_product = operation.expected_product_revisions.get(product['id'])
-        if expected_product and product['revision'] != expected_product:
-            raise RuleConflict('产品身份资料在预览后再次变化，请重新预览再应用')
+        product = device["variant_snapshot"]["product"]
+        expected_product = operation.expected_product_revisions.get(product["id"])
+        if expected_product and product["revision"] != expected_product:
+            raise RuleConflict("产品身份资料在预览后再次变化，请重新预览再应用")
+    return result
+
+
+def upgrade_decisions(data, operation, *, repository):
+    result = repository.check(Configuration.model_validate(data), upgrade_decisions=True)[
+        "configuration"
+    ]
+    if result["decision_bundle_id"] != operation.expected_bundle_id:
+        raise RuleConflict("决策资料与升级预览不一致，请重新预览")
     return result

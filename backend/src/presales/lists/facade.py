@@ -42,7 +42,15 @@ class ListApplication:
             "list_check": (CheckList, self.lists.check),
             "list_save": (SaveList, self.lists.save),
             "list_export": (ExportList, self.exports.export),
-            "catalog_search": (CatalogSearch, lambda r: queries.search_catalog(self.session, r)),
+            "catalog_search": (
+                CatalogSearch,
+                lambda r: queries.search_catalog(
+                    self.session,
+                    r,
+                    decisions=getattr(self.lists.repository.engine, "decision_service", None),
+                    engine=self.lists.repository.engine,
+                ),
+            ),
             "systems_list": (SystemsList, lambda r: queries.systems(self.session, r)),
             "catalog_get": (
                 CatalogGet,

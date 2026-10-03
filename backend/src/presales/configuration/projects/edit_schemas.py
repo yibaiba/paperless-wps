@@ -179,6 +179,11 @@ class KnowledgeRefresh(Input):
     expected_product_revisions: dict[str, int] = Field(default_factory=dict)
 
 
+class DecisionUpgrade(Input):
+    action: Literal["decision_upgrade"]
+    expected_bundle_id: Text
+
+
 class AccessoryChoiceClear(Input):
     action: Literal["accessory_choice_clear"]
     demand_id: Text
@@ -199,6 +204,7 @@ Operation = Annotated[
     | AccessoryLink
     | QuotationReplace
     | KnowledgeRefresh
+    | DecisionUpgrade
     | DrawingSet
     | AuthorSet
     | RoomPut

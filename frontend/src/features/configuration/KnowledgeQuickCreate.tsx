@@ -84,7 +84,7 @@ export function KnowledgeQuickCreate({
           )
         }
       >
-        <div className="knowledge-workbench"><div>
+        <div className="knowledge-workbench knowledge-form-workbench"><div>
         <section hidden={step !== 0}>
           <KnowledgeRelationStep kind={kind} variants={variants.data} />
         </section>

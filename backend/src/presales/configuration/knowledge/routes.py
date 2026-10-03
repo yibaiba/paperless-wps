@@ -26,6 +26,17 @@ def validate_knowledge(session, data):
     from .evidence import validate_evidence_refs
 
     validate_evidence_refs(session, data.evidence_refs)
+    if data.combination:
+        for target in data.combination.targets:
+            CatalogService(session).validate_variant_ids(target.variant_ids)
+            if target.system_definition_id:
+                definition = Entities(session).get(
+                    target.system_definition_id, kind="system_definition"
+                )
+                if target.role_id and target.role_id not in {
+                    r["id"] for r in definition.payload["roles"]
+                }:
+                    raise ValueError("组合目标角色不属于所选系统定义")
 
 
 def save(session, data, **options):

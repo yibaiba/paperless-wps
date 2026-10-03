@@ -24,6 +24,8 @@ from .snapshots import SnapshotResolver
 def empty_configuration():
     return dict(
         calculation_version=3,
+        decision_runtime="zen-v1",
+        decision_bundle_id=None,
         actor="",
         evidence="",
         rooms=[],
@@ -44,6 +46,9 @@ def empty_configuration():
 class ProjectConfigurations:
     def __init__(self, session, engine, *, catalog=None):
         self.session, self.engine = session, engine
+        self.decisions = (
+            engine.decision_service.request() if hasattr(engine, "decision_service") else None
+        )
         self.entities = Entities(session)
         self.catalog = catalog if catalog is not None else CatalogService(session)
 
@@ -145,12 +150,14 @@ class ProjectConfigurations:
         validate_references(self.session, result)
         return adopt_prices(result), variants, current
 
-    def check(self, data, *, refresh=False, upgrade=False):
+    def check(self, data, *, refresh=False, upgrade=False, upgrade_decisions=False):
         from presales.catalog_updates.impacts import apply_review_checks
 
         from .services.issue_actions import with_issue_actions
 
-        checked = self._check(data, refresh=refresh, upgrade=upgrade)
+        checked = self._check(
+            data, refresh=refresh, upgrade=upgrade, upgrade_decisions=upgrade_decisions
+        )
         payload = checked["configuration"]
         knowledge = payload.get("knowledge_snapshot") or []
         if payload.get("calculation_version") == 3:
@@ -160,10 +167,13 @@ class ProjectConfigurations:
             knowledge = project_knowledge(payload, definitions)
         return with_issue_actions(with_quotation(apply_review_checks(checked, knowledge=knowledge)))
 
-    def _check(self, data, *, refresh=False, upgrade=False):
+    def _check(self, data, *, refresh=False, upgrade=False, upgrade_decisions=False):
         payload, variants, catalog_variants = self.prepare(data, refresh=refresh)
-        if upgrade:
+        if upgrade or upgrade_decisions:
             payload["calculation_version"] = 3
+        if upgrade_decisions:
+            payload["decision_runtime"] = "zen-v1"
+            payload["decision_bundle_id"] = None
         if payload.get("calculation_version") == 3:
             from .calculation.evaluate import evaluate_v3
             from .services.definition_snapshot import project_knowledge, resolve_definitions
@@ -173,7 +183,10 @@ class ProjectConfigurations:
             calculation_input = dict(
                 payload, knowledge_snapshot=project_knowledge(payload, definitions)
             )
+            decisions, metadata = self.resolve_decisions(calculation_input, refresh=refresh)
+            payload["decision_bundle_id"] = calculation_input.get("decision_bundle_id")
             return dict(
+                decision=metadata,
                 configuration=payload,
                 version_changes=self._version_changes(payload),
                 **evaluate_v3(
@@ -182,6 +195,7 @@ class ProjectConfigurations:
                     catalog_variants=catalog_variants,
                     engine=self.engine,
                     definitions=definitions,
+                    decisions=decisions,
                 ),
             )
         if any(
@@ -202,6 +216,25 @@ class ProjectConfigurations:
             ),
         )
 
+    def resolve_decisions(self, payload, *, refresh=False):
+        from ..decisions.snapshots import decision_metadata, resolve_bundle
+
+        if payload.get("decision_runtime", "python-v3") != "zen-v1":
+            return None, dict(runtime="python-v3")
+        service = self.decisions
+        if service is None:
+            raise ValueError("ZEN 决策服务未配置")
+        bundle, identity = resolve_bundle(
+            self.session,
+            payload["knowledge_snapshot"],
+            identity=payload.get("decision_bundle_id"),
+            refresh=refresh,
+            compiler=service.bundle,
+        )
+        service.load(bundle)
+        payload["decision_bundle_id"] = identity
+        return service, decision_metadata(bundle, identity)
+
     def _version_changes(self, payload):
         from .services.definition_snapshot import definition_version_changes
 
@@ -220,6 +253,10 @@ class ProjectConfigurations:
                     used=payload.get("calculation_version", 1),
                     current=3,
                 )
+            )
+        if payload.get("decision_runtime", "python-v3") != "zen-v1":
+            changes.append(
+                dict(kind="decision_runtime", id="project", used="python-v3", current="zen-v1")
             )
         ids = {
             s["id"]

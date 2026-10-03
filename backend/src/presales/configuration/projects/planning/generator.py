@@ -24,29 +24,41 @@ def generate_options(context, *, prices):
         for proposed, gaps, accessory_decisions in accessory_branches(
             context, configured, tasks=tasks
         ):
-            checked = context.repository.check(Configuration.model_validate(proposed))
-            checked = quote_plan(checked, prices)
-            option = proposal_option(
+            yield_options = completed_options(
                 context,
-                checked,
+                proposed,
+                tasks=tasks,
+                prices=prices,
                 questions=[*initial_questions, *questions, *gaps],
                 decisions=[*decisions, *accessory_decisions],
             )
-            signature = digest([option["configuration"], option["questions"]])
-            if signature in seen:
-                continue
-            seen.add(signature)
-            if option["status"] == "conflict":
-                partial = partial or option
-                continue
-            yielded = True
-            yield option
+            for option in yield_options:
+                signature = digest([option["configuration"], option["questions"]])
+                if signature in seen:
+                    continue
+                seen.add(signature)
+                if option["status"] == "conflict":
+                    partial = partial or option
+                    continue
+                yielded = True
+                yield option
     if not seen:
         checked = context.repository.check(Configuration.model_validate(data))
         yield proposal_option(context, checked, questions=initial_questions, decisions=[])
     elif partial and not yielded:
         # A rejected branch is evidence of local conflicts, never proof of global infeasibility.
         yield partial
+
+
+def completed_options(context, proposed, *, tasks, prices, questions, decisions):
+    from .combinations import combination_branches
+
+    for configuration, gaps, choices in combination_branches(context, proposed, tasks=tasks):
+        checked = context.repository.check(Configuration.model_validate(configuration))
+        checked = quote_plan(checked, prices)
+        yield proposal_option(
+            context, checked, questions=[*questions, *gaps], decisions=[*decisions, *choices]
+        )
 
 
 def walk_roles(context, data, tasks, *, index):

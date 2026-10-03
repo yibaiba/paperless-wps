@@ -15,7 +15,7 @@ import { requiredRoleLabel } from "../projects/definitionSelection";
 import { PackageReadiness } from "./PackageReadiness";
 import { KnowledgeReconciliation } from './KnowledgeReconciliation';
 
-const labels = { suitability: '适用候选', accessory: '配套需求', sharing: '共享条件' };
+const labels = { suitability: '适用候选', accessory: '配套需求', sharing: '共享条件', combination: '互斥 / 必选组合' };
 export function SystemVersionWorkbench() {
   const definitions = useDefinitions(), knowledge = useKnowledge(), variants = useVariants();
   const packages = useQuery({ queryKey: ["configuration", "knowledge-packages"], queryFn: () => api<KnowledgePackage[]>(ROOT + "/knowledge-packages") });

@@ -73,7 +73,7 @@ def search_projects(session, request):
     )
 
 
-def search_catalog(session, request):
+def search_catalog(session, request, *, decisions=None, engine=None):
     if bool(request.draft_id) != bool(request.requirement_id):
         raise ValueError("候选查询需要同时指定草稿和角色需求 ID")
     results = []
@@ -87,7 +87,11 @@ def search_catalog(session, request):
             raise ValueError("角色需求不存在")
         system = next(s for s in configuration["systems"] if s["id"] == role["system_id"])
         data = CandidateRequest(
+            configuration=configuration,
+            requirement_id=request.requirement_id,
             calculation_version=configuration["calculation_version"],
+            decision_runtime=configuration.get("decision_runtime", "python-v3"),
+            decision_bundle_id=configuration.get("decision_bundle_id"),
             system=system["kind"],
             role=role["role"],
             environment=effective_environment(system, role)[0],
@@ -99,7 +103,11 @@ def search_catalog(session, request):
             include_all=request.include_other_products,
         )
         results = candidate_results(
-            data, session=session, catalog=DraftCatalog(session, draft["catalog_snapshot_id"])
+            data,
+            session=session,
+            catalog=DraftCatalog(session, draft["catalog_snapshot_id"]),
+            decisions=decisions,
+            engine=engine,
         )
     else:
         results = [
@@ -155,10 +163,7 @@ def catalog_detail(session, *, variant_id, draft_id=None, on_date=None):
         variant=variant,
         prices=dict(
             on_date=str(day),
-            current={
-                c: price_service.effective(variant_id, c, day)
-                for c in sorted(PRICE_HEADERS)
-            },
+            current={c: price_service.effective(variant_id, c, day) for c in sorted(PRICE_HEADERS)},
         ),
         sources=[dict(id=s.id, import_id=s.import_id, **s.payload) for s in sources],
         knowledge=[k for k in knowledge if scope_matches(variant, k["selector"])],
@@ -190,6 +195,11 @@ def systems(session, request):
                 name=p["name"],
                 revision=p["revision"],
                 status=p["status"],
+                decision_bundle_id=p.get("decision_bundle_id"),
+                combination_rule_count=sum(r["kind"] == "combination" for r in p["rules"]),
+                required_decision_runtime="zen-v1"
+                if any(r["kind"] == "combination" and r["status"] != "disabled" for r in p["rules"])
+                else None,
                 system_definition_id=p["system_definition_id"],
             )
             for p in (

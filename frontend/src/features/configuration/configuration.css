@@ -122,4 +122,5 @@
 
 .knowledge-workbench { display: grid; grid-template-columns: minmax(280px, 0.8fr) minmax(0, 1.7fr); gap: 16px; align-items: start; }
 .knowledge-workbench > * { min-width: 0; }
+.knowledge-form-workbench { grid-template-columns: minmax(0, 1.3fr) minmax(280px, 1fr); }
 @media (max-width: 1050px) { .knowledge-workbench { grid-template-columns: 1fr; } }

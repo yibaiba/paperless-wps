@@ -22,7 +22,7 @@ from .resource_review import resource_policy_checks
 from .supply import supply_projection
 
 
-def evaluate_v3(data, *, variants, catalog_variants, engine, definitions):
+def evaluate_v3(data, *, variants, catalog_variants, engine, definitions, decisions=None):
     from ..role_allocations import project_allocations, restore_requirement_ids
     from .role_allocations import allocation_checks
 
@@ -30,10 +30,16 @@ def evaluate_v3(data, *, variants, catalog_variants, engine, definitions):
     data, aliases = project_allocations(data)
     data, inspection_checks, inspection_policies = prepare_inspections(data, definitions)
     systems = {s["id"]: s for s in data["systems"]}
-    checks = compatibility(data, systems=systems, variants=variants, definitions=definitions)
+    checks = compatibility(
+        data, systems=systems, variants=variants, definitions=definitions, decisions=decisions
+    )
     checks.extend(feature_checks(input_data, definitions))
     suggestions = accessory_demands_v3(
-        data, variants=variants, catalog_variants=catalog_variants, engine=engine
+        data,
+        variants=variants,
+        catalog_variants=catalog_variants,
+        engine=engine,
+        decisions=decisions,
     )
     suggestions, included_checks = included_fulfillment(data, suggestions)
     checks.extend(included_checks)
@@ -67,7 +73,19 @@ def evaluate_v3(data, *, variants, catalog_variants, engine, definitions):
         policies[identity] = review["selected"]
     usages = resource_usages(data, active, policies, inspection_policies=inspection_policies)
     usages = alias_consumers(usages, fulfilled)
-    checks.extend(usage_checks(data, usages, variants=variants))
+    checks.extend(usage_checks(data, usages, variants=variants, decisions=decisions))
+    from .combinations import combination_checks
+
+    checks.extend(
+        combination_checks(
+            data,
+            variants=variants,
+            suggestions=suggestions,
+            definitions=definitions,
+            engine=engine,
+            decisions=decisions,
+        )
+    )
     supply, supply_checks = supply_projection(data)
     checks.extend(supply_checks)
     readiness = readiness_v3(input_data, checks, active, coverage)
@@ -109,7 +127,7 @@ def business_input(data):
     return {key: value for key, value in data.items() if key != "drawing_xml"}
 
 
-def compatibility(data, *, systems, variants, definitions):
+def compatibility(data, *, systems, variants, definitions, decisions=None):
     checks = []
     for requirement in data["requirements"]:
         device_id = requirement.get("device_id")
@@ -139,6 +157,7 @@ def compatibility(data, *, systems, variants, definitions):
                 capability_ids=role_capabilities(role_context, definitions),
             ),
             knowledge=data["knowledge_snapshot"],
+            decisions=decisions,
         )
         checks.append(
             dict(
@@ -194,7 +213,7 @@ def resource_usages(data, suggestions, policies, *, inspection_policies=None):
     return usages
 
 
-def usage_checks(data, usages, *, variants):
+def usage_checks(data, usages, *, variants, decisions=None):
     devices = {d["id"]: d for d in data["devices"]}
     checks = []
     for usage in usages:
@@ -228,17 +247,22 @@ def usage_checks(data, usages, *, variants):
                 consumers,
                 variant=variants[device["id"]],
                 usage=usage,
+                decisions=decisions,
             )
         )
         partitioned = Decimal(device["quantity"]) > 1 and all(
             c.get("allocated_quantity") is not None and c["via"] == "direct" for c in consumers
         )
         if len(consumers) > 1 and not partitioned:
-            checks.append(sharing(data, device, consumers, variant=variants[device["id"]]))
+            checks.append(
+                sharing(
+                    data, device, consumers, variant=variants[device["id"]], decisions=decisions
+                )
+            )
     return checks
 
 
-def sharing(data, device, consumers, *, variant):
+def sharing(data, device, consumers, *, variant, decisions=None):
     requirements = {r["id"]: r for r in data["requirements"]}
     systems = {s["id"]: s for s in data["systems"]}
     from ...knowledge.semantics import shared_roles_match
@@ -260,7 +284,10 @@ def sharing(data, device, consumers, *, variant):
         and scope_matches(variant, r["selector"])
         and shared_roles_match(r, uses)
     ]
-    results = [evaluate_rules_v3(rules, context_for(variant, c["environment"])) for c in consumers]
+    results = [
+        evaluate_rules_v3(rules, context_for(variant, c["environment"]), decisions=decisions)
+        for c in consumers
+    ]
     states = {r["status"] for r in results}
     status = "conflict" if "conflict" in states else "unknown" if "unknown" in states else "pass"
     if status == "pass" and any(not scope_is_reviewed(r, variant) for r in rules):

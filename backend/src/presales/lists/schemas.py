@@ -52,6 +52,7 @@ class UpdateList(DraftWrite):
 class CheckList(DraftWrite):
     refresh_knowledge: bool = False
     upgrade_calculation: bool = False
+    upgrade_decisions: bool = False
 
 
 class SaveList(DraftWrite):

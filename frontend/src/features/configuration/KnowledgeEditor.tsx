@@ -1,3 +1,4 @@
+import { CombinationFields } from "./knowledge/CombinationFields";
 import { ConditionsEditor } from "./knowledge/ConditionsEditor";
 export { ConditionsEditor } from "./knowledge/ConditionsEditor";
 import {
@@ -76,6 +77,7 @@ export function KnowledgeFields() {
               { value: "suitability", label: "系统适用" },
               { value: "accessory", label: "配套关系" },
               { value: "sharing", label: "共用部署" },
+              { value: "combination", label: "互斥 / 必选组合" },
             ]}
           />
         </Form.Item>
@@ -157,6 +159,7 @@ export function KnowledgeFields() {
         </Form.Item>
         </>
       ) : null}
+      {kind === "combination" ? <CombinationFields variants={variants.data} /> : null}
       {kind === "accessory" ? (
         <AccessoryKnowledgeFields />
       ) : null}
@@ -173,6 +176,7 @@ export function normalizeKnowledge(values: Knowledge & { updated_at?: string }):
   return {
     ...payload,
     schema_version: 2,
+    combination: values.kind === "combination" ? values.combination : null,
     activation_conditions: (values.activation_conditions ?? []).map((c) => ({
       ...c, unit: c.unit ?? "", value: c.value ?? null,
       minimum: c.minimum ?? null, maximum: c.maximum ?? null,

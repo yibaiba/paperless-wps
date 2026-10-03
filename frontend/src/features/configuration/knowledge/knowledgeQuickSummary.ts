@@ -4,6 +4,7 @@ export function knowledgeName(values: Knowledge, variants?: Variant[]) {
   const source = selectedNames(values.selector?.variant_ids ?? [], variants);
   if (values.kind === "suitability") return `${source} · ${values.system} · ${values.role}`;
   if (values.kind === "accessory") return `${source} · 配套 ${values.need_name}`;
+  if (values.kind === "combination") return `${source} · 组合要求`;
   return `${source} · 共用部署`;
 }
 
@@ -24,6 +25,10 @@ export function knowledgeSummary(values: Knowledge | undefined, variants?: Varia
       "候选型号待确认",
     );
     return `选择 ${source} 后，${relation}搭配“${values.need_name || "待填写配套"}”；可选配置：${targets}。`;
+  }
+  if (values.kind === "combination") {
+    const modes = { exclude: "不能同时选用", require_all: "必须满足全部需求", require_any: "至少满足一项需求" };
+    return `${source}：${values.combination ? modes[values.combination.mode] : "待选择组合类型"}，${values.combination?.targets.map(t => t.name).join("、") || "目标待确认"}。`;
   }
   const result = values.effect === "deny" ? "禁止共用" : "满足条件时可以共用";
   return `${source} 在 ${values.shared_roles?.join("、") || "待填写系统角色"} 之间${result}。`;

@@ -46,3 +46,10 @@ test('scope-only input edits persist without changing generation preferences', (
  assert.deepEqual(configurationOperations(after, before), [{ action: 'requirements_patch', room_inputs: {}, project_inputs: [] }]);
  assert.deepEqual(configurationOperations(after, after), []);
 });
+
+test('decision upgrade is explicit and keeps product and price refresh separate', () => {
+ const before = {...base, decision_runtime:'python-v3'};
+ const after = {...base, decision_runtime:'zen-v1', decision_bundle_id:'compiled-version'};
+ assert.deepEqual(configurationOperations(before, after), [{action:'decision_upgrade', expected_bundle_id:'compiled-version'}]);
+ assert.throws(() => configurationOperations(before, {...after, decision_bundle_id:null}), /预览决策升级/);
+});

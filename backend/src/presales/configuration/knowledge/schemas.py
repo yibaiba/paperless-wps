@@ -5,6 +5,7 @@ from pydantic import Field, model_validator
 
 from ..catalog.schemas import UNITS
 from ..common import Authored, Input, Text
+from .combination_schemas import Combination, missing_combination
 
 
 class Condition(Input):
@@ -96,7 +97,8 @@ class KnowledgeInput(Authored):
     completion: Literal["complete", "incomplete"] | None = Field(default=None, exclude=True)
     missing_fields: list[str] = Field(default_factory=list, exclude=True)
     name: Text
-    kind: Literal["suitability", "accessory", "sharing"]
+    kind: Literal["suitability", "accessory", "sharing", "combination"]
+    combination: Combination | None = None
     status: Literal["draft", "confirmed", "disabled"] = "draft"
     effect: Literal["allow", "deny"] = "allow"
     selector: Selector
@@ -120,6 +122,13 @@ class KnowledgeInput(Authored):
 
     @model_validator(mode="after")
     def complete_relation(self):
+        if self.kind == "combination":
+            if self.schema_version != 2 or self.effect != "allow":
+                raise ValueError("组合关系使用第二版语义和明确的组合类型，不使用允许/拒绝反转")
+            if self.combination is None:
+                raise ValueError("请选择组合关系类型")
+        elif self.combination is not None:
+            raise ValueError("只有组合关系可以填写组合需求")
         if self.quantity_unit and self.quantity_unit not in UNITS:
             raise ValueError("数量输入单位不受支持")
         if self.schema_version == 2:
@@ -170,6 +179,8 @@ def accessory_missing_fields(data: KnowledgeInput | dict) -> list[str]:
 
 def with_completion(view: dict) -> dict:
     missing = accessory_missing_fields(view)
+    if view.get("kind") == "combination":
+        missing.extend(missing_combination(view))
     if view.get("kind") == "accessory" and view.get("schema_version") == 2:
         if view.get("quantity_review") != "confirmed":
             missing.append("数量依据待确认")

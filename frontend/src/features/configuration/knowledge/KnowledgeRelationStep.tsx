@@ -1,3 +1,4 @@
+import { CombinationFields } from "./CombinationFields";
 import { Alert, Form, Input, Select, Space, Typography } from "antd";
 import type { Knowledge, Variant } from "../types";
 import { QuickIdentity } from "./QuickIdentity";
@@ -22,6 +23,7 @@ export function KnowledgeRelationStep({
             { value: "suitability", label: "某产品可以用于某个系统角色" },
             { value: "accessory", label: "选择某产品后还需要搭配其他产品" },
             { value: "sharing", label: "一台设备可以给多个系统共同使用" },
+            { value: "combination", label: "产品之间的互斥或必选组合" },
           ]}
         />
       </Form.Item>
@@ -43,6 +45,7 @@ export function KnowledgeRelationStep({
         <AccessoryFields variants={variants} />
       ) : null}
       {kind === "sharing" ? <SharingFields /> : null}
+      {kind === "combination" ? <CombinationFields variants={variants} /> : null}
     </>
   );
 }

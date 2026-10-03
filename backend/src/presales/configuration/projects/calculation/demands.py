@@ -15,7 +15,7 @@ from ..accessory_demands import (
 from .demand_identity import DemandIdentities
 
 
-def accessory_demands_v3(data, *, variants, catalog_variants, engine):
+def accessory_demands_v3(data, *, variants, catalog_variants, engine, decisions=None):
     rules = [
         r
         for r in data["knowledge_snapshot"]
@@ -34,6 +34,7 @@ def accessory_demands_v3(data, *, variants, catalog_variants, engine):
             engine=engine,
             cycles=cycles,
             identities=identities,
+            decisions=decisions,
         )
         expanded = expand_owners(data, owners, demands)
         if expanded == owners:
@@ -59,12 +60,14 @@ def expand_owners(data, owners, demands):
     return expanded
 
 
-def collect_demands(data, *, rules, owners, variants, engine, cycles, identities):
+def collect_demands(data, *, rules, owners, variants, engine, cycles, identities, decisions=None):
     results = []
     for rule in rules:
         if rule["effect"] != "allow":
             continue
-        groups = contributions(data, rule=rule, owners=owners, variants=variants)
+        groups = contributions(
+            data, rule=rule, owners=owners, variants=variants, decisions=decisions
+        )
         for scope_id, entries in groups.items():
             identity = identities.identity(rule, scope_id)
             missing = quantity_missing(rule)
@@ -142,7 +145,7 @@ def with_selection(data, demand):
     )
 
 
-def contributions(data, *, rule, owners, variants):
+def contributions(data, *, rule, owners, variants, decisions=None):
     systems = {s["id"]: s for s in data["systems"]}
     requirements = {r["id"]: r for r in data["requirements"]}
     grouped, counted = defaultdict(list), set()
@@ -154,7 +157,9 @@ def contributions(data, *, rule, owners, variants):
         served = applicable_roles(served, rule, systems)
         for requirement in served:
             context = context_for(variant, requirement.get("environment", []))
-            activation = condition_result(rule.get("activation_conditions", []), context)
+            activation = condition_result(
+                rule.get("activation_conditions", []), context, decisions=decisions
+            )
             if activation == "fail":
                 continue
             scope_id = scope_identity(rule, device, requirement, systems)
@@ -162,7 +167,7 @@ def contributions(data, *, rule, owners, variants):
             denials = [
                 r for r in denial_rules(data, rule, variant) if package_allows(r, package_id)
             ]
-            evaluation = evaluate_rules_v3([rule, *denials], context)
+            evaluation = evaluate_rules_v3([rule, *denials], context, decisions=decisions)
             if not scope_id:
                 scope_id = "unknown:" + device["id"]
                 evaluation = dict(evaluation, status="unknown")

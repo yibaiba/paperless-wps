@@ -38,6 +38,9 @@ def decision_graph(expression: str) -> dict:
 
 class ZenQuantityEngine:
     def __init__(self, engine):
+        from presales.configuration.decisions.runtime import ZenDecisions
+
+        self.decision_service = ZenDecisions(engine)
         self.decisions = {
             mode: engine.create_decision(json.dumps(decision_graph(expression)))
             for mode, expression in EXPRESSIONS.items()

@@ -115,7 +115,8 @@ def candidate_check(variant, *, requirement, knowledge):
     return dict(variant=variant, **result)
 
 
-def environment_checks(variant, environment, *, rules):
+def environment_checks(variant, environment, *, rules, condition_checker=None):
+    checker = condition_checker or check_condition
     context = context_for(variant, [])
     accounted = {c["field"] for r in rules for c in r["conditions"]}
     checks = []
@@ -138,6 +139,6 @@ def environment_checks(variant, environment, *, rules):
             minimum=None,
             maximum=None,
         )
-        status = check_condition(condition, context) if expected is not None else "unknown"
+        status = checker(condition, context) if expected is not None else "unknown"
         checks.append(dict(**condition, actual=actual, result=status))
     return checks

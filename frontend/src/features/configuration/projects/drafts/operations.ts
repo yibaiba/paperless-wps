@@ -80,5 +80,9 @@ export function configurationOperations(before: Configuration, after: Configurat
       expected_product_revisions: Object.fromEntries(after.devices.filter((d) => d.variant_snapshot).map((d) => [d.variant_snapshot!.product.id, d.variant_snapshot!.product.revision])),
       expected_variant_revisions: Object.fromEntries(after.devices.filter((d) => d.variant_snapshot).map((d) => [d.variant_id, d.variant_snapshot!.revision])) });
   }
+  if ((before.decision_runtime ?? "python-v3") !== after.decision_runtime && after.decision_runtime === "zen-v1") {
+    if (!after.decision_bundle_id) throw new Error("请先预览决策升级");
+    operations.push({ action: "decision_upgrade", expected_bundle_id: after.decision_bundle_id });
+  }
   return operations;
 }

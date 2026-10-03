@@ -59,6 +59,8 @@ class Coverage(Input):
 
 
 class KnowledgePackage(Authored):
+    # Read metadata may round-trip through old editors; publication recomputes it.
+    decision_bundle_id: Text | None = Field(default=None, exclude=True)
     recommendations: list[Recommendation] = Field(default_factory=list)
     name: Text
     system_definition_id: Text

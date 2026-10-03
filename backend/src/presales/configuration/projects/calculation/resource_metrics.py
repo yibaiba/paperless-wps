@@ -4,7 +4,7 @@ from collections import defaultdict
 from decimal import Decimal, InvalidOperation
 
 
-def metric_checks(device, consumers, *, variant):
+def metric_checks(device, consumers, *, variant, decisions=None):
     groups = defaultdict(list)
     for consumer in consumers:
         for resource in consumer["resources"]:
@@ -13,11 +13,12 @@ def metric_checks(device, consumers, *, variant):
             )
     attributes = {a["key"]: a for a in variant["attributes"]}
     return [
-        metric_result(device, items, attribute=attributes.get(key)) for key, items in groups.items()
+        metric_result(device, items, attribute=attributes.get(key), decisions=decisions)
+        for key, items in groups.items()
     ]
 
 
-def metric_result(device, items, *, attribute):
+def metric_result(device, items, *, attribute, decisions=None):
     first = items[0]
     check = dict(
         kind="capacity",
@@ -43,7 +44,15 @@ def metric_result(device, items, *, attribute):
     capacity = known_capacity(attribute, unit)
     if capacity is not None and basis == "unit":
         capacity *= Decimal(str(device["quantity"]))
-    status = "unknown" if capacity is None else "pass" if capacity >= required else "conflict"
+    status = (
+        decisions.capacity(required=required, capacity=capacity)
+        if decisions
+        else "unknown"
+        if capacity is None
+        else "pass"
+        if capacity >= required
+        else "conflict"
+    )
     return dict(
         check,
         status=status,

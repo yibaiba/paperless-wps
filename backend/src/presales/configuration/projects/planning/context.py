@@ -30,6 +30,8 @@ class PlanningContext:
         if key not in self.candidate_cache:
             request = CandidateRequest(
                 calculation_version=3,
+                decision_runtime=self.configuration.get("decision_runtime", "python-v3"),
+                decision_bundle_id=self.configuration.get("decision_bundle_id"),
                 system=system["kind"],
                 role=requirement["role"],
                 system_definition_id=system["definition_id"],
@@ -41,7 +43,10 @@ class PlanningContext:
                 include_all=bool(self.preference(requirement["id"]).get("required_variant_id")),
             )
             self.candidate_cache[key] = candidate_results(
-                request, session=self.repository.session, catalog=self.repository.catalog
+                request,
+                session=self.repository.session,
+                catalog=self.repository.catalog,
+                decisions=self.repository.decisions,
             )
         return self.candidate_cache[key]
 
@@ -85,7 +90,13 @@ def ordered_candidates(context, items, *, requirement, system, need_key=""):
         applicable = {
             i["variant"]["id"]
             for i in items
-            if condition_result(rule["conditions"], context_for(i["variant"], environment))
+            if condition_result(
+                rule["conditions"],
+                context_for(i["variant"], environment),
+                decisions=context.repository.decisions
+                if context.configuration.get("decision_runtime") == "zen-v1"
+                else None,
+            )
             == "pass"
         }
         order = [identity for identity in rule["variant_ids"] if identity in applicable]

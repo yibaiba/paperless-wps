@@ -27,6 +27,7 @@ const kinds = {
   suitability: "系统适用",
   accessory: "配套关系",
   sharing: "共用部署",
+  combination: "互斥 / 必选组合",
 };
 import { KnowledgeWorkbench } from "./knowledge/KnowledgeWorkbench";
 import { SystemVersionWorkbench } from "./knowledge/SystemVersionWorkbench";

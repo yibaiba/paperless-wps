@@ -11,6 +11,7 @@ export const checkLabels: Record<string, string> = {
   selection: "角色选型",
   compatibility: "产品适配",
   sharing: "共用部署",
+  combination: "组合要求",
   capacity: "资源容量",
   resource_policy: "容量检查口径",
   included_allocation: "已含内容抵扣",

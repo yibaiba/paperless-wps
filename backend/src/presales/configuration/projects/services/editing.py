@@ -73,6 +73,10 @@ def apply_operation(data, *, operation, repository):
     if action == "quotation_replace":
         data["quotation"] = operation.value.model_dump(mode="json") if operation.value else None
         return data
+    if action == "decision_upgrade":
+        from .refreshing import upgrade_decisions
+
+        return upgrade_decisions(data, operation, repository=repository)
     if action == "knowledge_refresh":
         from .refreshing import refresh_knowledge
 

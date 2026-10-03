@@ -165,7 +165,7 @@ def sharing_check(device, consumers, *, variant, knowledge):
     }
 
 
-def capacity_checks(device, consumers, *, variant, usage):
+def capacity_checks(device, consumers, *, variant, usage, decisions=None):
     expected = [item for item in consumers if item["capacity_expected"]]
     if not expected:
         return []
@@ -186,4 +186,4 @@ def capacity_checks(device, consumers, *, variant, usage):
                 ),
             }
         )
-    return checks + metric_checks(device, expected, variant=variant)
+    return checks + metric_checks(device, expected, variant=variant, decisions=decisions)

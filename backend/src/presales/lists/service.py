@@ -145,6 +145,7 @@ class ListService:
             Configuration.model_validate(record.payload["configuration"]),
             refresh=request.refresh_knowledge,
             upgrade=request.upgrade_calculation,
+            upgrade_decisions=request.upgrade_decisions,
         )
         config = checked["configuration"]
         baseline = record.payload["configuration"]

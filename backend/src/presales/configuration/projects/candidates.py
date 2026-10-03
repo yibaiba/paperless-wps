@@ -8,7 +8,8 @@ from .knowledge_snapshot import candidate_knowledge
 STATUS_ORDER = {"pass": 0, "unknown": 1, "conflict": 2}
 
 
-def candidate_results(data, *, session, search=None, catalog=None):
+def candidate_results(data, *, session, search=None, catalog=None, decisions=None, engine=None):
+    decisions = decisions.request() if decisions else None
     knowledge = candidate_knowledge(session, data.knowledge_snapshot_id)
     definitions = (
         (
@@ -53,17 +54,43 @@ def candidate_results(data, *, session, search=None, catalog=None):
         ranking = {item["variant_id"]: item for item in results}
         variants = [variant for variant in variants if variant["id"] in ranking]
     evaluator = candidate_check_v3 if data.calculation_version == 3 else candidate_check
+    options = {}
+    if data.decision_runtime == "zen-v1":
+        if data.calculation_version != 3 or decisions is None:
+            raise ValueError("ZEN 决策服务未配置或计算语义不匹配")
+        if data.decision_bundle_id:
+            from ..decisions.snapshots import resolve_bundle
+
+            stored = Entities(session).get(data.decision_bundle_id, kind="decision_bundle").payload
+            bundle, _ = resolve_bundle(
+                session,
+                stored["rules"],
+                identity=data.decision_bundle_id,
+                compiler=decisions.bundle,
+            )
+            decisions.load(bundle)
+        options["decisions"] = decisions
     if data.calculation_version < 3 and any(
         r.get("schema_version", 1) > 1 and role_matches(r, requirement) for r in knowledge
     ):
         raise ValueError("当前角色包含新版知识，请预览并升级项目计算语义至版本 3")
     checked = [
         {
-            **evaluator(v, requirement=requirement, knowledge=knowledge),
+            **evaluator(v, requirement=requirement, knowledge=knowledge, **options),
             "ranking": ranking.get(v["id"]),
         }
         for v in variants
     ]
+    if data.configuration is not None and data.decision_runtime == "zen-v1":
+        from .repository import ProjectConfigurations
+        from .services.candidate_combinations import CandidateCombinations
+
+        if engine is None:
+            raise ValueError("项目候选数量计算服务未配置")
+        projector = CandidateCombinations(
+            ProjectConfigurations(session, engine, catalog=catalog), data
+        )
+        checked = [projector.check(item) for item in checked]
     for item in checked:
         variant = item["variant"]
         from presales.catalog_updates.impacts import pending_reviews

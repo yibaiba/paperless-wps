@@ -11,8 +11,9 @@ import { VariantEditor } from "../CatalogEditor";
 import { copyKnowledge, requiresAdvanced } from "./quickEdit";
 import { configurationKeys } from "../queryKeys";
 import { useDefinitions } from "./useDefinitions";
+import { knowledgeSummary } from "./knowledgeQuickSummary";
 
-const relationNames = { suitability: "系统适用", accessory: "配套需求", sharing: "共用条件" };
+const relationNames = { suitability: "系统适用", accessory: "配套需求", sharing: "共用条件", combination: "互斥 / 必选组合" };
 
 export function KnowledgeWorkbench() {
   const [params] = useSearchParams();
@@ -73,7 +74,7 @@ export function KnowledgeWorkbench() {
         </Space>
         <Table<Knowledge> rowKey="id" dataSource={rules} loading={knowledge.isLoading} scroll={{ x: 720 }} columns={[
           { title: "关系", render: (_, k) => <><Typography.Text strong>{k.name}</Typography.Text><div><Tag>{relationNames[k.kind]}</Tag>{k.system} {k.role}</div></> },
-          { title: "数量与依据", render: (_, k) => k.kind !== "accessory" ? "查看适用条件" : <><div>{k.target_variant_ids.length ? `候选 ${k.target_variant_ids.length} 个` : '候选型号待补'}</div>{quantityLabel(k)}<div>数量依据：<Status value={k.quantity_review === "confirmed" ? "confirmed" : "unknown"} /></div><div>容量：{({ unknown: '待确认', required: '需核算', not_applicable: '明确不涉及' })[k.resource_policy ?? "unknown"]}</div></> },
+          { title: "数量与依据", render: (_, k) => k.kind === "combination" ? knowledgeSummary(k, variants.data) : k.kind !== "accessory" ? "查看适用条件" : <><div>{k.target_variant_ids.length ? `候选 ${k.target_variant_ids.length} 个` : '候选型号待补'}</div>{quantityLabel(k)}<div>数量依据：<Status value={k.quantity_review === "confirmed" ? "confirmed" : "unknown"} /></div><div>容量：{({ unknown: '待确认', required: '需核算', not_applicable: '明确不涉及' })[k.resource_policy ?? "unknown"]}</div></> },
           { title: "状态", width: 90, render: (_, k) => <Status value={k.status} /> },
           { title: "操作", width: 150, render: (_, k) => <Space>
             <Button size="small" onClick={() => { setAdvanced(requiresAdvanced(k)); setEditing({ original: k, value: k }); }}>维护</Button>

@@ -104,6 +104,8 @@ class ProposalService:
             catalog_snapshot_id=draft.payload["catalog_snapshot_id"],
             knowledge_snapshot_id=configuration["knowledge_snapshot_id"],
             definition_snapshot_id=configuration["definition_snapshot_id"],
+            decision_runtime=configuration.get("decision_runtime", "python-v3"),
+            decision_bundle_id=configuration.get("decision_bundle_id"),
             price_adoption_date=(configuration.get("quotation") or {}).get("price_adoption_date"),
             price_snapshot_fingerprint=digest(prices),
         )

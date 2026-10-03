@@ -53,6 +53,11 @@ class Definitions:
         if options.get("entity_id"):
             self.entities.get(options["entity_id"], kind="knowledge_package")
         payload = self.package_payload(data)
+        if data.status == "published":
+            from ..decisions.snapshots import resolve_bundle
+
+            _, identity = resolve_bundle(self.session, payload["rules"])
+            payload["decision_bundle_id"] = identity
         return self.entities.save("knowledge_package", payload, **options)
 
     def package_payload(self, data):

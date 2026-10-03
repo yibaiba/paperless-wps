@@ -6,7 +6,9 @@ from .evaluator import check_condition, context_for, environment_checks, scope_m
 from .package_scope import package_allows
 
 
-def condition_result(conditions, context):
+def condition_result(conditions, context, *, decisions=None):
+    if decisions is not None:
+        return decisions.condition_result(conditions, context)
     outcomes = {check_condition(item, context) for item in conditions}
     return "fail" if "fail" in outcomes else "unknown" if "unknown" in outcomes else "pass"
 
@@ -44,7 +46,9 @@ def alternative_result(items):
     return "fail" if "fail" in states else "not_applicable"
 
 
-def evaluate_rules_v3(rules, context):
+def evaluate_rules_v3(rules, context, *, decisions=None):
+    if decisions is not None:
+        return decisions.evaluate_rules(rules, context)
     details = [rule_evidence(rule, context) for rule in rules]
     denials = {item["result"] for item in details if item["effect"] == "deny"}
     groups = defaultdict(list)
@@ -84,7 +88,7 @@ def shared_roles_match(rule, uses):
     return {u["system"] + "/" + u["role"] for u in uses} <= set(rule.get("shared_roles", []))
 
 
-def candidate_check_v3(variant, *, requirement, knowledge):
+def candidate_check_v3(variant, *, requirement, knowledge, decisions=None):
     rules = [
         item
         for item in knowledge
@@ -95,17 +99,23 @@ def candidate_check_v3(variant, *, requirement, knowledge):
     ]
     unreviewed = [r for r in rules if not scope_is_reviewed(r, variant)]
     context = context_for(variant, requirement["environment"])
-    result = evaluate_rules_v3(rules, context)
+    result = evaluate_rules_v3(rules, context, decisions=decisions)
     active = [
         item
         for item in rules
-        if condition_result(item.get("activation_conditions", []), context) != "fail"
+        if condition_result(item.get("activation_conditions", []), context, decisions=decisions)
+        != "fail"
     ]
     accounted = [
         dict(item, conditions=[*item["conditions"], *item.get("activation_conditions", [])])
         for item in active
     ]
-    environment = environment_checks(variant, requirement["environment"], rules=accounted)
+    environment = environment_checks(
+        variant,
+        requirement["environment"],
+        rules=accounted,
+        condition_checker=decisions.check_condition if decisions else None,
+    )
     if any(item["result"] == "fail" for item in environment):
         result["status"] = "conflict"
     elif result["status"] == "pass" and (

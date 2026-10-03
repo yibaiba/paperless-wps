@@ -1,15 +1,18 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Alert, App, Button, Collapse, Modal, Space, Table, Typography } from "antd";
+import { Alert, App, Button, Checkbox, Collapse, Modal, Space, Table, Typography } from "antd";
 import { api } from "../../../shared/api";
-import { ROOT } from "../shared";
+import { ROOT, Status } from "../shared";
+import { checkLabels } from "./checkLabels";
 import type { BusinessChange, ChangePreview, Checked, Configuration } from "../types";
 
 export function ProjectChangePanel({ projectId, revision, configuration, refresh, cleanup, current, onApply, onClose }: {
   projectId: string; revision: number; configuration: Configuration; refresh: boolean; cleanup: boolean;
   current: () => Configuration; onApply: (result: Checked) => void; onClose: () => void;
 }) {
-  const [request] = useState(() => ({ expected_revision: revision, configuration: structuredClone(configuration), refresh_knowledge: refresh, upgrade_calculation: refresh, cleanup_allocations: cleanup }));
+  const [upgradeDecisions, setUpgradeDecisions] = useState(false);
+  const [baselineRequest] = useState(() => ({ expected_revision: revision, configuration: structuredClone(configuration), refresh_knowledge: refresh, upgrade_calculation: refresh, cleanup_allocations: cleanup }));
+  const request = { ...baselineRequest, upgrade_decisions: upgradeDecisions };
   const { message } = App.useApp();
   const query = useQuery({ queryKey: ["configuration", "change-preview", projectId, request], retry: false, refetchOnWindowFocus: false,
     queryFn: () => api<ChangePreview>(`${ROOT}/projects/${projectId}/change-preview`, { method: "POST", body: JSON.stringify(request) }),
@@ -30,6 +33,7 @@ export function ProjectChangePanel({ projectId, revision, configuration, refresh
     <Button type="primary" disabled={!query.data || stale} loading={apply.isPending} onClick={() => apply.mutate()}>应用到草稿</Button>
   </Space>}>
     <Alert showIcon type="info" title="预览不会修改已保存项目" description="应用后可以整次撤销；保存才产生项目新版本。减少数量不自动删除采购设备。" />
+    {configuration.decision_runtime !== "zen-v1" ? <Checkbox checked={upgradeDecisions} onChange={e => setUpgradeDecisions(e.target.checked)}>预览采用 ZEN 决策（单独勾选不会刷新产品、知识或报价）</Checkbox> : <Typography.Text>本项目使用 ZEN 固定版本决策</Typography.Text>}
     {query.error ? <Alert type="error" title={query.error.message} /> : null}
     {stale ? <Alert type="warning" title="草稿已变化，请重新预览" /> : null}
     <Typography.Title level={5}>项目业务变化</Typography.Title>
@@ -38,19 +42,19 @@ export function ProjectChangePanel({ projectId, revision, configuration, refresh
     <ChangeTable changes={query.data?.procurement_changes} loading={query.isLoading} />
     <Typography.Title level={5}>变化后的检查</Typography.Title>
     <Table rowKey={(_, i) => String(i)} size="small" dataSource={query.data?.checked.checks.filter((c) => c.status !== "pass")} columns={[
-      { title: "检查", dataIndex: "kind" }, { title: "状态", dataIndex: "status" }, { title: "说明", render: (_, c) => c.message ?? `${c.resource ?? "适配"}：需求 ${c.required ?? "见条件"}，容量 ${c.capacity ?? "待核对"}` },
+      { title: "检查", render: (_, c) => checkLabels[c.kind] ?? c.kind }, { title: "状态", render: (_, c) => <Status value={c.status} /> }, { title: "说明", render: (_, c) => c.message ?? `${c.resource ?? "适配"}：需求 ${c.required ?? "见条件"}，容量 ${c.capacity ?? "待核对"}` },
     ]} />
   </Modal>;
 }
 function ChangeTable({ changes, loading }: { changes?: BusinessChange[]; loading: boolean }) {
   return <Table<BusinessChange> rowKey={(r) => `${r.kind}:${r.id}`} size="small" loading={loading} dataSource={changes}
     expandable={{ expandedRowRender: (change) => <Collapse items={[{ key: "details", label: "完整字段变化与依据", children: <Space align="start"><pre>{JSON.stringify(change.before, null, 2)}</pre><pre>{JSON.stringify(change.after, null, 2)}</pre></Space> }]} /> }}
-    columns={[{ title: "对象", render: (_, c) => `${c.kind} · ${c.id.slice(0, 12)}` },
+    columns={[{ title: "对象", render: (_, c) => `${({ decision_runtime: "决策运行时", decision_bundle_id: "固定决策资料" } as Record<string, string>)[c.kind] ?? c.kind} · ${c.id.slice(0, 12)}` },
       { title: "修改前", render: (_, c) => describe(c.before) }, { title: "修改后", render: (_, c) => describe(c.after) }]} />;
 }
 function describe(value: unknown): string {
   if (value == null) return "无";
-  if (typeof value !== "object") return String(value);
+  if (typeof value !== "object") return ({ "python-v3": "历史 Python 判断", "zen-v1": "ZEN 统一决策 v1" } as Record<string, string>)[String(value)] ?? String(value);
   const item = value as Record<string, unknown>;
   const source = typeof item.source === "string" ? ({ purchase: "本次采购", existing: "客户已有", unknown: "供货待确认" }[item.source] ?? item.source) : "";
   if (item.name || item.quantity) return [item.name, item.model, item.quantity ? `数量 ${item.quantity}` : "", source].filter(Boolean).join(" · ");

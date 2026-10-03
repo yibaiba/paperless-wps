@@ -34,6 +34,8 @@ def configuration_diff(before, after):
         "knowledge_snapshot_id",
         "definition_snapshot_id",
         "calculation_version",
+        "decision_runtime",
+        "decision_bundle_id",
         "quotation",
         "room_inputs",
         "project_inputs",

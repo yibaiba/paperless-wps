@@ -44,6 +44,10 @@ export function ProjectCandidates(props: Props) {
       configuration.knowledge_snapshot_id,
       mode,
       semanticQuery,
+      { runtime: configuration.decision_runtime, bundle: configuration.decision_bundle_id, systems: configuration.systems, requirements: configuration.requirements,
+        devices: configuration.devices.map(({ id, variant_id, quantity }) => ({ id, variant_id, quantity })),
+        accessories: configuration.accessory_allocations, choices: configuration.accessory_choices, included: configuration.included_allocations,
+        rooms: configuration.room_inputs, project: configuration.project_inputs },
     ),
     enabled: (!!requirement || !!props.replacement) && (mode !== "semantic" || !!semanticQuery),
     queryFn: () =>
@@ -51,7 +55,11 @@ export function ProjectCandidates(props: Props) {
         method: "POST",
         body: JSON.stringify({
           system: system?.kind ?? "",
+          configuration: requirement ? configuration : undefined,
+          requirement_id: requirement?.id ?? "",
           calculation_version: configuration.calculation_version,
+          decision_runtime: configuration.decision_runtime ?? "python-v3",
+          decision_bundle_id: configuration.decision_bundle_id ?? null,
           system_definition_id: system?.definition_id ?? "",
           role_id: requirement?.role_id ?? "",
           definition_snapshot_id: configuration.definition_snapshot_id ?? null,

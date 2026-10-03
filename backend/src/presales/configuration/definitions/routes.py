@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from presales.api import session_dependency
 
 from ..common import Authored, Change, Entities, Text
-from ..http import execute
+from ..http import execute, quantity_engine
 from ..projects.services.setup import SetupPreview, apply_setup
 from ..transactions import commit
 from .inspection_schemas import InspectionProfile
@@ -77,9 +77,12 @@ def package_change_preview(
 
 @router.post("/knowledge-packages/{identity}/trial")
 def package_trial(
-    identity: str, data: PackageTrial, session: Session = Depends(session_dependency)
+    identity: str,
+    data: PackageTrial,
+    session: Session = Depends(session_dependency),
+    engine=Depends(quantity_engine),
 ):
-    return execute(lambda: run_trial(session, identity, data))
+    return execute(lambda: run_trial(session, identity, data, decisions=engine.decision_service))
 
 
 @router.post("/knowledge-packages")

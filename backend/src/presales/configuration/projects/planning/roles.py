@@ -113,6 +113,8 @@ def role_branches(context, data, task):
         )
         return
     items = context.candidates(requirement, system)
+    if task.get("candidate_variant_ids"):
+        items = [i for i in items if i["variant"]["id"] in task["candidate_variant_ids"]]
     choices, ranking_gap, ranking = ordered_candidates(
         context, items, requirement=requirement, system=system
     )

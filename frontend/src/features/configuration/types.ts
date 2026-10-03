@@ -97,7 +97,8 @@ export interface Knowledge extends Authored {
   id: string;
   revision: number;
   name: string;
-  kind: "suitability" | "accessory" | "sharing";
+  kind: "suitability" | "accessory" | "sharing" | "combination";
+  combination?: { mode: "exclude" | "require_all" | "require_any"; scope: "system" | "room" | "project" | null; targets: { id: string; name: string; system_definition_id: string; role_id: string; need_key: string; variant_ids: string[] }[] } | null;
   status: "draft" | "confirmed" | "disabled";
   effect: "allow" | "deny";
   selector: {
@@ -187,6 +188,8 @@ export interface Configuration extends Authored {
   manual_edits?: { requirements: string[]; accessory_allocations: string[]; included_allocations: string[] };
   included_allocations?: IncludedAllocation[];
   quotation?: import("./quotation/types").Quotation | null;
+  decision_runtime?: "python-v3" | "zen-v1";
+  decision_bundle_id?: string | null;
   calculation_version: 1 | 2 | 3;
   definition_snapshot_id?: string | null;
   accessory_choices?: { demand_id: string; selected: boolean; note?: string }[];
@@ -342,6 +345,8 @@ export interface ProjectOutput {
   status: "draft" | "confirmed";
   ready_for_confirmed_output: boolean;
   knowledge_snapshot_id: string | null;
+  decision_runtime?: "python-v3" | "zen-v1";
+  decision_bundle_id?: string | null;
   calculation_version: number;
   lines: ProjectOutputLine[];
 }
@@ -361,6 +366,8 @@ export interface Checked {
   project_output: ProjectOutput;
   fingerprint: string;
   versions: { id: string; revision: number }[];
+  decision_runtime?: "python-v3" | "zen-v1";
+  decision_bundle_id?: string | null;
   calculation_version: number;
 }
 export type ApplyChoice =

@@ -23,10 +23,22 @@ def candidates(
     request: Request,
     session: Session = Depends(session_dependency),
 ):
-    search = SemanticCandidateSearch(
-        session, request.app.state.search_settings, request.app.state.search_provider
-    ) if data.mode == "semantic" else None
-    return execute(lambda: candidate_results(data, session=session, search=search))
+    search = (
+        SemanticCandidateSearch(
+            session, request.app.state.search_settings, request.app.state.search_provider
+        )
+        if data.mode == "semantic"
+        else None
+    )
+    return execute(
+        lambda: candidate_results(
+            data,
+            session=session,
+            search=search,
+            decisions=request.app.state.quantity_engine.decision_service,
+            engine=request.app.state.quantity_engine,
+        )
+    )
 
 
 @router.get("/projects/{project_id}")
@@ -63,6 +75,7 @@ def check(
                 data.configuration,
                 refresh=data.refresh_knowledge,
                 upgrade=data.upgrade_calculation,
+                upgrade_decisions=data.upgrade_decisions,
             ),
         )
     )

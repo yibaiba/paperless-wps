@@ -82,6 +82,8 @@ class Configuration(Authored):
     included_allocations: list[IncludedAllocation] = Field(default_factory=list)
     quotation: Quotation | None = None
     calculation_version: Literal[1, 2, 3] = 1
+    decision_runtime: Literal["python-v3", "zen-v1"] = "python-v3"
+    decision_bundle_id: str | None = None
     definition_snapshot_id: str | None = None
     accessory_choices: list[AccessoryChoice] = Field(default_factory=list)
     supply_allocations: list[SupplyAllocation] = Field(default_factory=list)
@@ -96,6 +98,8 @@ class Configuration(Authored):
 
     @model_validator(mode="after")
     def references(self):
+        if self.decision_runtime == "zen-v1" and self.calculation_version != 3:
+            raise ValueError("ZEN 决策需要计算语义版本 3")
         for items in (
             self.rooms,
             self.systems,
@@ -152,7 +156,11 @@ class ConfigurationSave(Input):
 
 
 class CandidateRequest(Input):
+    configuration: Configuration | None = None
+    requirement_id: str = ""
     calculation_version: Literal[1, 2, 3] = 1
+    decision_runtime: Literal["python-v3", "zen-v1"] = "python-v3"
+    decision_bundle_id: str | None = None
     system_definition_id: str = ""
     role_id: str = ""
     definition_snapshot_id: str | None = None
@@ -168,6 +176,10 @@ class CandidateRequest(Input):
 
     @model_validator(mode="after")
     def semantic_query(self):
+        if bool(self.configuration) != bool(self.requirement_id):
+            raise ValueError("项目候选检查需要同时提供配置及角色需求标识")
+        if self.configuration and self.configuration.decision_runtime != self.decision_runtime:
+            raise ValueError("候选运行时与项目固定运行时不一致")
         if (
             self.mode != "all"
             and not self.include_all
@@ -183,6 +195,7 @@ class CheckRequest(Input):
     configuration: Configuration
     refresh_knowledge: bool = False
     upgrade_calculation: bool = False
+    upgrade_decisions: bool = False
 
 
 class SuggestionApply(CheckRequest):

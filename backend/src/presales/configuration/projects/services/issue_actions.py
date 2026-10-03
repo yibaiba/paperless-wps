@@ -65,6 +65,18 @@ def with_issue_actions(checked, *, annotate_only=False):
             if check["kind"] == "sharing"
             else [],
         )
+        if check["kind"] == "combination":
+            from .combination_actions import combination_action
+
+            action.update(
+                type="edit_knowledge",
+                rule_id=check["rule_id"],
+                missing_fields=check.get("missing_fields", []),
+                requirement_ids=list(
+                    dict.fromkeys(r for g in check["groups"] for r in g["requirement_ids"])
+                ),
+            )
+            action.update(combination_action(check))
         if check.get("responsibility") == "project":
             action.update(
                 type={

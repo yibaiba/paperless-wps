@@ -25,7 +25,7 @@ class PackageTrial(Input):
         return self
 
 
-def evaluate_trial(package, variant, data):
+def evaluate_trial(package, variant, data, *, decisions=None):
     if package["revision"] != data.expected_revision:
         raise RuleConflict("知识包已有新修订，请刷新后重新试查")
     definition = package["definition"]
@@ -42,7 +42,9 @@ def evaluate_trial(package, variant, data):
         capability_ids=role.get("capability_ids", []),
         environment=[p.model_dump(mode="json") for p in data.environment],
     )
-    result = candidate_check_v3(variant, requirement=requirement, knowledge=package["rules"])
+    result = candidate_check_v3(
+        variant, requirement=requirement, knowledge=package["rules"], decisions=decisions
+    )
     coverage = role_coverage(requirement, variant, package)
     drafts = [
         dict(id=r["id"], revision=r["revision"], name=r["name"], evidence=r["evidence"])
@@ -71,9 +73,10 @@ def evaluate_trial(package, variant, data):
     )
 
 
-def run_trial(session, identity, data):
+def run_trial(session, identity, data, *, decisions=None):
+    decisions = decisions.request() if decisions else None
     package = view(Entities(session).get(identity, kind="knowledge_package"))
     variants = CatalogService(session).variants(ids=[data.variant_id])
     if not variants:
         raise ValueError("试查的产品配置不存在")
-    return evaluate_trial(package, variants[0], data)
+    return evaluate_trial(package, variants[0], data, decisions=decisions)
