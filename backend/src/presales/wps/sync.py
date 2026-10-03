@@ -189,6 +189,28 @@ class WorkbookSync:
             if any(item["device_id"] == device_id for item in line_bindings):
                 raise ValueError("同一设备不能重复绑定到两个产品行，请用用途分配表达共享")
             raw.extend(self._line_operations(line, device_id, variant))
+            previous = next(
+                (d for d in state["configuration"]["devices"] if d["id"] == device_id), None
+            )
+            if (
+                request.schema_version == 2
+                and line.price is None
+                and previous
+                and any(previous[key] != getattr(line, key) for key in ("variant_id", "source_id"))
+            ):
+                raw.append(
+                    {
+                        "action": "price_set",
+                        "value": {
+                            "device_id": device_id,
+                            "variant_id": line.variant_id,
+                            "source_id": line.source_id,
+                            "mode": "pending",
+                            "unit_price": None,
+                            "evidence": "WPS 换型后旧价格失效，待确认新价格",
+                        },
+                    }
+                )
             raw.extend(supply_operations(line, device_id=device_id, version=request.schema_version))
             line_bindings.append(self._line_binding(line, device_id))
         for device_id in sorted(managed - current_ids):

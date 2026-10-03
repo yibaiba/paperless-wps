@@ -6,9 +6,10 @@ from decimal import Decimal
 
 from ..projections.comparison import configuration_diff
 from ..schemas import Configuration
-from .accessories import accessory_options
+from .accessories import accessory_options, apply_included, manual_allocation_gap
 from .context import PlanningContext
 from .devices import put_device
+from .fulfillment import bind_fulfilled_roles, fulfillment_devices
 from .quantities import role_quantity
 from .roles import prepare_roles, role_branches
 
@@ -47,6 +48,25 @@ class NextEditContext(PlanningContext):
         text = " ".join([variant["product"]["name"], variant["product"]["model"], variant["name"]])
         return all(token in text.casefold() for token in self.query.casefold().split())
 
+    def preference(self, requirement_id):
+        preference = super().preference(requirement_id)
+        existing = {
+            a["device_id"]
+            for a in self.configuration["supply_allocations"]
+            if a["source"] == "existing" and Decimal(a["quantity"]) > 0
+        }
+        reusable = {
+            d["id"]
+            for d in self.configuration["devices"]
+            if d["id"] in existing
+            and d["source_id"] in (self.allowed_sources or {}).get(d["variant_id"], [])
+        }
+        # Preview branches only; shared compatibility/capacity checks decide applicability.
+        return dict(
+            preference,
+            reusable_device_ids=sorted(reusable | set(preference.get("reusable_device_ids", []))),
+        )
+
 
 def next_edit_options(context, checked, *, system_id, requirement_id=None):
     data, tasks, questions = prepare_roles(context)
@@ -65,6 +85,14 @@ def next_edit_options(context, checked, *, system_id, requirement_id=None):
             continue
         if Decimal(demand["missing"] or "0") <= 0:
             continue
+        gap = manual_allocation_gap(data, demand)
+        if gap:
+            return [], [*questions, gap]
+        included = apply_included(data, demand)
+        if included != data:
+            return [
+                make_option(context, included, gaps=[], evidence=[demand["explanation"]])
+            ], questions
         options = [
             make_option(context, result, gaps=gaps, evidence=[decision])
             for result, gaps, decision in accessory_options(
@@ -141,10 +169,22 @@ def typed_options(context, data, task):
 
 def make_option(context, proposed, *, gaps, evidence):
     checked = context.repository.check(Configuration.model_validate(deepcopy(proposed)))
+    _, tasks, _ = prepare_roles(context)
+    tasks = [
+        t
+        for t in tasks
+        if t["role"].get("fulfilled_by")
+        and fulfillment_devices(checked["configuration"], task=t, demands=checked["suggestions"])
+    ]
+    fulfilled, fulfillment_gaps = bind_fulfilled_roles(
+        checked["configuration"], tasks=tasks, demands=checked["suggestions"]
+    )
+    if fulfilled != checked["configuration"]:
+        checked = context.repository.check(Configuration.model_validate(fulfilled))
     return {
         "configuration": checked["configuration"],
         "checked": checked,
         "changes": configuration_diff(context.configuration, checked["configuration"]),
-        "questions": gaps,
+        "questions": [*gaps, *fulfillment_gaps],
         "evidence": evidence,
     }

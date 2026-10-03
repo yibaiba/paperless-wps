@@ -96,6 +96,13 @@ def project_next_edit(option, *, request, profile, projection):
         if r.get("device_id") in touched
         or any(a["device_id"] in touched for a in r.get("allocations", []))
     }
+    linked.update(
+        c["id"]
+        for c in changes
+        if c["kind"] == "requirements"
+        and c["after"]
+        and (c["after"].get("device_id") or c["after"].get("allocations"))
+    )
     blocking = [
         i
         for i in issues

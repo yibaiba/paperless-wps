@@ -29,6 +29,11 @@ DiagnosticEventType = Literal[
     "tab_expand",
     "accept_success",
     "accept_error",
+    "completion_shown",
+    "completion_accepted",
+    "completion_undone",
+    "completion_replaced",
+    "completion_retained",
 ]
 CompletionPhase = Literal["typing", "loading", "ghost", "ambiguous", "list", "no-match", "error"]
 

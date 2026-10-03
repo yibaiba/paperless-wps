@@ -1,6 +1,8 @@
 from copy import deepcopy
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
+from .schemas import QuotedPrice
+
 CENT = Decimal("0.01")
 
 
@@ -21,7 +23,7 @@ def adopt_prices(configuration):
             prices.append(old)
             continue
         prices.append(
-            dict(
+            QuotedPrice(
                 device_id=device["id"],
                 variant_id=device["variant_id"],
                 source_id=device["source_id"],
@@ -29,7 +31,7 @@ def adopt_prices(configuration):
                 price_column=quote["price_column"],
                 unit_price=None,
                 evidence="采用本次报价指定的原资料价格列",
-            )
+            ).model_dump(mode="json")
         )
     quote["prices"] = prices
     device_ids = {d["id"] for d in data["devices"]}
