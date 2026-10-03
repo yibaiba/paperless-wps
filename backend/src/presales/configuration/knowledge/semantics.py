@@ -65,15 +65,16 @@ def evaluate_rules_v3(rules, context, *, decisions=None):
     return dict(status=status, evidence=details)
 
 
-def role_matches(rule, requirement):
+def role_matches(rule, requirement, *, allow_unrestricted=False):
     if not package_allows(rule, requirement.get("knowledge_package_id")):
         return False
     for identity, label in (("system_definition_id", "system"), ("role_id", "role")):
         if rule.get(identity):
             if rule[identity] != requirement.get(identity):
                 return False
-        elif rule.get(label, "") != requirement.get(label, ""):
-            return False
+        elif not (allow_unrestricted and not rule.get(label)):
+            if rule.get(label, "") != requirement.get(label, ""):
+                return False
     return True
 
 

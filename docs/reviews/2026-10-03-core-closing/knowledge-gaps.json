@@ -1,0 +1,2493 @@
+{
+  "knowledge": 209,
+  "statuses": {
+    "confirmed": 115,
+    "draft": 92,
+    "disabled": 2
+  },
+  "confirmed_sharing": 0,
+  "packages": [
+    {
+      "id": "28b513aa-c06b-448d-aedd-afc5090f0733",
+      "revision": 1,
+      "name": "会议预约与信息发布系统 · 试点资料核对",
+      "status": "draft",
+      "gaps": [
+        {
+          "id": "a53855257c855de3e7f643f252bd0528013b96c50e6ecb013686b9b73dd78f4c",
+          "code": "published_package_missing",
+          "field": "knowledge_package_id",
+          "missing_fields": [
+            "knowledge_package_id"
+          ],
+          "message": "资料包尚未发布",
+          "object_kind": "knowledge_package",
+          "object_id": "28b513aa-c06b-448d-aedd-afc5090f0733",
+          "object_revision": 1,
+          "role_id": null,
+          "package_id": "28b513aa-c06b-448d-aedd-afc5090f0733",
+          "package_revision": 1,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "会议预约与信发系统 第17行；来源 fc27e275-ceb7-484a-9098-9122702e3c9e；CRIR-1516N 会议预约与信息发布系统服务器；备注：\n会议预约与信发系统 第18行；来源 facc338e-f3f8-4de3-b8a2-a696f7292cb0；CRIR-GL20S 会议预约与信息发布管理系统；备注：\n第17行服务器支持 Linux，第18行软件支持 Linux 部署；数量、容量、授权和跨系统共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "e401b647-18ee-42b0-9f9f-120628e5b1b9"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=e401b647-18ee-42b0-9f9f-120628e5b1b9"
+        },
+        {
+          "id": "96d77df96538a5c8d733a8f76c529881795a6b3ed08ce7642a00ad3e6af00613",
+          "code": "role_definition_unconfirmed",
+          "field": "status",
+          "missing_fields": [
+            "status"
+          ],
+          "message": "角色必要性及功能分支待确认",
+          "object_kind": "system_definition",
+          "object_id": "e401b647-18ee-42b0-9f9f-120628e5b1b9",
+          "object_revision": 1,
+          "role_id": "server-software",
+          "package_id": "28b513aa-c06b-448d-aedd-afc5090f0733",
+          "package_revision": 1,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "会议预约与信发系统 第17行；来源 fc27e275-ceb7-484a-9098-9122702e3c9e；CRIR-1516N 会议预约与信息发布系统服务器；备注：\n会议预约与信发系统 第18行；来源 facc338e-f3f8-4de3-b8a2-a696f7292cb0；CRIR-GL20S 会议预约与信息发布管理系统；备注：\n第17行服务器支持 Linux，第18行软件支持 Linux 部署；数量、容量、授权和跨系统共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "e401b647-18ee-42b0-9f9f-120628e5b1b9"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=e401b647-18ee-42b0-9f9f-120628e5b1b9"
+        },
+        {
+          "id": "62cbe93847f19915c86cb74071c180c96776fe9cdb088bad649a3ad31bbe30d7",
+          "code": "role_candidates_missing",
+          "field": "members",
+          "missing_fields": [
+            "members"
+          ],
+          "message": "缺少匹配此系统和角色的适用关系",
+          "object_kind": "system_definition",
+          "object_id": "e401b647-18ee-42b0-9f9f-120628e5b1b9",
+          "object_revision": 1,
+          "role_id": "server-software",
+          "package_id": "28b513aa-c06b-448d-aedd-afc5090f0733",
+          "package_revision": 1,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "会议预约与信发系统 第17行；来源 fc27e275-ceb7-484a-9098-9122702e3c9e；CRIR-1516N 会议预约与信息发布系统服务器；备注：\n会议预约与信发系统 第18行；来源 facc338e-f3f8-4de3-b8a2-a696f7292cb0；CRIR-GL20S 会议预约与信息发布管理系统；备注：\n第17行服务器支持 Linux，第18行软件支持 Linux 部署；数量、容量、授权和跨系统共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "e401b647-18ee-42b0-9f9f-120628e5b1b9"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=e401b647-18ee-42b0-9f9f-120628e5b1b9"
+        },
+        {
+          "id": "859c3677bbb9c290f04c5f94e1378975a259da243d0167beb4216fddd7a6e813",
+          "code": "accessory_coverage_missing",
+          "field": "coverage.accessories",
+          "missing_fields": [
+            "coverage.accessories"
+          ],
+          "message": "配套覆盖范围尚未核对完整",
+          "object_kind": "system_definition",
+          "object_id": "e401b647-18ee-42b0-9f9f-120628e5b1b9",
+          "object_revision": 1,
+          "role_id": "server-software",
+          "package_id": "28b513aa-c06b-448d-aedd-afc5090f0733",
+          "package_revision": 1,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "会议预约与信发系统 第17行；来源 fc27e275-ceb7-484a-9098-9122702e3c9e；CRIR-1516N 会议预约与信息发布系统服务器；备注：\n会议预约与信发系统 第18行；来源 facc338e-f3f8-4de3-b8a2-a696f7292cb0；CRIR-GL20S 会议预约与信息发布管理系统；备注：\n第17行服务器支持 Linux，第18行软件支持 Linux 部署；数量、容量、授权和跨系统共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "e401b647-18ee-42b0-9f9f-120628e5b1b9"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=e401b647-18ee-42b0-9f9f-120628e5b1b9"
+        },
+        {
+          "id": "e067bc038d2f160fb4b2ec6ba0da6f5b80ea7b4d607e6992263eb2e86ec99a83",
+          "code": "capacity_basis_missing",
+          "field": "coverage.resources",
+          "missing_fields": [
+            "coverage.resources"
+          ],
+          "message": "是否需要资源核算待确认",
+          "object_kind": "system_definition",
+          "object_id": "e401b647-18ee-42b0-9f9f-120628e5b1b9",
+          "object_revision": 1,
+          "role_id": "server-software",
+          "package_id": "28b513aa-c06b-448d-aedd-afc5090f0733",
+          "package_revision": 1,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "会议预约与信发系统 第17行；来源 fc27e275-ceb7-484a-9098-9122702e3c9e；CRIR-1516N 会议预约与信息发布系统服务器；备注：\n会议预约与信发系统 第18行；来源 facc338e-f3f8-4de3-b8a2-a696f7292cb0；CRIR-GL20S 会议预约与信息发布管理系统；备注：\n第17行服务器支持 Linux，第18行软件支持 Linux 部署；数量、容量、授权和跨系统共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "e401b647-18ee-42b0-9f9f-120628e5b1b9"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=e401b647-18ee-42b0-9f9f-120628e5b1b9"
+        },
+        {
+          "id": "adef6e21d30ef461baf3cd373bfa47fecf0166c07f4dda9563160e0a6f154231",
+          "code": "role_quantity_missing",
+          "field": "quantity_basis",
+          "missing_fields": [
+            "quantity_basis"
+          ],
+          "message": "角色数量依据待确认",
+          "object_kind": "system_definition",
+          "object_id": "e401b647-18ee-42b0-9f9f-120628e5b1b9",
+          "object_revision": 1,
+          "role_id": "server-software",
+          "package_id": "28b513aa-c06b-448d-aedd-afc5090f0733",
+          "package_revision": 1,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "会议预约与信发系统 第17行；来源 fc27e275-ceb7-484a-9098-9122702e3c9e；CRIR-1516N 会议预约与信息发布系统服务器；备注：\n会议预约与信发系统 第18行；来源 facc338e-f3f8-4de3-b8a2-a696f7292cb0；CRIR-GL20S 会议预约与信息发布管理系统；备注：\n第17行服务器支持 Linux，第18行软件支持 Linux 部署；数量、容量、授权和跨系统共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "e401b647-18ee-42b0-9f9f-120628e5b1b9"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=e401b647-18ee-42b0-9f9f-120628e5b1b9"
+        },
+        {
+          "id": "1943809be3b5171de5db9a6932f4db57d85c500f43633d335ab07e98d5c8dc10",
+          "code": "role_definition_unconfirmed",
+          "field": "status",
+          "missing_fields": [
+            "status"
+          ],
+          "message": "角色必要性及功能分支待确认",
+          "object_kind": "system_definition",
+          "object_id": "e401b647-18ee-42b0-9f9f-120628e5b1b9",
+          "object_revision": 1,
+          "role_id": "server",
+          "package_id": "28b513aa-c06b-448d-aedd-afc5090f0733",
+          "package_revision": 1,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "会议预约与信发系统 第17行；来源 fc27e275-ceb7-484a-9098-9122702e3c9e；CRIR-1516N 会议预约与信息发布系统服务器；备注：\n会议预约与信发系统 第18行；来源 facc338e-f3f8-4de3-b8a2-a696f7292cb0；CRIR-GL20S 会议预约与信息发布管理系统；备注：\n第17行服务器支持 Linux，第18行软件支持 Linux 部署；数量、容量、授权和跨系统共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "e401b647-18ee-42b0-9f9f-120628e5b1b9"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=e401b647-18ee-42b0-9f9f-120628e5b1b9"
+        },
+        {
+          "id": "643b3023c3bf2083bd73b6d90d62663a3d416e8fbf19d0e0a4c928bd1d72edd7",
+          "code": "role_candidates_missing",
+          "field": "members",
+          "missing_fields": [
+            "members"
+          ],
+          "message": "缺少匹配此系统和角色的适用关系",
+          "object_kind": "system_definition",
+          "object_id": "e401b647-18ee-42b0-9f9f-120628e5b1b9",
+          "object_revision": 1,
+          "role_id": "server",
+          "package_id": "28b513aa-c06b-448d-aedd-afc5090f0733",
+          "package_revision": 1,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "会议预约与信发系统 第17行；来源 fc27e275-ceb7-484a-9098-9122702e3c9e；CRIR-1516N 会议预约与信息发布系统服务器；备注：\n会议预约与信发系统 第18行；来源 facc338e-f3f8-4de3-b8a2-a696f7292cb0；CRIR-GL20S 会议预约与信息发布管理系统；备注：\n第17行服务器支持 Linux，第18行软件支持 Linux 部署；数量、容量、授权和跨系统共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "e401b647-18ee-42b0-9f9f-120628e5b1b9"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=e401b647-18ee-42b0-9f9f-120628e5b1b9"
+        },
+        {
+          "id": "9115aa8c4578d6e99cbd2499daba64be911ed5a08109ff6d5a0a87c37694e523",
+          "code": "accessory_coverage_missing",
+          "field": "coverage.accessories",
+          "missing_fields": [
+            "coverage.accessories"
+          ],
+          "message": "配套覆盖范围尚未核对完整",
+          "object_kind": "system_definition",
+          "object_id": "e401b647-18ee-42b0-9f9f-120628e5b1b9",
+          "object_revision": 1,
+          "role_id": "server",
+          "package_id": "28b513aa-c06b-448d-aedd-afc5090f0733",
+          "package_revision": 1,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "会议预约与信发系统 第17行；来源 fc27e275-ceb7-484a-9098-9122702e3c9e；CRIR-1516N 会议预约与信息发布系统服务器；备注：\n会议预约与信发系统 第18行；来源 facc338e-f3f8-4de3-b8a2-a696f7292cb0；CRIR-GL20S 会议预约与信息发布管理系统；备注：\n第17行服务器支持 Linux，第18行软件支持 Linux 部署；数量、容量、授权和跨系统共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "e401b647-18ee-42b0-9f9f-120628e5b1b9"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=e401b647-18ee-42b0-9f9f-120628e5b1b9"
+        },
+        {
+          "id": "4cf543c9721f398ca2a3061b277b4b623e622ad96dea18f5823ee2100fd67305",
+          "code": "capacity_basis_missing",
+          "field": "coverage.resources",
+          "missing_fields": [
+            "coverage.resources"
+          ],
+          "message": "是否需要资源核算待确认",
+          "object_kind": "system_definition",
+          "object_id": "e401b647-18ee-42b0-9f9f-120628e5b1b9",
+          "object_revision": 1,
+          "role_id": "server",
+          "package_id": "28b513aa-c06b-448d-aedd-afc5090f0733",
+          "package_revision": 1,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "会议预约与信发系统 第17行；来源 fc27e275-ceb7-484a-9098-9122702e3c9e；CRIR-1516N 会议预约与信息发布系统服务器；备注：\n会议预约与信发系统 第18行；来源 facc338e-f3f8-4de3-b8a2-a696f7292cb0；CRIR-GL20S 会议预约与信息发布管理系统；备注：\n第17行服务器支持 Linux，第18行软件支持 Linux 部署；数量、容量、授权和跨系统共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "e401b647-18ee-42b0-9f9f-120628e5b1b9"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=e401b647-18ee-42b0-9f9f-120628e5b1b9"
+        },
+        {
+          "id": "47fa6e62b3194d003b2e90ab1c10bc6e5b479d59689765591295b749b3bf578e",
+          "code": "role_quantity_missing",
+          "field": "quantity_basis",
+          "missing_fields": [
+            "quantity_basis"
+          ],
+          "message": "角色数量依据待确认",
+          "object_kind": "system_definition",
+          "object_id": "e401b647-18ee-42b0-9f9f-120628e5b1b9",
+          "object_revision": 1,
+          "role_id": "server",
+          "package_id": "28b513aa-c06b-448d-aedd-afc5090f0733",
+          "package_revision": 1,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "会议预约与信发系统 第17行；来源 fc27e275-ceb7-484a-9098-9122702e3c9e；CRIR-1516N 会议预约与信息发布系统服务器；备注：\n会议预约与信发系统 第18行；来源 facc338e-f3f8-4de3-b8a2-a696f7292cb0；CRIR-GL20S 会议预约与信息发布管理系统；备注：\n第17行服务器支持 Linux，第18行软件支持 Linux 部署；数量、容量、授权和跨系统共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "e401b647-18ee-42b0-9f9f-120628e5b1b9"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=e401b647-18ee-42b0-9f9f-120628e5b1b9"
+        },
+        {
+          "id": "0ea146180dad939e04fa7407f0dbd9f32a47ad33bf4a02fc5736e95db18a6f9a",
+          "code": "role_definition_unconfirmed",
+          "field": "status",
+          "missing_fields": [
+            "status"
+          ],
+          "message": "角色必要性及功能分支待确认",
+          "object_kind": "system_definition",
+          "object_id": "e401b647-18ee-42b0-9f9f-120628e5b1b9",
+          "object_revision": 1,
+          "role_id": "terminal",
+          "package_id": "28b513aa-c06b-448d-aedd-afc5090f0733",
+          "package_revision": 1,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "会议预约与信发系统 第17行；来源 fc27e275-ceb7-484a-9098-9122702e3c9e；CRIR-1516N 会议预约与信息发布系统服务器；备注：\n会议预约与信发系统 第18行；来源 facc338e-f3f8-4de3-b8a2-a696f7292cb0；CRIR-GL20S 会议预约与信息发布管理系统；备注：\n第17行服务器支持 Linux，第18行软件支持 Linux 部署；数量、容量、授权和跨系统共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "e401b647-18ee-42b0-9f9f-120628e5b1b9"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=e401b647-18ee-42b0-9f9f-120628e5b1b9"
+        },
+        {
+          "id": "e1235363d3ac5811c20c0e311d8f2b86107ab09f3811bd9c2a9b523dec7dbfdd",
+          "code": "role_candidates_missing",
+          "field": "members",
+          "missing_fields": [
+            "members"
+          ],
+          "message": "缺少匹配此系统和角色的适用关系",
+          "object_kind": "system_definition",
+          "object_id": "e401b647-18ee-42b0-9f9f-120628e5b1b9",
+          "object_revision": 1,
+          "role_id": "terminal",
+          "package_id": "28b513aa-c06b-448d-aedd-afc5090f0733",
+          "package_revision": 1,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "会议预约与信发系统 第17行；来源 fc27e275-ceb7-484a-9098-9122702e3c9e；CRIR-1516N 会议预约与信息发布系统服务器；备注：\n会议预约与信发系统 第18行；来源 facc338e-f3f8-4de3-b8a2-a696f7292cb0；CRIR-GL20S 会议预约与信息发布管理系统；备注：\n第17行服务器支持 Linux，第18行软件支持 Linux 部署；数量、容量、授权和跨系统共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "e401b647-18ee-42b0-9f9f-120628e5b1b9"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=e401b647-18ee-42b0-9f9f-120628e5b1b9"
+        },
+        {
+          "id": "c5662be8639d6b9fb9d3d812c5c2a5e16b1f03af3cb0fc0e022abbb416978115",
+          "code": "accessory_coverage_missing",
+          "field": "coverage.accessories",
+          "missing_fields": [
+            "coverage.accessories"
+          ],
+          "message": "配套覆盖范围尚未核对完整",
+          "object_kind": "system_definition",
+          "object_id": "e401b647-18ee-42b0-9f9f-120628e5b1b9",
+          "object_revision": 1,
+          "role_id": "terminal",
+          "package_id": "28b513aa-c06b-448d-aedd-afc5090f0733",
+          "package_revision": 1,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "会议预约与信发系统 第17行；来源 fc27e275-ceb7-484a-9098-9122702e3c9e；CRIR-1516N 会议预约与信息发布系统服务器；备注：\n会议预约与信发系统 第18行；来源 facc338e-f3f8-4de3-b8a2-a696f7292cb0；CRIR-GL20S 会议预约与信息发布管理系统；备注：\n第17行服务器支持 Linux，第18行软件支持 Linux 部署；数量、容量、授权和跨系统共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "e401b647-18ee-42b0-9f9f-120628e5b1b9"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=e401b647-18ee-42b0-9f9f-120628e5b1b9"
+        },
+        {
+          "id": "e689c93cc47970f4c015d1d7e306c05c5df205528dc5facf00c71086c11557ef",
+          "code": "capacity_basis_missing",
+          "field": "coverage.resources",
+          "missing_fields": [
+            "coverage.resources"
+          ],
+          "message": "是否需要资源核算待确认",
+          "object_kind": "system_definition",
+          "object_id": "e401b647-18ee-42b0-9f9f-120628e5b1b9",
+          "object_revision": 1,
+          "role_id": "terminal",
+          "package_id": "28b513aa-c06b-448d-aedd-afc5090f0733",
+          "package_revision": 1,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "会议预约与信发系统 第17行；来源 fc27e275-ceb7-484a-9098-9122702e3c9e；CRIR-1516N 会议预约与信息发布系统服务器；备注：\n会议预约与信发系统 第18行；来源 facc338e-f3f8-4de3-b8a2-a696f7292cb0；CRIR-GL20S 会议预约与信息发布管理系统；备注：\n第17行服务器支持 Linux，第18行软件支持 Linux 部署；数量、容量、授权和跨系统共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "e401b647-18ee-42b0-9f9f-120628e5b1b9"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=e401b647-18ee-42b0-9f9f-120628e5b1b9"
+        },
+        {
+          "id": "e4c06f27ef0f96467ff428d5bf762e68862fae57b764a1454b37aa884349206e",
+          "code": "role_quantity_missing",
+          "field": "quantity_basis",
+          "missing_fields": [
+            "quantity_basis"
+          ],
+          "message": "角色数量依据待确认",
+          "object_kind": "system_definition",
+          "object_id": "e401b647-18ee-42b0-9f9f-120628e5b1b9",
+          "object_revision": 1,
+          "role_id": "terminal",
+          "package_id": "28b513aa-c06b-448d-aedd-afc5090f0733",
+          "package_revision": 1,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "会议预约与信发系统 第17行；来源 fc27e275-ceb7-484a-9098-9122702e3c9e；CRIR-1516N 会议预约与信息发布系统服务器；备注：\n会议预约与信发系统 第18行；来源 facc338e-f3f8-4de3-b8a2-a696f7292cb0；CRIR-GL20S 会议预约与信息发布管理系统；备注：\n第17行服务器支持 Linux，第18行软件支持 Linux 部署；数量、容量、授权和跨系统共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "e401b647-18ee-42b0-9f9f-120628e5b1b9"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=e401b647-18ee-42b0-9f9f-120628e5b1b9"
+        },
+        {
+          "id": "80f5d4966590ffee40d85006da07e7f72c82feb34a6ec2f037cdbb4c5f262969",
+          "code": "role_definition_unconfirmed",
+          "field": "status",
+          "missing_fields": [
+            "status"
+          ],
+          "message": "角色必要性及功能分支待确认",
+          "object_kind": "system_definition",
+          "object_id": "e401b647-18ee-42b0-9f9f-120628e5b1b9",
+          "object_revision": 1,
+          "role_id": "license",
+          "package_id": "28b513aa-c06b-448d-aedd-afc5090f0733",
+          "package_revision": 1,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "会议预约与信发系统 第17行；来源 fc27e275-ceb7-484a-9098-9122702e3c9e；CRIR-1516N 会议预约与信息发布系统服务器；备注：\n会议预约与信发系统 第18行；来源 facc338e-f3f8-4de3-b8a2-a696f7292cb0；CRIR-GL20S 会议预约与信息发布管理系统；备注：\n第17行服务器支持 Linux，第18行软件支持 Linux 部署；数量、容量、授权和跨系统共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "e401b647-18ee-42b0-9f9f-120628e5b1b9"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=e401b647-18ee-42b0-9f9f-120628e5b1b9"
+        },
+        {
+          "id": "c60a7130f790891517818f347384ffd1d3c72466d76764b526588d77638166de",
+          "code": "role_candidates_missing",
+          "field": "members",
+          "missing_fields": [
+            "members"
+          ],
+          "message": "缺少匹配此系统和角色的适用关系",
+          "object_kind": "system_definition",
+          "object_id": "e401b647-18ee-42b0-9f9f-120628e5b1b9",
+          "object_revision": 1,
+          "role_id": "license",
+          "package_id": "28b513aa-c06b-448d-aedd-afc5090f0733",
+          "package_revision": 1,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "会议预约与信发系统 第17行；来源 fc27e275-ceb7-484a-9098-9122702e3c9e；CRIR-1516N 会议预约与信息发布系统服务器；备注：\n会议预约与信发系统 第18行；来源 facc338e-f3f8-4de3-b8a2-a696f7292cb0；CRIR-GL20S 会议预约与信息发布管理系统；备注：\n第17行服务器支持 Linux，第18行软件支持 Linux 部署；数量、容量、授权和跨系统共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "e401b647-18ee-42b0-9f9f-120628e5b1b9"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=e401b647-18ee-42b0-9f9f-120628e5b1b9"
+        },
+        {
+          "id": "0ef98aacc6ed552c27324a5bb4dcc78f892eb87c7d5adba8a41062d2a837985f",
+          "code": "accessory_coverage_missing",
+          "field": "coverage.accessories",
+          "missing_fields": [
+            "coverage.accessories"
+          ],
+          "message": "配套覆盖范围尚未核对完整",
+          "object_kind": "system_definition",
+          "object_id": "e401b647-18ee-42b0-9f9f-120628e5b1b9",
+          "object_revision": 1,
+          "role_id": "license",
+          "package_id": "28b513aa-c06b-448d-aedd-afc5090f0733",
+          "package_revision": 1,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "会议预约与信发系统 第17行；来源 fc27e275-ceb7-484a-9098-9122702e3c9e；CRIR-1516N 会议预约与信息发布系统服务器；备注：\n会议预约与信发系统 第18行；来源 facc338e-f3f8-4de3-b8a2-a696f7292cb0；CRIR-GL20S 会议预约与信息发布管理系统；备注：\n第17行服务器支持 Linux，第18行软件支持 Linux 部署；数量、容量、授权和跨系统共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "e401b647-18ee-42b0-9f9f-120628e5b1b9"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=e401b647-18ee-42b0-9f9f-120628e5b1b9"
+        },
+        {
+          "id": "80c8734dcd352ddc532f4746385c83a3eab086e45db7af6157dca7a27d7c5e5f",
+          "code": "capacity_basis_missing",
+          "field": "coverage.resources",
+          "missing_fields": [
+            "coverage.resources"
+          ],
+          "message": "是否需要资源核算待确认",
+          "object_kind": "system_definition",
+          "object_id": "e401b647-18ee-42b0-9f9f-120628e5b1b9",
+          "object_revision": 1,
+          "role_id": "license",
+          "package_id": "28b513aa-c06b-448d-aedd-afc5090f0733",
+          "package_revision": 1,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "会议预约与信发系统 第17行；来源 fc27e275-ceb7-484a-9098-9122702e3c9e；CRIR-1516N 会议预约与信息发布系统服务器；备注：\n会议预约与信发系统 第18行；来源 facc338e-f3f8-4de3-b8a2-a696f7292cb0；CRIR-GL20S 会议预约与信息发布管理系统；备注：\n第17行服务器支持 Linux，第18行软件支持 Linux 部署；数量、容量、授权和跨系统共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "e401b647-18ee-42b0-9f9f-120628e5b1b9"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=e401b647-18ee-42b0-9f9f-120628e5b1b9"
+        },
+        {
+          "id": "b9689fe8bd5787b5f50c73ff25fa74475be0d950ff4e4dd7ce85cc69190ec84b",
+          "code": "role_quantity_missing",
+          "field": "quantity_basis",
+          "missing_fields": [
+            "quantity_basis"
+          ],
+          "message": "角色数量依据待确认",
+          "object_kind": "system_definition",
+          "object_id": "e401b647-18ee-42b0-9f9f-120628e5b1b9",
+          "object_revision": 1,
+          "role_id": "license",
+          "package_id": "28b513aa-c06b-448d-aedd-afc5090f0733",
+          "package_revision": 1,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "会议预约与信发系统 第17行；来源 fc27e275-ceb7-484a-9098-9122702e3c9e；CRIR-1516N 会议预约与信息发布系统服务器；备注：\n会议预约与信发系统 第18行；来源 facc338e-f3f8-4de3-b8a2-a696f7292cb0；CRIR-GL20S 会议预约与信息发布管理系统；备注：\n第17行服务器支持 Linux，第18行软件支持 Linux 部署；数量、容量、授权和跨系统共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "e401b647-18ee-42b0-9f9f-120628e5b1b9"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=e401b647-18ee-42b0-9f9f-120628e5b1b9"
+        },
+        {
+          "id": "07d6e8b174010d6d745fd4692552aafd465b23cee34b47a2e434ca99727db59b",
+          "code": "accessory_quantity_unconfirmed",
+          "field": "quantity_review",
+          "missing_fields": [
+            "quantity_review"
+          ],
+          "message": "数量依据尚未单独确认（旧公式不等于确认）",
+          "object_kind": "knowledge",
+          "object_id": "0198c3f5-27fd-5dee-aed9-4b58e0af8f31",
+          "object_revision": 1,
+          "role_id": null,
+          "package_id": "28b513aa-c06b-448d-aedd-afc5090f0733",
+          "package_revision": 1,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "会议预约与信发系统 第14行明确第三方中控对接的定制服务和对接能力。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_knowledge",
+            "rule_id": "0198c3f5-27fd-5dee-aed9-4b58e0af8f31"
+          },
+          "maintenance_url": "/knowledge?rule=0198c3f5-27fd-5dee-aed9-4b58e0af8f31"
+        },
+        {
+          "id": "5464524a6e9c60a3578e99bf98894706f4a696d0e3afca8692458a9edb050e89",
+          "code": "accessory_quantity_unconfirmed",
+          "field": "quantity_review",
+          "missing_fields": [
+            "quantity_review"
+          ],
+          "message": "数量依据尚未单独确认（旧公式不等于确认）",
+          "object_kind": "knowledge",
+          "object_id": "033887ec-73d7-5485-aeb7-affbc922f1f2",
+          "object_revision": 1,
+          "role_id": null,
+          "package_id": "28b513aa-c06b-448d-aedd-afc5090f0733",
+          "package_revision": 1,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "会议预约与信发系统 第17-18行：Linux 服务器及对应 B/S 管理系统。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_knowledge",
+            "rule_id": "033887ec-73d7-5485-aeb7-affbc922f1f2"
+          },
+          "maintenance_url": "/knowledge?rule=033887ec-73d7-5485-aeb7-affbc922f1f2"
+        },
+        {
+          "id": "feea6a798f3f98fd1a43e0177a49f03b22de749335906cdcead61afcc133a6eb",
+          "code": "accessory_quantity_unconfirmed",
+          "field": "quantity_review",
+          "missing_fields": [
+            "quantity_review"
+          ],
+          "message": "数量依据尚未单独确认（旧公式不等于确认）",
+          "object_kind": "knowledge",
+          "object_id": "09c02fb0-ae25-5d09-981f-0a9f74980e38",
+          "object_revision": 1,
+          "role_id": null,
+          "package_id": "28b513aa-c06b-448d-aedd-afc5090f0733",
+          "package_revision": 1,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "会议预约与信发系统 第11行明确企业微信对接的定制服务和对接能力。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_knowledge",
+            "rule_id": "09c02fb0-ae25-5d09-981f-0a9f74980e38"
+          },
+          "maintenance_url": "/knowledge?rule=09c02fb0-ae25-5d09-981f-0a9f74980e38"
+        },
+        {
+          "id": "049a8c92fbc38f5fcdb0ab703657f489272d2b1b64cf0c6f3bc67efe12f525fd",
+          "code": "accessory_quantity_unconfirmed",
+          "field": "quantity_review",
+          "missing_fields": [
+            "quantity_review"
+          ],
+          "message": "数量依据尚未单独确认（旧公式不等于确认）",
+          "object_kind": "knowledge",
+          "object_id": "2f416475-2ee9-5bdd-b8bc-3cdcaff77810",
+          "object_revision": 1,
+          "role_id": null,
+          "package_id": "28b513aa-c06b-448d-aedd-afc5090f0733",
+          "package_revision": 1,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "会议预约与信发系统 第8行明确邮件系统对接的定制服务和对接能力。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_knowledge",
+            "rule_id": "2f416475-2ee9-5bdd-b8bc-3cdcaff77810"
+          },
+          "maintenance_url": "/knowledge?rule=2f416475-2ee9-5bdd-b8bc-3cdcaff77810"
+        },
+        {
+          "id": "af6f278d01543051443acf03bc35ad2e5639c12bf5060c36751c8f0e07532470",
+          "code": "accessory_quantity_unconfirmed",
+          "field": "quantity_review",
+          "missing_fields": [
+            "quantity_review"
+          ],
+          "message": "数量依据尚未单独确认（旧公式不等于确认）",
+          "object_kind": "knowledge",
+          "object_id": "6b0313c5-d909-5de5-9df4-73962a4a1710",
+          "object_revision": 1,
+          "role_id": null,
+          "package_id": "28b513aa-c06b-448d-aedd-afc5090f0733",
+          "package_revision": 1,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "会议预约与信发系统 第10行明确短信平台对接的定制服务和对接能力。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_knowledge",
+            "rule_id": "6b0313c5-d909-5de5-9df4-73962a4a1710"
+          },
+          "maintenance_url": "/knowledge?rule=6b0313c5-d909-5de5-9df4-73962a4a1710"
+        },
+        {
+          "id": "5ec3ba6d633229d2aa2d892bc0e7b2cb03d02600c758e049233d4e6599ef7ab4",
+          "code": "accessory_quantity_unconfirmed",
+          "field": "quantity_review",
+          "missing_fields": [
+            "quantity_review"
+          ],
+          "message": "数量依据尚未单独确认（旧公式不等于确认）",
+          "object_kind": "knowledge",
+          "object_id": "81fd2226-a1a0-5c9d-9af1-c95a3aa3ce91",
+          "object_revision": 1,
+          "role_id": null,
+          "package_id": "28b513aa-c06b-448d-aedd-afc5090f0733",
+          "package_revision": 1,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "会议预约与信发系统 第15行明确第三方门禁对接的定制服务和对接能力。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_knowledge",
+            "rule_id": "81fd2226-a1a0-5c9d-9af1-c95a3aa3ce91"
+          },
+          "maintenance_url": "/knowledge?rule=81fd2226-a1a0-5c9d-9af1-c95a3aa3ce91"
+        },
+        {
+          "id": "f4b04c951477922b5f6c0fb243e01732fc4563798d73cc250706af3f8d75dfa4",
+          "code": "accessory_quantity_unconfirmed",
+          "field": "quantity_review",
+          "missing_fields": [
+            "quantity_review"
+          ],
+          "message": "数量依据尚未单独确认（旧公式不等于确认）",
+          "object_kind": "knowledge",
+          "object_id": "9466963b-b93a-5f28-ba60-c0fad32d504a",
+          "object_revision": 1,
+          "role_id": null,
+          "package_id": "28b513aa-c06b-448d-aedd-afc5090f0733",
+          "package_revision": 1,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "会议预约与信发系统 第12行明确钉钉对接的定制服务和对接能力。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_knowledge",
+            "rule_id": "9466963b-b93a-5f28-ba60-c0fad32d504a"
+          },
+          "maintenance_url": "/knowledge?rule=9466963b-b93a-5f28-ba60-c0fad32d504a"
+        },
+        {
+          "id": "98694720d17966450ef15984c21ae8967f7ea6705b4995517f4eab2d881919e4",
+          "code": "accessory_quantity_unconfirmed",
+          "field": "quantity_review",
+          "missing_fields": [
+            "quantity_review"
+          ],
+          "message": "数量依据尚未单独确认（旧公式不等于确认）",
+          "object_kind": "knowledge",
+          "object_id": "9c7037e8-c66c-53d7-8cfc-215457e12f12",
+          "object_revision": 1,
+          "role_id": null,
+          "package_id": "28b513aa-c06b-448d-aedd-afc5090f0733",
+          "package_revision": 1,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "会议预约与信发系统 第9行明确单点登录对接的定制服务和对接能力。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_knowledge",
+            "rule_id": "9c7037e8-c66c-53d7-8cfc-215457e12f12"
+          },
+          "maintenance_url": "/knowledge?rule=9c7037e8-c66c-53d7-8cfc-215457e12f12"
+        },
+        {
+          "id": "329c4bc04072159e3afb73484337e938376a6905a0c27549e43eb8c6a492134d",
+          "code": "accessory_quantity_unconfirmed",
+          "field": "quantity_review",
+          "missing_fields": [
+            "quantity_review"
+          ],
+          "message": "数量依据尚未单独确认（旧公式不等于确认）",
+          "object_kind": "knowledge",
+          "object_id": "db5977e3-7aec-51e0-98e7-a8390723f173",
+          "object_revision": 1,
+          "role_id": null,
+          "package_id": "28b513aa-c06b-448d-aedd-afc5090f0733",
+          "package_revision": 1,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "会议预约与信发系统 第13行明确OA系统对接的定制服务和对接能力。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_knowledge",
+            "rule_id": "db5977e3-7aec-51e0-98e7-a8390723f173"
+          },
+          "maintenance_url": "/knowledge?rule=db5977e3-7aec-51e0-98e7-a8390723f173"
+        },
+        {
+          "id": "68a2b62af70058883fbc47dfa43c914ad44bf1ef92631b307f89600d03d839e4",
+          "code": "sharing_basis_missing",
+          "field": "sharing",
+          "missing_fields": [
+            "sharing"
+          ],
+          "message": "共用部署缺少已确认依据；独立部署不受此项影响",
+          "object_kind": "knowledge_package",
+          "object_id": "28b513aa-c06b-448d-aedd-afc5090f0733",
+          "object_revision": 1,
+          "role_id": null,
+          "package_id": "28b513aa-c06b-448d-aedd-afc5090f0733",
+          "package_revision": 1,
+          "scenario": "shared",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "会议预约与信发系统 第17行；来源 fc27e275-ceb7-484a-9098-9122702e3c9e；CRIR-1516N 会议预约与信息发布系统服务器；备注：\n会议预约与信发系统 第18行；来源 facc338e-f3f8-4de3-b8a2-a696f7292cb0；CRIR-GL20S 会议预约与信息发布管理系统；备注：\n第17行服务器支持 Linux，第18行软件支持 Linux 部署；数量、容量、授权和跨系统共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "e401b647-18ee-42b0-9f9f-120628e5b1b9"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=e401b647-18ee-42b0-9f9f-120628e5b1b9"
+        }
+      ],
+      "gap_count": 31
+    },
+    {
+      "id": "3febf40b-da31-508a-bd92-8cf88819f972",
+      "revision": 1,
+      "name": "分布式无纸化会务系统2.0 · 历史报价资料核对",
+      "status": "draft",
+      "gap_count": 210
+    },
+    {
+      "id": "7f012387-66e6-5534-b832-261dcca5abf1",
+      "revision": 1,
+      "name": "安全无纸化V3.0 · 历史报价资料核对",
+      "status": "draft",
+      "gap_count": 92
+    },
+    {
+      "id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+      "revision": 2,
+      "name": "红盾无纸化会议系统 · Windows · 试点资料核对",
+      "status": "draft",
+      "gaps": [
+        {
+          "id": "98d89ea8d0ae5787526c7bcb112f828ab58223f7e5473a2bd0944f0cfc47c1b2",
+          "code": "published_package_missing",
+          "field": "knowledge_package_id",
+          "missing_fields": [
+            "knowledge_package_id"
+          ],
+          "message": "资料包尚未发布",
+          "object_kind": "knowledge_package",
+          "object_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "object_revision": 2,
+          "role_id": null,
+          "package_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "package_revision": 2,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "红盾无纸化会议系统 第6行；来源 7292073f-30e3-4dfa-8caa-e40f61a55f8b；PCS-1516N 无纸化会议主机；备注：因特尔处理器+优班图系统，50台终端以内使用\n红盾无纸化会议系统 第7行；来源 37ee825a-8ddc-4e7b-840c-ff8c87532753；PCS-15110N 无纸化会议主机；备注：因特尔处理器+优班图系统，50-100台终端以使用\n红盾无纸化会议系统 第8行；来源 a5d62354-ee5d-47f4-8dcc-26c5ffc86a48；RS-MSC100 无纸化会议系统服务端软件(windows)；备注：适用于windows系统\n第8行软件要求 Windows；第6-7行主机备注为优班图。Windows 部署主机、授权数量、资源需求及共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。\n【Windows 分支范围核对 2026-09-28】引用相关配置与原有关系，不确认跨环境兼容、数量、共享或全套覆盖。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+        },
+        {
+          "id": "ad6db0b4bf33c4007b8417ddcd98d8fb5c4feb831d8e1b4f5a6ce3ec89ab140f",
+          "code": "role_definition_unconfirmed",
+          "field": "status",
+          "missing_fields": [
+            "status"
+          ],
+          "message": "角色必要性及功能分支待确认",
+          "object_kind": "system_definition",
+          "object_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4",
+          "object_revision": 2,
+          "role_id": "server-software",
+          "package_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "package_revision": 2,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "红盾无纸化会议系统 第6行；来源 7292073f-30e3-4dfa-8caa-e40f61a55f8b；PCS-1516N 无纸化会议主机；备注：因特尔处理器+优班图系统，50台终端以内使用\n红盾无纸化会议系统 第7行；来源 37ee825a-8ddc-4e7b-840c-ff8c87532753；PCS-15110N 无纸化会议主机；备注：因特尔处理器+优班图系统，50-100台终端以使用\n红盾无纸化会议系统 第8行；来源 a5d62354-ee5d-47f4-8dcc-26c5ffc86a48；RS-MSC100 无纸化会议系统服务端软件(windows)；备注：适用于windows系统\n第8行软件要求 Windows；第6-7行主机备注为优班图。Windows 部署主机、授权数量、资源需求及共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。\n【Windows 分支范围核对 2026-09-28】仅整理目录角色与出处；角色必要性待确认，false不表示已确认可省略。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+        },
+        {
+          "id": "7782e27af3250e24601bb06007a628f7814ad93ff9d2c5a0cfa6d775af75e3cf",
+          "code": "accessory_coverage_missing",
+          "field": "coverage.accessories",
+          "missing_fields": [
+            "coverage.accessories"
+          ],
+          "message": "配套覆盖范围尚未核对完整",
+          "object_kind": "system_definition",
+          "object_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4",
+          "object_revision": 2,
+          "role_id": "server-software",
+          "package_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "package_revision": 2,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "红盾无纸化会议系统 第6行；来源 7292073f-30e3-4dfa-8caa-e40f61a55f8b；PCS-1516N 无纸化会议主机；备注：因特尔处理器+优班图系统，50台终端以内使用\n红盾无纸化会议系统 第7行；来源 37ee825a-8ddc-4e7b-840c-ff8c87532753；PCS-15110N 无纸化会议主机；备注：因特尔处理器+优班图系统，50-100台终端以使用\n红盾无纸化会议系统 第8行；来源 a5d62354-ee5d-47f4-8dcc-26c5ffc86a48；RS-MSC100 无纸化会议系统服务端软件(windows)；备注：适用于windows系统\n第8行软件要求 Windows；第6-7行主机备注为优班图。Windows 部署主机、授权数量、资源需求及共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。\n【Windows 分支范围核对 2026-09-28】仅整理目录角色与出处；角色必要性待确认，false不表示已确认可省略。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+        },
+        {
+          "id": "492e7b83c9eda8bf082f595e728f86dfb9bc8d1ce0893fdfbb910f1455367401",
+          "code": "capacity_basis_missing",
+          "field": "coverage.resources",
+          "missing_fields": [
+            "coverage.resources"
+          ],
+          "message": "是否需要资源核算待确认",
+          "object_kind": "system_definition",
+          "object_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4",
+          "object_revision": 2,
+          "role_id": "server-software",
+          "package_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "package_revision": 2,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "红盾无纸化会议系统 第6行；来源 7292073f-30e3-4dfa-8caa-e40f61a55f8b；PCS-1516N 无纸化会议主机；备注：因特尔处理器+优班图系统，50台终端以内使用\n红盾无纸化会议系统 第7行；来源 37ee825a-8ddc-4e7b-840c-ff8c87532753；PCS-15110N 无纸化会议主机；备注：因特尔处理器+优班图系统，50-100台终端以使用\n红盾无纸化会议系统 第8行；来源 a5d62354-ee5d-47f4-8dcc-26c5ffc86a48；RS-MSC100 无纸化会议系统服务端软件(windows)；备注：适用于windows系统\n第8行软件要求 Windows；第6-7行主机备注为优班图。Windows 部署主机、授权数量、资源需求及共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。\n【Windows 分支范围核对 2026-09-28】仅整理目录角色与出处；角色必要性待确认，false不表示已确认可省略。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+        },
+        {
+          "id": "cfad327e0d0d83ad7c9d0f69a6b06b0353e04b886881d9557f4747915bda0657",
+          "code": "role_quantity_missing",
+          "field": "quantity_basis",
+          "missing_fields": [
+            "quantity_basis"
+          ],
+          "message": "角色数量依据待确认",
+          "object_kind": "system_definition",
+          "object_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4",
+          "object_revision": 2,
+          "role_id": "server-software",
+          "package_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "package_revision": 2,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "红盾无纸化会议系统 第6行；来源 7292073f-30e3-4dfa-8caa-e40f61a55f8b；PCS-1516N 无纸化会议主机；备注：因特尔处理器+优班图系统，50台终端以内使用\n红盾无纸化会议系统 第7行；来源 37ee825a-8ddc-4e7b-840c-ff8c87532753；PCS-15110N 无纸化会议主机；备注：因特尔处理器+优班图系统，50-100台终端以使用\n红盾无纸化会议系统 第8行；来源 a5d62354-ee5d-47f4-8dcc-26c5ffc86a48；RS-MSC100 无纸化会议系统服务端软件(windows)；备注：适用于windows系统\n第8行软件要求 Windows；第6-7行主机备注为优班图。Windows 部署主机、授权数量、资源需求及共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。\n【Windows 分支范围核对 2026-09-28】仅整理目录角色与出处；角色必要性待确认，false不表示已确认可省略。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+        },
+        {
+          "id": "09e4014a7c24ee1e222bf5468b0ecaf642c63f0a48759ed30b16cb86af42654a",
+          "code": "role_definition_unconfirmed",
+          "field": "status",
+          "missing_fields": [
+            "status"
+          ],
+          "message": "角色必要性及功能分支待确认",
+          "object_kind": "system_definition",
+          "object_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4",
+          "object_revision": 2,
+          "role_id": "server",
+          "package_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "package_revision": 2,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "红盾无纸化会议系统 第6行；来源 7292073f-30e3-4dfa-8caa-e40f61a55f8b；PCS-1516N 无纸化会议主机；备注：因特尔处理器+优班图系统，50台终端以内使用\n红盾无纸化会议系统 第7行；来源 37ee825a-8ddc-4e7b-840c-ff8c87532753；PCS-15110N 无纸化会议主机；备注：因特尔处理器+优班图系统，50-100台终端以使用\n红盾无纸化会议系统 第8行；来源 a5d62354-ee5d-47f4-8dcc-26c5ffc86a48；RS-MSC100 无纸化会议系统服务端软件(windows)；备注：适用于windows系统\n第8行软件要求 Windows；第6-7行主机备注为优班图。Windows 部署主机、授权数量、资源需求及共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。\n【Windows 分支范围核对 2026-09-28】仅整理目录角色与出处；角色必要性待确认，false不表示已确认可省略。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+        },
+        {
+          "id": "5aa0d0e1163f47e19dd7b730cf9d1a03c877d2e51a5dadf51b6ae767148302a3",
+          "code": "role_candidates_missing",
+          "field": "members",
+          "missing_fields": [
+            "members"
+          ],
+          "message": "缺少匹配此系统和角色的适用关系",
+          "object_kind": "system_definition",
+          "object_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4",
+          "object_revision": 2,
+          "role_id": "server",
+          "package_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "package_revision": 2,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "红盾无纸化会议系统 第6行；来源 7292073f-30e3-4dfa-8caa-e40f61a55f8b；PCS-1516N 无纸化会议主机；备注：因特尔处理器+优班图系统，50台终端以内使用\n红盾无纸化会议系统 第7行；来源 37ee825a-8ddc-4e7b-840c-ff8c87532753；PCS-15110N 无纸化会议主机；备注：因特尔处理器+优班图系统，50-100台终端以使用\n红盾无纸化会议系统 第8行；来源 a5d62354-ee5d-47f4-8dcc-26c5ffc86a48；RS-MSC100 无纸化会议系统服务端软件(windows)；备注：适用于windows系统\n第8行软件要求 Windows；第6-7行主机备注为优班图。Windows 部署主机、授权数量、资源需求及共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。\n【Windows 分支范围核对 2026-09-28】仅整理目录角色与出处；角色必要性待确认，false不表示已确认可省略。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+        },
+        {
+          "id": "a2fba51210610a575aa8ccde768f400029fe047344875441174d751896964f3c",
+          "code": "accessory_coverage_missing",
+          "field": "coverage.accessories",
+          "missing_fields": [
+            "coverage.accessories"
+          ],
+          "message": "配套覆盖范围尚未核对完整",
+          "object_kind": "system_definition",
+          "object_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4",
+          "object_revision": 2,
+          "role_id": "server",
+          "package_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "package_revision": 2,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "红盾无纸化会议系统 第6行；来源 7292073f-30e3-4dfa-8caa-e40f61a55f8b；PCS-1516N 无纸化会议主机；备注：因特尔处理器+优班图系统，50台终端以内使用\n红盾无纸化会议系统 第7行；来源 37ee825a-8ddc-4e7b-840c-ff8c87532753；PCS-15110N 无纸化会议主机；备注：因特尔处理器+优班图系统，50-100台终端以使用\n红盾无纸化会议系统 第8行；来源 a5d62354-ee5d-47f4-8dcc-26c5ffc86a48；RS-MSC100 无纸化会议系统服务端软件(windows)；备注：适用于windows系统\n第8行软件要求 Windows；第6-7行主机备注为优班图。Windows 部署主机、授权数量、资源需求及共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。\n【Windows 分支范围核对 2026-09-28】仅整理目录角色与出处；角色必要性待确认，false不表示已确认可省略。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+        },
+        {
+          "id": "cc553d189c6eda7ae92379358740c478b2b12d7a28117087e99ff10ec2d4c8c4",
+          "code": "capacity_basis_missing",
+          "field": "coverage.resources",
+          "missing_fields": [
+            "coverage.resources"
+          ],
+          "message": "是否需要资源核算待确认",
+          "object_kind": "system_definition",
+          "object_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4",
+          "object_revision": 2,
+          "role_id": "server",
+          "package_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "package_revision": 2,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "红盾无纸化会议系统 第6行；来源 7292073f-30e3-4dfa-8caa-e40f61a55f8b；PCS-1516N 无纸化会议主机；备注：因特尔处理器+优班图系统，50台终端以内使用\n红盾无纸化会议系统 第7行；来源 37ee825a-8ddc-4e7b-840c-ff8c87532753；PCS-15110N 无纸化会议主机；备注：因特尔处理器+优班图系统，50-100台终端以使用\n红盾无纸化会议系统 第8行；来源 a5d62354-ee5d-47f4-8dcc-26c5ffc86a48；RS-MSC100 无纸化会议系统服务端软件(windows)；备注：适用于windows系统\n第8行软件要求 Windows；第6-7行主机备注为优班图。Windows 部署主机、授权数量、资源需求及共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。\n【Windows 分支范围核对 2026-09-28】仅整理目录角色与出处；角色必要性待确认，false不表示已确认可省略。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+        },
+        {
+          "id": "757bebda2d47e0bf95321213541b8ddb8c3406331b4a7061210767f275666c01",
+          "code": "role_quantity_missing",
+          "field": "quantity_basis",
+          "missing_fields": [
+            "quantity_basis"
+          ],
+          "message": "角色数量依据待确认",
+          "object_kind": "system_definition",
+          "object_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4",
+          "object_revision": 2,
+          "role_id": "server",
+          "package_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "package_revision": 2,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "红盾无纸化会议系统 第6行；来源 7292073f-30e3-4dfa-8caa-e40f61a55f8b；PCS-1516N 无纸化会议主机；备注：因特尔处理器+优班图系统，50台终端以内使用\n红盾无纸化会议系统 第7行；来源 37ee825a-8ddc-4e7b-840c-ff8c87532753；PCS-15110N 无纸化会议主机；备注：因特尔处理器+优班图系统，50-100台终端以使用\n红盾无纸化会议系统 第8行；来源 a5d62354-ee5d-47f4-8dcc-26c5ffc86a48；RS-MSC100 无纸化会议系统服务端软件(windows)；备注：适用于windows系统\n第8行软件要求 Windows；第6-7行主机备注为优班图。Windows 部署主机、授权数量、资源需求及共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。\n【Windows 分支范围核对 2026-09-28】仅整理目录角色与出处；角色必要性待确认，false不表示已确认可省略。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+        },
+        {
+          "id": "018a5c128e1bca39cb34d39336982fc9e452b1a04ad9b65dce776209c43bc813",
+          "code": "role_definition_unconfirmed",
+          "field": "status",
+          "missing_fields": [
+            "status"
+          ],
+          "message": "角色必要性及功能分支待确认",
+          "object_kind": "system_definition",
+          "object_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4",
+          "object_revision": 2,
+          "role_id": "terminal",
+          "package_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "package_revision": 2,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "红盾无纸化会议系统 第6行；来源 7292073f-30e3-4dfa-8caa-e40f61a55f8b；PCS-1516N 无纸化会议主机；备注：因特尔处理器+优班图系统，50台终端以内使用\n红盾无纸化会议系统 第7行；来源 37ee825a-8ddc-4e7b-840c-ff8c87532753；PCS-15110N 无纸化会议主机；备注：因特尔处理器+优班图系统，50-100台终端以使用\n红盾无纸化会议系统 第8行；来源 a5d62354-ee5d-47f4-8dcc-26c5ffc86a48；RS-MSC100 无纸化会议系统服务端软件(windows)；备注：适用于windows系统\n第8行软件要求 Windows；第6-7行主机备注为优班图。Windows 部署主机、授权数量、资源需求及共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。\n【Windows 分支范围核对 2026-09-28】仅整理目录角色与出处；角色必要性待确认，false不表示已确认可省略。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+        },
+        {
+          "id": "6f63e8195fd7041407a9f4974ceba12391aa832b20df7ec25a55ed2eea08d881",
+          "code": "accessory_coverage_missing",
+          "field": "coverage.accessories",
+          "missing_fields": [
+            "coverage.accessories"
+          ],
+          "message": "配套覆盖范围尚未核对完整",
+          "object_kind": "system_definition",
+          "object_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4",
+          "object_revision": 2,
+          "role_id": "terminal",
+          "package_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "package_revision": 2,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "红盾无纸化会议系统 第6行；来源 7292073f-30e3-4dfa-8caa-e40f61a55f8b；PCS-1516N 无纸化会议主机；备注：因特尔处理器+优班图系统，50台终端以内使用\n红盾无纸化会议系统 第7行；来源 37ee825a-8ddc-4e7b-840c-ff8c87532753；PCS-15110N 无纸化会议主机；备注：因特尔处理器+优班图系统，50-100台终端以使用\n红盾无纸化会议系统 第8行；来源 a5d62354-ee5d-47f4-8dcc-26c5ffc86a48；RS-MSC100 无纸化会议系统服务端软件(windows)；备注：适用于windows系统\n第8行软件要求 Windows；第6-7行主机备注为优班图。Windows 部署主机、授权数量、资源需求及共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。\n【Windows 分支范围核对 2026-09-28】仅整理目录角色与出处；角色必要性待确认，false不表示已确认可省略。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+        },
+        {
+          "id": "db35a42ab6a627949e65d509147c3d200836c0ed0b2a49d410eed272786de5aa",
+          "code": "capacity_basis_missing",
+          "field": "coverage.resources",
+          "missing_fields": [
+            "coverage.resources"
+          ],
+          "message": "是否需要资源核算待确认",
+          "object_kind": "system_definition",
+          "object_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4",
+          "object_revision": 2,
+          "role_id": "terminal",
+          "package_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "package_revision": 2,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "红盾无纸化会议系统 第6行；来源 7292073f-30e3-4dfa-8caa-e40f61a55f8b；PCS-1516N 无纸化会议主机；备注：因特尔处理器+优班图系统，50台终端以内使用\n红盾无纸化会议系统 第7行；来源 37ee825a-8ddc-4e7b-840c-ff8c87532753；PCS-15110N 无纸化会议主机；备注：因特尔处理器+优班图系统，50-100台终端以使用\n红盾无纸化会议系统 第8行；来源 a5d62354-ee5d-47f4-8dcc-26c5ffc86a48；RS-MSC100 无纸化会议系统服务端软件(windows)；备注：适用于windows系统\n第8行软件要求 Windows；第6-7行主机备注为优班图。Windows 部署主机、授权数量、资源需求及共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。\n【Windows 分支范围核对 2026-09-28】仅整理目录角色与出处；角色必要性待确认，false不表示已确认可省略。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+        },
+        {
+          "id": "74c900fc92add8f5f0d1b219f3826fa51884ddeffe108cea41e3d6c2d1cbaf56",
+          "code": "role_quantity_missing",
+          "field": "quantity_basis",
+          "missing_fields": [
+            "quantity_basis"
+          ],
+          "message": "角色数量依据待确认",
+          "object_kind": "system_definition",
+          "object_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4",
+          "object_revision": 2,
+          "role_id": "terminal",
+          "package_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "package_revision": 2,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "红盾无纸化会议系统 第6行；来源 7292073f-30e3-4dfa-8caa-e40f61a55f8b；PCS-1516N 无纸化会议主机；备注：因特尔处理器+优班图系统，50台终端以内使用\n红盾无纸化会议系统 第7行；来源 37ee825a-8ddc-4e7b-840c-ff8c87532753；PCS-15110N 无纸化会议主机；备注：因特尔处理器+优班图系统，50-100台终端以使用\n红盾无纸化会议系统 第8行；来源 a5d62354-ee5d-47f4-8dcc-26c5ffc86a48；RS-MSC100 无纸化会议系统服务端软件(windows)；备注：适用于windows系统\n第8行软件要求 Windows；第6-7行主机备注为优班图。Windows 部署主机、授权数量、资源需求及共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。\n【Windows 分支范围核对 2026-09-28】仅整理目录角色与出处；角色必要性待确认，false不表示已确认可省略。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+        },
+        {
+          "id": "3de691446b2258dd0e38a4a627a5a0f52ecb3adbb5e584b3595452417efe7818",
+          "code": "role_definition_unconfirmed",
+          "field": "status",
+          "missing_fields": [
+            "status"
+          ],
+          "message": "角色必要性及功能分支待确认",
+          "object_kind": "system_definition",
+          "object_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4",
+          "object_revision": 2,
+          "role_id": "license",
+          "package_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "package_revision": 2,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "红盾无纸化会议系统 第6行；来源 7292073f-30e3-4dfa-8caa-e40f61a55f8b；PCS-1516N 无纸化会议主机；备注：因特尔处理器+优班图系统，50台终端以内使用\n红盾无纸化会议系统 第7行；来源 37ee825a-8ddc-4e7b-840c-ff8c87532753；PCS-15110N 无纸化会议主机；备注：因特尔处理器+优班图系统，50-100台终端以使用\n红盾无纸化会议系统 第8行；来源 a5d62354-ee5d-47f4-8dcc-26c5ffc86a48；RS-MSC100 无纸化会议系统服务端软件(windows)；备注：适用于windows系统\n第8行软件要求 Windows；第6-7行主机备注为优班图。Windows 部署主机、授权数量、资源需求及共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。\n【Windows 分支范围核对 2026-09-28】仅整理目录角色与出处；角色必要性待确认，false不表示已确认可省略。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+        },
+        {
+          "id": "c4b8c6b245434ef950304c0d843c3444668d201c3ae0eab34c4a34e9f8a63432",
+          "code": "role_candidates_missing",
+          "field": "members",
+          "missing_fields": [
+            "members"
+          ],
+          "message": "缺少匹配此系统和角色的适用关系",
+          "object_kind": "system_definition",
+          "object_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4",
+          "object_revision": 2,
+          "role_id": "license",
+          "package_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "package_revision": 2,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "红盾无纸化会议系统 第6行；来源 7292073f-30e3-4dfa-8caa-e40f61a55f8b；PCS-1516N 无纸化会议主机；备注：因特尔处理器+优班图系统，50台终端以内使用\n红盾无纸化会议系统 第7行；来源 37ee825a-8ddc-4e7b-840c-ff8c87532753；PCS-15110N 无纸化会议主机；备注：因特尔处理器+优班图系统，50-100台终端以使用\n红盾无纸化会议系统 第8行；来源 a5d62354-ee5d-47f4-8dcc-26c5ffc86a48；RS-MSC100 无纸化会议系统服务端软件(windows)；备注：适用于windows系统\n第8行软件要求 Windows；第6-7行主机备注为优班图。Windows 部署主机、授权数量、资源需求及共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。\n【Windows 分支范围核对 2026-09-28】仅整理目录角色与出处；角色必要性待确认，false不表示已确认可省略。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+        },
+        {
+          "id": "896d17d3a587283b3d15b860dfd299b05f4d0d173144f202e0fc61a37abb93b0",
+          "code": "accessory_coverage_missing",
+          "field": "coverage.accessories",
+          "missing_fields": [
+            "coverage.accessories"
+          ],
+          "message": "配套覆盖范围尚未核对完整",
+          "object_kind": "system_definition",
+          "object_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4",
+          "object_revision": 2,
+          "role_id": "license",
+          "package_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "package_revision": 2,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "红盾无纸化会议系统 第6行；来源 7292073f-30e3-4dfa-8caa-e40f61a55f8b；PCS-1516N 无纸化会议主机；备注：因特尔处理器+优班图系统，50台终端以内使用\n红盾无纸化会议系统 第7行；来源 37ee825a-8ddc-4e7b-840c-ff8c87532753；PCS-15110N 无纸化会议主机；备注：因特尔处理器+优班图系统，50-100台终端以使用\n红盾无纸化会议系统 第8行；来源 a5d62354-ee5d-47f4-8dcc-26c5ffc86a48；RS-MSC100 无纸化会议系统服务端软件(windows)；备注：适用于windows系统\n第8行软件要求 Windows；第6-7行主机备注为优班图。Windows 部署主机、授权数量、资源需求及共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。\n【Windows 分支范围核对 2026-09-28】仅整理目录角色与出处；角色必要性待确认，false不表示已确认可省略。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+        },
+        {
+          "id": "751626e38247452db00e34c08f736e55f0d508eb21a4a0a1e248a5e813e48027",
+          "code": "capacity_basis_missing",
+          "field": "coverage.resources",
+          "missing_fields": [
+            "coverage.resources"
+          ],
+          "message": "是否需要资源核算待确认",
+          "object_kind": "system_definition",
+          "object_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4",
+          "object_revision": 2,
+          "role_id": "license",
+          "package_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "package_revision": 2,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "红盾无纸化会议系统 第6行；来源 7292073f-30e3-4dfa-8caa-e40f61a55f8b；PCS-1516N 无纸化会议主机；备注：因特尔处理器+优班图系统，50台终端以内使用\n红盾无纸化会议系统 第7行；来源 37ee825a-8ddc-4e7b-840c-ff8c87532753；PCS-15110N 无纸化会议主机；备注：因特尔处理器+优班图系统，50-100台终端以使用\n红盾无纸化会议系统 第8行；来源 a5d62354-ee5d-47f4-8dcc-26c5ffc86a48；RS-MSC100 无纸化会议系统服务端软件(windows)；备注：适用于windows系统\n第8行软件要求 Windows；第6-7行主机备注为优班图。Windows 部署主机、授权数量、资源需求及共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。\n【Windows 分支范围核对 2026-09-28】仅整理目录角色与出处；角色必要性待确认，false不表示已确认可省略。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+        },
+        {
+          "id": "928aa221237903958f399a7340eb60b9e8cc6107d1de4823dbbabbabf86d0e02",
+          "code": "role_quantity_missing",
+          "field": "quantity_basis",
+          "missing_fields": [
+            "quantity_basis"
+          ],
+          "message": "角色数量依据待确认",
+          "object_kind": "system_definition",
+          "object_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4",
+          "object_revision": 2,
+          "role_id": "license",
+          "package_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "package_revision": 2,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "红盾无纸化会议系统 第6行；来源 7292073f-30e3-4dfa-8caa-e40f61a55f8b；PCS-1516N 无纸化会议主机；备注：因特尔处理器+优班图系统，50台终端以内使用\n红盾无纸化会议系统 第7行；来源 37ee825a-8ddc-4e7b-840c-ff8c87532753；PCS-15110N 无纸化会议主机；备注：因特尔处理器+优班图系统，50-100台终端以使用\n红盾无纸化会议系统 第8行；来源 a5d62354-ee5d-47f4-8dcc-26c5ffc86a48；RS-MSC100 无纸化会议系统服务端软件(windows)；备注：适用于windows系统\n第8行软件要求 Windows；第6-7行主机备注为优班图。Windows 部署主机、授权数量、资源需求及共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。\n【Windows 分支范围核对 2026-09-28】仅整理目录角色与出处；角色必要性待确认，false不表示已确认可省略。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+        },
+        {
+          "id": "02ce495243c6fe6fd091281bf5afbfa2558ccdc953c834ebe42244f8372488cf",
+          "code": "role_definition_unconfirmed",
+          "field": "status",
+          "missing_fields": [
+            "status"
+          ],
+          "message": "角色必要性及功能分支待确认",
+          "object_kind": "system_definition",
+          "object_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4",
+          "object_revision": 2,
+          "role_id": "client-software",
+          "package_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "package_revision": 2,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "红盾无纸化会议系统 第6行；来源 7292073f-30e3-4dfa-8caa-e40f61a55f8b；PCS-1516N 无纸化会议主机；备注：因特尔处理器+优班图系统，50台终端以内使用\n红盾无纸化会议系统 第7行；来源 37ee825a-8ddc-4e7b-840c-ff8c87532753；PCS-15110N 无纸化会议主机；备注：因特尔处理器+优班图系统，50-100台终端以使用\n红盾无纸化会议系统 第8行；来源 a5d62354-ee5d-47f4-8dcc-26c5ffc86a48；RS-MSC100 无纸化会议系统服务端软件(windows)；备注：适用于windows系统\n第8行软件要求 Windows；第6-7行主机备注为优班图。Windows 部署主机、授权数量、资源需求及共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。\n【Windows 分支范围核对 2026-09-28】仅整理目录角色与出处；角色必要性待确认，false不表示已确认可省略。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+        },
+        {
+          "id": "943c0839fb9d5e7542d2222bd75d0806917f64f024bd945dd0f7fdb0134e0977",
+          "code": "accessory_coverage_missing",
+          "field": "coverage.accessories",
+          "missing_fields": [
+            "coverage.accessories"
+          ],
+          "message": "配套覆盖范围尚未核对完整",
+          "object_kind": "system_definition",
+          "object_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4",
+          "object_revision": 2,
+          "role_id": "client-software",
+          "package_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "package_revision": 2,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "红盾无纸化会议系统 第6行；来源 7292073f-30e3-4dfa-8caa-e40f61a55f8b；PCS-1516N 无纸化会议主机；备注：因特尔处理器+优班图系统，50台终端以内使用\n红盾无纸化会议系统 第7行；来源 37ee825a-8ddc-4e7b-840c-ff8c87532753；PCS-15110N 无纸化会议主机；备注：因特尔处理器+优班图系统，50-100台终端以使用\n红盾无纸化会议系统 第8行；来源 a5d62354-ee5d-47f4-8dcc-26c5ffc86a48；RS-MSC100 无纸化会议系统服务端软件(windows)；备注：适用于windows系统\n第8行软件要求 Windows；第6-7行主机备注为优班图。Windows 部署主机、授权数量、资源需求及共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。\n【Windows 分支范围核对 2026-09-28】仅整理目录角色与出处；角色必要性待确认，false不表示已确认可省略。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+        },
+        {
+          "id": "7a3ef1b17bc06bd5f1462a61188b41d1bec1d2b20f17575bce87dbf0d2b195af",
+          "code": "capacity_basis_missing",
+          "field": "coverage.resources",
+          "missing_fields": [
+            "coverage.resources"
+          ],
+          "message": "是否需要资源核算待确认",
+          "object_kind": "system_definition",
+          "object_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4",
+          "object_revision": 2,
+          "role_id": "client-software",
+          "package_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "package_revision": 2,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "红盾无纸化会议系统 第6行；来源 7292073f-30e3-4dfa-8caa-e40f61a55f8b；PCS-1516N 无纸化会议主机；备注：因特尔处理器+优班图系统，50台终端以内使用\n红盾无纸化会议系统 第7行；来源 37ee825a-8ddc-4e7b-840c-ff8c87532753；PCS-15110N 无纸化会议主机；备注：因特尔处理器+优班图系统，50-100台终端以使用\n红盾无纸化会议系统 第8行；来源 a5d62354-ee5d-47f4-8dcc-26c5ffc86a48；RS-MSC100 无纸化会议系统服务端软件(windows)；备注：适用于windows系统\n第8行软件要求 Windows；第6-7行主机备注为优班图。Windows 部署主机、授权数量、资源需求及共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。\n【Windows 分支范围核对 2026-09-28】仅整理目录角色与出处；角色必要性待确认，false不表示已确认可省略。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+        },
+        {
+          "id": "c78f966ad034a4ff7e059e499d6101a2a7436fabb1ea70d5c48ac3707c8323e5",
+          "code": "role_quantity_missing",
+          "field": "quantity_basis",
+          "missing_fields": [
+            "quantity_basis"
+          ],
+          "message": "角色数量依据待确认",
+          "object_kind": "system_definition",
+          "object_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4",
+          "object_revision": 2,
+          "role_id": "client-software",
+          "package_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "package_revision": 2,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "红盾无纸化会议系统 第6行；来源 7292073f-30e3-4dfa-8caa-e40f61a55f8b；PCS-1516N 无纸化会议主机；备注：因特尔处理器+优班图系统，50台终端以内使用\n红盾无纸化会议系统 第7行；来源 37ee825a-8ddc-4e7b-840c-ff8c87532753；PCS-15110N 无纸化会议主机；备注：因特尔处理器+优班图系统，50-100台终端以使用\n红盾无纸化会议系统 第8行；来源 a5d62354-ee5d-47f4-8dcc-26c5ffc86a48；RS-MSC100 无纸化会议系统服务端软件(windows)；备注：适用于windows系统\n第8行软件要求 Windows；第6-7行主机备注为优班图。Windows 部署主机、授权数量、资源需求及共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。\n【Windows 分支范围核对 2026-09-28】仅整理目录角色与出处；角色必要性待确认，false不表示已确认可省略。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+        },
+        {
+          "id": "3b75ada31a51c7ee7ab31ab2d1134c0680ead0b41cb71443b880be31f890d5f6",
+          "code": "role_definition_unconfirmed",
+          "field": "status",
+          "missing_fields": [
+            "status"
+          ],
+          "message": "角色必要性及功能分支待确认",
+          "object_kind": "system_definition",
+          "object_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4",
+          "object_revision": 2,
+          "role_id": "fence",
+          "package_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "package_revision": 2,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "红盾无纸化会议系统 第6行；来源 7292073f-30e3-4dfa-8caa-e40f61a55f8b；PCS-1516N 无纸化会议主机；备注：因特尔处理器+优班图系统，50台终端以内使用\n红盾无纸化会议系统 第7行；来源 37ee825a-8ddc-4e7b-840c-ff8c87532753；PCS-15110N 无纸化会议主机；备注：因特尔处理器+优班图系统，50-100台终端以使用\n红盾无纸化会议系统 第8行；来源 a5d62354-ee5d-47f4-8dcc-26c5ffc86a48；RS-MSC100 无纸化会议系统服务端软件(windows)；备注：适用于windows系统\n第8行软件要求 Windows；第6-7行主机备注为优班图。Windows 部署主机、授权数量、资源需求及共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。\n【Windows 分支范围核对 2026-09-28】仅整理目录角色与出处；角色必要性待确认，false不表示已确认可省略。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+        },
+        {
+          "id": "1a63a195fcd71a2f8973a0e702b517d071db31cadd3d5c0e6e219ca628d787af",
+          "code": "role_candidates_missing",
+          "field": "members",
+          "missing_fields": [
+            "members"
+          ],
+          "message": "缺少匹配此系统和角色的适用关系",
+          "object_kind": "system_definition",
+          "object_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4",
+          "object_revision": 2,
+          "role_id": "fence",
+          "package_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "package_revision": 2,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "红盾无纸化会议系统 第6行；来源 7292073f-30e3-4dfa-8caa-e40f61a55f8b；PCS-1516N 无纸化会议主机；备注：因特尔处理器+优班图系统，50台终端以内使用\n红盾无纸化会议系统 第7行；来源 37ee825a-8ddc-4e7b-840c-ff8c87532753；PCS-15110N 无纸化会议主机；备注：因特尔处理器+优班图系统，50-100台终端以使用\n红盾无纸化会议系统 第8行；来源 a5d62354-ee5d-47f4-8dcc-26c5ffc86a48；RS-MSC100 无纸化会议系统服务端软件(windows)；备注：适用于windows系统\n第8行软件要求 Windows；第6-7行主机备注为优班图。Windows 部署主机、授权数量、资源需求及共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。\n【Windows 分支范围核对 2026-09-28】仅整理目录角色与出处；角色必要性待确认，false不表示已确认可省略。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+        },
+        {
+          "id": "6a13ff039c7fbf378221faf4676b4da890a2bf141c3ff0bf55c1008a9cc2d5b4",
+          "code": "accessory_coverage_missing",
+          "field": "coverage.accessories",
+          "missing_fields": [
+            "coverage.accessories"
+          ],
+          "message": "配套覆盖范围尚未核对完整",
+          "object_kind": "system_definition",
+          "object_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4",
+          "object_revision": 2,
+          "role_id": "fence",
+          "package_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "package_revision": 2,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "红盾无纸化会议系统 第6行；来源 7292073f-30e3-4dfa-8caa-e40f61a55f8b；PCS-1516N 无纸化会议主机；备注：因特尔处理器+优班图系统，50台终端以内使用\n红盾无纸化会议系统 第7行；来源 37ee825a-8ddc-4e7b-840c-ff8c87532753；PCS-15110N 无纸化会议主机；备注：因特尔处理器+优班图系统，50-100台终端以使用\n红盾无纸化会议系统 第8行；来源 a5d62354-ee5d-47f4-8dcc-26c5ffc86a48；RS-MSC100 无纸化会议系统服务端软件(windows)；备注：适用于windows系统\n第8行软件要求 Windows；第6-7行主机备注为优班图。Windows 部署主机、授权数量、资源需求及共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。\n【Windows 分支范围核对 2026-09-28】仅整理目录角色与出处；角色必要性待确认，false不表示已确认可省略。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+        },
+        {
+          "id": "2f5dae3ca81c07bb06d74ebb81e43c499377dd3b1fb9a3ebab5db8f4611d9098",
+          "code": "capacity_basis_missing",
+          "field": "coverage.resources",
+          "missing_fields": [
+            "coverage.resources"
+          ],
+          "message": "是否需要资源核算待确认",
+          "object_kind": "system_definition",
+          "object_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4",
+          "object_revision": 2,
+          "role_id": "fence",
+          "package_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "package_revision": 2,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "红盾无纸化会议系统 第6行；来源 7292073f-30e3-4dfa-8caa-e40f61a55f8b；PCS-1516N 无纸化会议主机；备注：因特尔处理器+优班图系统，50台终端以内使用\n红盾无纸化会议系统 第7行；来源 37ee825a-8ddc-4e7b-840c-ff8c87532753；PCS-15110N 无纸化会议主机；备注：因特尔处理器+优班图系统，50-100台终端以使用\n红盾无纸化会议系统 第8行；来源 a5d62354-ee5d-47f4-8dcc-26c5ffc86a48；RS-MSC100 无纸化会议系统服务端软件(windows)；备注：适用于windows系统\n第8行软件要求 Windows；第6-7行主机备注为优班图。Windows 部署主机、授权数量、资源需求及共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。\n【Windows 分支范围核对 2026-09-28】仅整理目录角色与出处；角色必要性待确认，false不表示已确认可省略。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+        },
+        {
+          "id": "19c826410094b678ed98a21a52460e55da3867946356e0609373c547c8440da4",
+          "code": "role_quantity_missing",
+          "field": "quantity_basis",
+          "missing_fields": [
+            "quantity_basis"
+          ],
+          "message": "角色数量依据待确认",
+          "object_kind": "system_definition",
+          "object_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4",
+          "object_revision": 2,
+          "role_id": "fence",
+          "package_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "package_revision": 2,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "红盾无纸化会议系统 第6行；来源 7292073f-30e3-4dfa-8caa-e40f61a55f8b；PCS-1516N 无纸化会议主机；备注：因特尔处理器+优班图系统，50台终端以内使用\n红盾无纸化会议系统 第7行；来源 37ee825a-8ddc-4e7b-840c-ff8c87532753；PCS-15110N 无纸化会议主机；备注：因特尔处理器+优班图系统，50-100台终端以使用\n红盾无纸化会议系统 第8行；来源 a5d62354-ee5d-47f4-8dcc-26c5ffc86a48；RS-MSC100 无纸化会议系统服务端软件(windows)；备注：适用于windows系统\n第8行软件要求 Windows；第6-7行主机备注为优班图。Windows 部署主机、授权数量、资源需求及共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。\n【Windows 分支范围核对 2026-09-28】仅整理目录角色与出处；角色必要性待确认，false不表示已确认可省略。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+        },
+        {
+          "id": "4126846befcbd8aa6d1949eddac5b7dd929b6006103022ea0984f8f18cdd2efa",
+          "code": "role_definition_unconfirmed",
+          "field": "status",
+          "missing_fields": [
+            "status"
+          ],
+          "message": "角色必要性及功能分支待确认",
+          "object_kind": "system_definition",
+          "object_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4",
+          "object_revision": 2,
+          "role_id": "lift",
+          "package_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "package_revision": 2,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "红盾无纸化会议系统 第6行；来源 7292073f-30e3-4dfa-8caa-e40f61a55f8b；PCS-1516N 无纸化会议主机；备注：因特尔处理器+优班图系统，50台终端以内使用\n红盾无纸化会议系统 第7行；来源 37ee825a-8ddc-4e7b-840c-ff8c87532753；PCS-15110N 无纸化会议主机；备注：因特尔处理器+优班图系统，50-100台终端以使用\n红盾无纸化会议系统 第8行；来源 a5d62354-ee5d-47f4-8dcc-26c5ffc86a48；RS-MSC100 无纸化会议系统服务端软件(windows)；备注：适用于windows系统\n第8行软件要求 Windows；第6-7行主机备注为优班图。Windows 部署主机、授权数量、资源需求及共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。\n【Windows 分支范围核对 2026-09-28】仅整理目录角色与出处；角色必要性待确认，false不表示已确认可省略。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+        },
+        {
+          "id": "7fb21a0dfb621353496ae8796ee642f370fbcba382f97e40af2b7395f1775dbe",
+          "code": "role_candidates_missing",
+          "field": "members",
+          "missing_fields": [
+            "members"
+          ],
+          "message": "缺少匹配此系统和角色的适用关系",
+          "object_kind": "system_definition",
+          "object_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4",
+          "object_revision": 2,
+          "role_id": "lift",
+          "package_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "package_revision": 2,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "红盾无纸化会议系统 第6行；来源 7292073f-30e3-4dfa-8caa-e40f61a55f8b；PCS-1516N 无纸化会议主机；备注：因特尔处理器+优班图系统，50台终端以内使用\n红盾无纸化会议系统 第7行；来源 37ee825a-8ddc-4e7b-840c-ff8c87532753；PCS-15110N 无纸化会议主机；备注：因特尔处理器+优班图系统，50-100台终端以使用\n红盾无纸化会议系统 第8行；来源 a5d62354-ee5d-47f4-8dcc-26c5ffc86a48；RS-MSC100 无纸化会议系统服务端软件(windows)；备注：适用于windows系统\n第8行软件要求 Windows；第6-7行主机备注为优班图。Windows 部署主机、授权数量、资源需求及共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。\n【Windows 分支范围核对 2026-09-28】仅整理目录角色与出处；角色必要性待确认，false不表示已确认可省略。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+        },
+        {
+          "id": "a136181d18aba05371d37f4650466fdb617abd70d5bf872bea4dbf55e3cc67ae",
+          "code": "accessory_coverage_missing",
+          "field": "coverage.accessories",
+          "missing_fields": [
+            "coverage.accessories"
+          ],
+          "message": "配套覆盖范围尚未核对完整",
+          "object_kind": "system_definition",
+          "object_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4",
+          "object_revision": 2,
+          "role_id": "lift",
+          "package_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "package_revision": 2,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "红盾无纸化会议系统 第6行；来源 7292073f-30e3-4dfa-8caa-e40f61a55f8b；PCS-1516N 无纸化会议主机；备注：因特尔处理器+优班图系统，50台终端以内使用\n红盾无纸化会议系统 第7行；来源 37ee825a-8ddc-4e7b-840c-ff8c87532753；PCS-15110N 无纸化会议主机；备注：因特尔处理器+优班图系统，50-100台终端以使用\n红盾无纸化会议系统 第8行；来源 a5d62354-ee5d-47f4-8dcc-26c5ffc86a48；RS-MSC100 无纸化会议系统服务端软件(windows)；备注：适用于windows系统\n第8行软件要求 Windows；第6-7行主机备注为优班图。Windows 部署主机、授权数量、资源需求及共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。\n【Windows 分支范围核对 2026-09-28】仅整理目录角色与出处；角色必要性待确认，false不表示已确认可省略。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+        },
+        {
+          "id": "fc1e43a394f60ec3d905f2a688a465db9e0a913e9b95a16423b54de9a484ccd6",
+          "code": "capacity_basis_missing",
+          "field": "coverage.resources",
+          "missing_fields": [
+            "coverage.resources"
+          ],
+          "message": "是否需要资源核算待确认",
+          "object_kind": "system_definition",
+          "object_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4",
+          "object_revision": 2,
+          "role_id": "lift",
+          "package_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "package_revision": 2,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "红盾无纸化会议系统 第6行；来源 7292073f-30e3-4dfa-8caa-e40f61a55f8b；PCS-1516N 无纸化会议主机；备注：因特尔处理器+优班图系统，50台终端以内使用\n红盾无纸化会议系统 第7行；来源 37ee825a-8ddc-4e7b-840c-ff8c87532753；PCS-15110N 无纸化会议主机；备注：因特尔处理器+优班图系统，50-100台终端以使用\n红盾无纸化会议系统 第8行；来源 a5d62354-ee5d-47f4-8dcc-26c5ffc86a48；RS-MSC100 无纸化会议系统服务端软件(windows)；备注：适用于windows系统\n第8行软件要求 Windows；第6-7行主机备注为优班图。Windows 部署主机、授权数量、资源需求及共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。\n【Windows 分支范围核对 2026-09-28】仅整理目录角色与出处；角色必要性待确认，false不表示已确认可省略。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+        },
+        {
+          "id": "1371245b419c7260aea8e1e1fb54cbd56843f45c26ff1b18cc977786cc0d95f0",
+          "code": "role_quantity_missing",
+          "field": "quantity_basis",
+          "missing_fields": [
+            "quantity_basis"
+          ],
+          "message": "角色数量依据待确认",
+          "object_kind": "system_definition",
+          "object_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4",
+          "object_revision": 2,
+          "role_id": "lift",
+          "package_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "package_revision": 2,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "红盾无纸化会议系统 第6行；来源 7292073f-30e3-4dfa-8caa-e40f61a55f8b；PCS-1516N 无纸化会议主机；备注：因特尔处理器+优班图系统，50台终端以内使用\n红盾无纸化会议系统 第7行；来源 37ee825a-8ddc-4e7b-840c-ff8c87532753；PCS-15110N 无纸化会议主机；备注：因特尔处理器+优班图系统，50-100台终端以使用\n红盾无纸化会议系统 第8行；来源 a5d62354-ee5d-47f4-8dcc-26c5ffc86a48；RS-MSC100 无纸化会议系统服务端软件(windows)；备注：适用于windows系统\n第8行软件要求 Windows；第6-7行主机备注为优班图。Windows 部署主机、授权数量、资源需求及共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。\n【Windows 分支范围核对 2026-09-28】仅整理目录角色与出处；角色必要性待确认，false不表示已确认可省略。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+        },
+        {
+          "id": "0fcee8e84b7ecf3750840eba20c151b8f534214862cc9a78dfef9c4ce3e21165",
+          "code": "role_definition_unconfirmed",
+          "field": "status",
+          "missing_fields": [
+            "status"
+          ],
+          "message": "角色必要性及功能分支待确认",
+          "object_kind": "system_definition",
+          "object_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4",
+          "object_revision": 2,
+          "role_id": "conference-host",
+          "package_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "package_revision": 2,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "红盾无纸化会议系统 第6行；来源 7292073f-30e3-4dfa-8caa-e40f61a55f8b；PCS-1516N 无纸化会议主机；备注：因特尔处理器+优班图系统，50台终端以内使用\n红盾无纸化会议系统 第7行；来源 37ee825a-8ddc-4e7b-840c-ff8c87532753；PCS-15110N 无纸化会议主机；备注：因特尔处理器+优班图系统，50-100台终端以使用\n红盾无纸化会议系统 第8行；来源 a5d62354-ee5d-47f4-8dcc-26c5ffc86a48；RS-MSC100 无纸化会议系统服务端软件(windows)；备注：适用于windows系统\n第8行软件要求 Windows；第6-7行主机备注为优班图。Windows 部署主机、授权数量、资源需求及共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。\n【Windows 分支范围核对 2026-09-28】仅整理目录角色与出处；角色必要性待确认，false不表示已确认可省略。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+        },
+        {
+          "id": "ab8d4cff68c29389d77763d164f2cdad4d0f9a6a32f6fa959aed8c7a9c39f7aa",
+          "code": "role_candidates_missing",
+          "field": "members",
+          "missing_fields": [
+            "members"
+          ],
+          "message": "缺少匹配此系统和角色的适用关系",
+          "object_kind": "system_definition",
+          "object_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4",
+          "object_revision": 2,
+          "role_id": "conference-host",
+          "package_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "package_revision": 2,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "红盾无纸化会议系统 第6行；来源 7292073f-30e3-4dfa-8caa-e40f61a55f8b；PCS-1516N 无纸化会议主机；备注：因特尔处理器+优班图系统，50台终端以内使用\n红盾无纸化会议系统 第7行；来源 37ee825a-8ddc-4e7b-840c-ff8c87532753；PCS-15110N 无纸化会议主机；备注：因特尔处理器+优班图系统，50-100台终端以使用\n红盾无纸化会议系统 第8行；来源 a5d62354-ee5d-47f4-8dcc-26c5ffc86a48；RS-MSC100 无纸化会议系统服务端软件(windows)；备注：适用于windows系统\n第8行软件要求 Windows；第6-7行主机备注为优班图。Windows 部署主机、授权数量、资源需求及共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。\n【Windows 分支范围核对 2026-09-28】仅整理目录角色与出处；角色必要性待确认，false不表示已确认可省略。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+        },
+        {
+          "id": "d2ac8ae0782ba5881c0ddd68dfdf672820f728ea5eefefaf41c9f2fb605fa9bc",
+          "code": "accessory_coverage_missing",
+          "field": "coverage.accessories",
+          "missing_fields": [
+            "coverage.accessories"
+          ],
+          "message": "配套覆盖范围尚未核对完整",
+          "object_kind": "system_definition",
+          "object_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4",
+          "object_revision": 2,
+          "role_id": "conference-host",
+          "package_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "package_revision": 2,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "红盾无纸化会议系统 第6行；来源 7292073f-30e3-4dfa-8caa-e40f61a55f8b；PCS-1516N 无纸化会议主机；备注：因特尔处理器+优班图系统，50台终端以内使用\n红盾无纸化会议系统 第7行；来源 37ee825a-8ddc-4e7b-840c-ff8c87532753；PCS-15110N 无纸化会议主机；备注：因特尔处理器+优班图系统，50-100台终端以使用\n红盾无纸化会议系统 第8行；来源 a5d62354-ee5d-47f4-8dcc-26c5ffc86a48；RS-MSC100 无纸化会议系统服务端软件(windows)；备注：适用于windows系统\n第8行软件要求 Windows；第6-7行主机备注为优班图。Windows 部署主机、授权数量、资源需求及共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。\n【Windows 分支范围核对 2026-09-28】仅整理目录角色与出处；角色必要性待确认，false不表示已确认可省略。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+        },
+        {
+          "id": "2ad2d0ebe561717aba2c565c6b5f193d49f964ae2dad4a3fd997123d0c881c5b",
+          "code": "capacity_basis_missing",
+          "field": "coverage.resources",
+          "missing_fields": [
+            "coverage.resources"
+          ],
+          "message": "是否需要资源核算待确认",
+          "object_kind": "system_definition",
+          "object_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4",
+          "object_revision": 2,
+          "role_id": "conference-host",
+          "package_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "package_revision": 2,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "红盾无纸化会议系统 第6行；来源 7292073f-30e3-4dfa-8caa-e40f61a55f8b；PCS-1516N 无纸化会议主机；备注：因特尔处理器+优班图系统，50台终端以内使用\n红盾无纸化会议系统 第7行；来源 37ee825a-8ddc-4e7b-840c-ff8c87532753；PCS-15110N 无纸化会议主机；备注：因特尔处理器+优班图系统，50-100台终端以使用\n红盾无纸化会议系统 第8行；来源 a5d62354-ee5d-47f4-8dcc-26c5ffc86a48；RS-MSC100 无纸化会议系统服务端软件(windows)；备注：适用于windows系统\n第8行软件要求 Windows；第6-7行主机备注为优班图。Windows 部署主机、授权数量、资源需求及共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。\n【Windows 分支范围核对 2026-09-28】仅整理目录角色与出处；角色必要性待确认，false不表示已确认可省略。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+        },
+        {
+          "id": "d383648a1b5c3f3e4979d9a1a069f08724fd3aa3a2b0b75ead99884eb5b04e10",
+          "code": "role_quantity_missing",
+          "field": "quantity_basis",
+          "missing_fields": [
+            "quantity_basis"
+          ],
+          "message": "角色数量依据待确认",
+          "object_kind": "system_definition",
+          "object_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4",
+          "object_revision": 2,
+          "role_id": "conference-host",
+          "package_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "package_revision": 2,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "红盾无纸化会议系统 第6行；来源 7292073f-30e3-4dfa-8caa-e40f61a55f8b；PCS-1516N 无纸化会议主机；备注：因特尔处理器+优班图系统，50台终端以内使用\n红盾无纸化会议系统 第7行；来源 37ee825a-8ddc-4e7b-840c-ff8c87532753；PCS-15110N 无纸化会议主机；备注：因特尔处理器+优班图系统，50-100台终端以使用\n红盾无纸化会议系统 第8行；来源 a5d62354-ee5d-47f4-8dcc-26c5ffc86a48；RS-MSC100 无纸化会议系统服务端软件(windows)；备注：适用于windows系统\n第8行软件要求 Windows；第6-7行主机备注为优班图。Windows 部署主机、授权数量、资源需求及共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。\n【Windows 分支范围核对 2026-09-28】仅整理目录角色与出处；角色必要性待确认，false不表示已确认可省略。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+        },
+        {
+          "id": "3fbd372806d8fce21ce2aecf9304c2ef2b18b8a9b1b6a64089ee0c4b76486c09",
+          "code": "role_definition_unconfirmed",
+          "field": "status",
+          "missing_fields": [
+            "status"
+          ],
+          "message": "角色必要性及功能分支待确认",
+          "object_kind": "system_definition",
+          "object_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4",
+          "object_revision": 2,
+          "role_id": "chair-mic",
+          "package_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "package_revision": 2,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "红盾无纸化会议系统 第6行；来源 7292073f-30e3-4dfa-8caa-e40f61a55f8b；PCS-1516N 无纸化会议主机；备注：因特尔处理器+优班图系统，50台终端以内使用\n红盾无纸化会议系统 第7行；来源 37ee825a-8ddc-4e7b-840c-ff8c87532753；PCS-15110N 无纸化会议主机；备注：因特尔处理器+优班图系统，50-100台终端以使用\n红盾无纸化会议系统 第8行；来源 a5d62354-ee5d-47f4-8dcc-26c5ffc86a48；RS-MSC100 无纸化会议系统服务端软件(windows)；备注：适用于windows系统\n第8行软件要求 Windows；第6-7行主机备注为优班图。Windows 部署主机、授权数量、资源需求及共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。\n【Windows 分支范围核对 2026-09-28】仅整理目录角色与出处；角色必要性待确认，false不表示已确认可省略。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+        },
+        {
+          "id": "ae9741e9cfadb641b18e524e1d3f5b4e0ede806200c28e6b2199bdb9861f8ad2",
+          "code": "role_candidates_missing",
+          "field": "members",
+          "missing_fields": [
+            "members"
+          ],
+          "message": "缺少匹配此系统和角色的适用关系",
+          "object_kind": "system_definition",
+          "object_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4",
+          "object_revision": 2,
+          "role_id": "chair-mic",
+          "package_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "package_revision": 2,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "红盾无纸化会议系统 第6行；来源 7292073f-30e3-4dfa-8caa-e40f61a55f8b；PCS-1516N 无纸化会议主机；备注：因特尔处理器+优班图系统，50台终端以内使用\n红盾无纸化会议系统 第7行；来源 37ee825a-8ddc-4e7b-840c-ff8c87532753；PCS-15110N 无纸化会议主机；备注：因特尔处理器+优班图系统，50-100台终端以使用\n红盾无纸化会议系统 第8行；来源 a5d62354-ee5d-47f4-8dcc-26c5ffc86a48；RS-MSC100 无纸化会议系统服务端软件(windows)；备注：适用于windows系统\n第8行软件要求 Windows；第6-7行主机备注为优班图。Windows 部署主机、授权数量、资源需求及共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。\n【Windows 分支范围核对 2026-09-28】仅整理目录角色与出处；角色必要性待确认，false不表示已确认可省略。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+        },
+        {
+          "id": "d803c6734d6f81dd83e20ee75ebead92e6272b9e03b9c443da3436a2c724d79d",
+          "code": "accessory_coverage_missing",
+          "field": "coverage.accessories",
+          "missing_fields": [
+            "coverage.accessories"
+          ],
+          "message": "配套覆盖范围尚未核对完整",
+          "object_kind": "system_definition",
+          "object_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4",
+          "object_revision": 2,
+          "role_id": "chair-mic",
+          "package_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "package_revision": 2,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "红盾无纸化会议系统 第6行；来源 7292073f-30e3-4dfa-8caa-e40f61a55f8b；PCS-1516N 无纸化会议主机；备注：因特尔处理器+优班图系统，50台终端以内使用\n红盾无纸化会议系统 第7行；来源 37ee825a-8ddc-4e7b-840c-ff8c87532753；PCS-15110N 无纸化会议主机；备注：因特尔处理器+优班图系统，50-100台终端以使用\n红盾无纸化会议系统 第8行；来源 a5d62354-ee5d-47f4-8dcc-26c5ffc86a48；RS-MSC100 无纸化会议系统服务端软件(windows)；备注：适用于windows系统\n第8行软件要求 Windows；第6-7行主机备注为优班图。Windows 部署主机、授权数量、资源需求及共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。\n【Windows 分支范围核对 2026-09-28】仅整理目录角色与出处；角色必要性待确认，false不表示已确认可省略。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+        },
+        {
+          "id": "eaa50950fa40d3beab44029e23a5f77ee62d2b12275f5d09e1c9d670ec43cd2e",
+          "code": "capacity_basis_missing",
+          "field": "coverage.resources",
+          "missing_fields": [
+            "coverage.resources"
+          ],
+          "message": "是否需要资源核算待确认",
+          "object_kind": "system_definition",
+          "object_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4",
+          "object_revision": 2,
+          "role_id": "chair-mic",
+          "package_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "package_revision": 2,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "红盾无纸化会议系统 第6行；来源 7292073f-30e3-4dfa-8caa-e40f61a55f8b；PCS-1516N 无纸化会议主机；备注：因特尔处理器+优班图系统，50台终端以内使用\n红盾无纸化会议系统 第7行；来源 37ee825a-8ddc-4e7b-840c-ff8c87532753；PCS-15110N 无纸化会议主机；备注：因特尔处理器+优班图系统，50-100台终端以使用\n红盾无纸化会议系统 第8行；来源 a5d62354-ee5d-47f4-8dcc-26c5ffc86a48；RS-MSC100 无纸化会议系统服务端软件(windows)；备注：适用于windows系统\n第8行软件要求 Windows；第6-7行主机备注为优班图。Windows 部署主机、授权数量、资源需求及共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。\n【Windows 分支范围核对 2026-09-28】仅整理目录角色与出处；角色必要性待确认，false不表示已确认可省略。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+        },
+        {
+          "id": "ada95f7c258da750265945e8097b343c696285e35ed192b7ad5d111fa779f69a",
+          "code": "role_quantity_missing",
+          "field": "quantity_basis",
+          "missing_fields": [
+            "quantity_basis"
+          ],
+          "message": "角色数量依据待确认",
+          "object_kind": "system_definition",
+          "object_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4",
+          "object_revision": 2,
+          "role_id": "chair-mic",
+          "package_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "package_revision": 2,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "红盾无纸化会议系统 第6行；来源 7292073f-30e3-4dfa-8caa-e40f61a55f8b；PCS-1516N 无纸化会议主机；备注：因特尔处理器+优班图系统，50台终端以内使用\n红盾无纸化会议系统 第7行；来源 37ee825a-8ddc-4e7b-840c-ff8c87532753；PCS-15110N 无纸化会议主机；备注：因特尔处理器+优班图系统，50-100台终端以使用\n红盾无纸化会议系统 第8行；来源 a5d62354-ee5d-47f4-8dcc-26c5ffc86a48；RS-MSC100 无纸化会议系统服务端软件(windows)；备注：适用于windows系统\n第8行软件要求 Windows；第6-7行主机备注为优班图。Windows 部署主机、授权数量、资源需求及共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。\n【Windows 分支范围核对 2026-09-28】仅整理目录角色与出处；角色必要性待确认，false不表示已确认可省略。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+        },
+        {
+          "id": "e9c897d4daa347cbb994425b8d710e6baa988a7d07a87e2de7f5e4c81eb34cd6",
+          "code": "role_definition_unconfirmed",
+          "field": "status",
+          "missing_fields": [
+            "status"
+          ],
+          "message": "角色必要性及功能分支待确认",
+          "object_kind": "system_definition",
+          "object_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4",
+          "object_revision": 2,
+          "role_id": "delegate-mic",
+          "package_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "package_revision": 2,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "红盾无纸化会议系统 第6行；来源 7292073f-30e3-4dfa-8caa-e40f61a55f8b；PCS-1516N 无纸化会议主机；备注：因特尔处理器+优班图系统，50台终端以内使用\n红盾无纸化会议系统 第7行；来源 37ee825a-8ddc-4e7b-840c-ff8c87532753；PCS-15110N 无纸化会议主机；备注：因特尔处理器+优班图系统，50-100台终端以使用\n红盾无纸化会议系统 第8行；来源 a5d62354-ee5d-47f4-8dcc-26c5ffc86a48；RS-MSC100 无纸化会议系统服务端软件(windows)；备注：适用于windows系统\n第8行软件要求 Windows；第6-7行主机备注为优班图。Windows 部署主机、授权数量、资源需求及共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。\n【Windows 分支范围核对 2026-09-28】仅整理目录角色与出处；角色必要性待确认，false不表示已确认可省略。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+        },
+        {
+          "id": "c2d7c12fb2dbeea6c39ff70b0411a91fe28e263865ca0dace9c34a649b4090fe",
+          "code": "role_candidates_missing",
+          "field": "members",
+          "missing_fields": [
+            "members"
+          ],
+          "message": "缺少匹配此系统和角色的适用关系",
+          "object_kind": "system_definition",
+          "object_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4",
+          "object_revision": 2,
+          "role_id": "delegate-mic",
+          "package_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "package_revision": 2,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "红盾无纸化会议系统 第6行；来源 7292073f-30e3-4dfa-8caa-e40f61a55f8b；PCS-1516N 无纸化会议主机；备注：因特尔处理器+优班图系统，50台终端以内使用\n红盾无纸化会议系统 第7行；来源 37ee825a-8ddc-4e7b-840c-ff8c87532753；PCS-15110N 无纸化会议主机；备注：因特尔处理器+优班图系统，50-100台终端以使用\n红盾无纸化会议系统 第8行；来源 a5d62354-ee5d-47f4-8dcc-26c5ffc86a48；RS-MSC100 无纸化会议系统服务端软件(windows)；备注：适用于windows系统\n第8行软件要求 Windows；第6-7行主机备注为优班图。Windows 部署主机、授权数量、资源需求及共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。\n【Windows 分支范围核对 2026-09-28】仅整理目录角色与出处；角色必要性待确认，false不表示已确认可省略。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+        },
+        {
+          "id": "72be22718aa90cba90e2c42ecdb212818ec51cecd93618b64feccc4291aef14e",
+          "code": "accessory_coverage_missing",
+          "field": "coverage.accessories",
+          "missing_fields": [
+            "coverage.accessories"
+          ],
+          "message": "配套覆盖范围尚未核对完整",
+          "object_kind": "system_definition",
+          "object_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4",
+          "object_revision": 2,
+          "role_id": "delegate-mic",
+          "package_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "package_revision": 2,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "红盾无纸化会议系统 第6行；来源 7292073f-30e3-4dfa-8caa-e40f61a55f8b；PCS-1516N 无纸化会议主机；备注：因特尔处理器+优班图系统，50台终端以内使用\n红盾无纸化会议系统 第7行；来源 37ee825a-8ddc-4e7b-840c-ff8c87532753；PCS-15110N 无纸化会议主机；备注：因特尔处理器+优班图系统，50-100台终端以使用\n红盾无纸化会议系统 第8行；来源 a5d62354-ee5d-47f4-8dcc-26c5ffc86a48；RS-MSC100 无纸化会议系统服务端软件(windows)；备注：适用于windows系统\n第8行软件要求 Windows；第6-7行主机备注为优班图。Windows 部署主机、授权数量、资源需求及共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。\n【Windows 分支范围核对 2026-09-28】仅整理目录角色与出处；角色必要性待确认，false不表示已确认可省略。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+        },
+        {
+          "id": "12f4836418c4d83da511df68b239fc41ce3a3a5787683a9456fc1e8ffb810ed5",
+          "code": "capacity_basis_missing",
+          "field": "coverage.resources",
+          "missing_fields": [
+            "coverage.resources"
+          ],
+          "message": "是否需要资源核算待确认",
+          "object_kind": "system_definition",
+          "object_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4",
+          "object_revision": 2,
+          "role_id": "delegate-mic",
+          "package_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "package_revision": 2,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "红盾无纸化会议系统 第6行；来源 7292073f-30e3-4dfa-8caa-e40f61a55f8b；PCS-1516N 无纸化会议主机；备注：因特尔处理器+优班图系统，50台终端以内使用\n红盾无纸化会议系统 第7行；来源 37ee825a-8ddc-4e7b-840c-ff8c87532753；PCS-15110N 无纸化会议主机；备注：因特尔处理器+优班图系统，50-100台终端以使用\n红盾无纸化会议系统 第8行；来源 a5d62354-ee5d-47f4-8dcc-26c5ffc86a48；RS-MSC100 无纸化会议系统服务端软件(windows)；备注：适用于windows系统\n第8行软件要求 Windows；第6-7行主机备注为优班图。Windows 部署主机、授权数量、资源需求及共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。\n【Windows 分支范围核对 2026-09-28】仅整理目录角色与出处；角色必要性待确认，false不表示已确认可省略。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+        },
+        {
+          "id": "31e33e68497987b3b7355874ef16f620ffcb003f2d72acd5494453eba4655a54",
+          "code": "role_quantity_missing",
+          "field": "quantity_basis",
+          "missing_fields": [
+            "quantity_basis"
+          ],
+          "message": "角色数量依据待确认",
+          "object_kind": "system_definition",
+          "object_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4",
+          "object_revision": 2,
+          "role_id": "delegate-mic",
+          "package_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "package_revision": 2,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "红盾无纸化会议系统 第6行；来源 7292073f-30e3-4dfa-8caa-e40f61a55f8b；PCS-1516N 无纸化会议主机；备注：因特尔处理器+优班图系统，50台终端以内使用\n红盾无纸化会议系统 第7行；来源 37ee825a-8ddc-4e7b-840c-ff8c87532753；PCS-15110N 无纸化会议主机；备注：因特尔处理器+优班图系统，50-100台终端以使用\n红盾无纸化会议系统 第8行；来源 a5d62354-ee5d-47f4-8dcc-26c5ffc86a48；RS-MSC100 无纸化会议系统服务端软件(windows)；备注：适用于windows系统\n第8行软件要求 Windows；第6-7行主机备注为优班图。Windows 部署主机、授权数量、资源需求及共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。\n【Windows 分支范围核对 2026-09-28】仅整理目录角色与出处；角色必要性待确认，false不表示已确认可省略。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+        },
+        {
+          "id": "dfa1a9f4c2ccd865eda1469f0bd71741740c1cd3527c62c5938e68f267b968fe",
+          "code": "relation_unconfirmed",
+          "field": "status",
+          "missing_fields": [
+            "status"
+          ],
+          "message": "关系尚未确认",
+          "object_kind": "knowledge",
+          "object_id": "05014174-b96b-4264-874e-4878317702b8",
+          "object_revision": 1,
+          "role_id": null,
+          "package_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "package_revision": 2,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "2026艾索软件产品及配套产品报价清单0604（V2.2）.xlsx；红盾无纸化会议系统 第46行；来源ID 1290b3fb-373e-485a-afac-469fc9d77f60；PCS-310C 鹅颈主席单元模块；备注原文“须搭配升降器使用，无法独立使用”。本条单独作为来源配置，不合并同型号。明确参数来自本行原文；未提取/未明确的字段保持未知。\n待确认：运行环境/安装适配条件未明确，不能根据网页访问或下载客户端推定服务器系统。；不能独立使用；兼容升降器型号及数量待确认。\n本关系仅检查原文可确认的系统角色与运行环境，不构成整套配套认证。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_knowledge",
+            "rule_id": "05014174-b96b-4264-874e-4878317702b8"
+          },
+          "maintenance_url": "/knowledge?rule=05014174-b96b-4264-874e-4878317702b8"
+        },
+        {
+          "id": "774c6d70e8a74292cb2bbfb11fa8467afd2b29faea08161e2bbd85d58103be97",
+          "code": "relation_unconfirmed",
+          "field": "status",
+          "missing_fields": [
+            "status"
+          ],
+          "message": "关系尚未确认",
+          "object_kind": "knowledge",
+          "object_id": "51421c1f-6a71-55c5-908f-599e2b8163f2",
+          "object_revision": 1,
+          "role_id": null,
+          "package_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "package_revision": 2,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "红盾无纸化会议系统 第6-8行与报价模板第105-106行。原表把 Windows 服务端软件与标注 Ubuntu 的服务器放在同一方案中，且50台与50-100台选型边界尚未转换为目标级条件，因此保留草稿。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_knowledge",
+            "rule_id": "51421c1f-6a71-55c5-908f-599e2b8163f2"
+          },
+          "maintenance_url": "/knowledge?rule=51421c1f-6a71-55c5-908f-599e2b8163f2"
+        },
+        {
+          "id": "96cb1368d1ea9325794bc7ca4f8bb69eb3a03409188b91e5f45070453887102d",
+          "code": "accessory_quantity_missing",
+          "field": "mode",
+          "missing_fields": [
+            "mode"
+          ],
+          "message": "数量公式",
+          "object_kind": "knowledge",
+          "object_id": "51421c1f-6a71-55c5-908f-599e2b8163f2",
+          "object_revision": 1,
+          "role_id": null,
+          "package_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "package_revision": 2,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "红盾无纸化会议系统 第6-8行与报价模板第105-106行。原表把 Windows 服务端软件与标注 Ubuntu 的服务器放在同一方案中，且50台与50-100台选型边界尚未转换为目标级条件，因此保留草稿。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_knowledge",
+            "rule_id": "51421c1f-6a71-55c5-908f-599e2b8163f2"
+          },
+          "maintenance_url": "/knowledge?rule=51421c1f-6a71-55c5-908f-599e2b8163f2"
+        },
+        {
+          "id": "a21fbc5b27bac47a401e85ecafb730274a3dc3cbc7b6745e30f180d5be45847e",
+          "code": "accessory_quantity_missing",
+          "field": "factor",
+          "missing_fields": [
+            "factor"
+          ],
+          "message": "数量公式",
+          "object_kind": "knowledge",
+          "object_id": "51421c1f-6a71-55c5-908f-599e2b8163f2",
+          "object_revision": 1,
+          "role_id": null,
+          "package_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "package_revision": 2,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "红盾无纸化会议系统 第6-8行与报价模板第105-106行。原表把 Windows 服务端软件与标注 Ubuntu 的服务器放在同一方案中，且50台与50-100台选型边界尚未转换为目标级条件，因此保留草稿。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_knowledge",
+            "rule_id": "51421c1f-6a71-55c5-908f-599e2b8163f2"
+          },
+          "maintenance_url": "/knowledge?rule=51421c1f-6a71-55c5-908f-599e2b8163f2"
+        },
+        {
+          "id": "ef4ba88a8980db00ebc956951c10c4a2232c349eabcd49c7818f373b2c833f71",
+          "code": "accessory_quantity_unconfirmed",
+          "field": "quantity_review",
+          "missing_fields": [
+            "quantity_review"
+          ],
+          "message": "数量依据尚未单独确认（旧公式不等于确认）",
+          "object_kind": "knowledge",
+          "object_id": "51421c1f-6a71-55c5-908f-599e2b8163f2",
+          "object_revision": 1,
+          "role_id": null,
+          "package_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "package_revision": 2,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "红盾无纸化会议系统 第6-8行与报价模板第105-106行。原表把 Windows 服务端软件与标注 Ubuntu 的服务器放在同一方案中，且50台与50-100台选型边界尚未转换为目标级条件，因此保留草稿。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_knowledge",
+            "rule_id": "51421c1f-6a71-55c5-908f-599e2b8163f2"
+          },
+          "maintenance_url": "/knowledge?rule=51421c1f-6a71-55c5-908f-599e2b8163f2"
+        },
+        {
+          "id": "596abeb253668a2c5604dfe1edad625877e907d3857fdbbb55f3e7df27fa4ce8",
+          "code": "relation_unconfirmed",
+          "field": "status",
+          "missing_fields": [
+            "status"
+          ],
+          "message": "关系尚未确认",
+          "object_kind": "knowledge",
+          "object_id": "6479b80b-68bf-4570-8150-6ea8ed849348",
+          "object_revision": 1,
+          "role_id": null,
+          "package_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "package_revision": 2,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "2026艾索软件产品及配套产品报价清单0604（V2.2）.xlsx；红盾无纸化会议系统 第35行；来源ID 5688b525-02ff-4320-829c-474cccf823d8；PCS-B120 电子围栏管理器；备注原文“推荐30平米办公室配置一个，需要使用保密模式才配置该设备”。本条单独作为来源配置，不合并同型号。明确参数来自本行原文；未提取/未明确的字段保持未知。\n待确认：运行环境/安装适配条件未明确，不能根据网页访问或下载客户端推定服务器系统。；仅保密模式适用，30平米/个为建议；未确认能否按面积线性取整、隔墙及布点条件，未自动算数量。\n本关系仅检查原文可确认的系统角色与运行环境，不构成整套配套认证。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_knowledge",
+            "rule_id": "6479b80b-68bf-4570-8150-6ea8ed849348"
+          },
+          "maintenance_url": "/knowledge?rule=6479b80b-68bf-4570-8150-6ea8ed849348"
+        },
+        {
+          "id": "0fdf912c66568a575d01246dccef28dafbc5a9b4069fad8836a9589d3b00a0ae",
+          "code": "relation_unconfirmed",
+          "field": "status",
+          "missing_fields": [
+            "status"
+          ],
+          "message": "关系尚未确认",
+          "object_kind": "knowledge",
+          "object_id": "9bed79ec-567a-4ca0-a124-4a24792646cf",
+          "object_revision": 1,
+          "role_id": null,
+          "package_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "package_revision": 2,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "2026艾索软件产品及配套产品报价清单0604（V2.2）.xlsx；红盾无纸化会议系统 第47行；来源ID c7e00776-542b-44ae-b4e1-2715160873ab；PCS-310D 鹅颈代表单元模块；备注原文“须搭配升降器使用，无法独立使用”。本条单独作为来源配置，不合并同型号。明确参数来自本行原文；未提取/未明确的字段保持未知。\n待确认：运行环境/安装适配条件未明确，不能根据网页访问或下载客户端推定服务器系统。；不能独立使用；兼容升降器型号及数量待确认。\n本关系仅检查原文可确认的系统角色与运行环境，不构成整套配套认证。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_knowledge",
+            "rule_id": "9bed79ec-567a-4ca0-a124-4a24792646cf"
+          },
+          "maintenance_url": "/knowledge?rule=9bed79ec-567a-4ca0-a124-4a24792646cf"
+        },
+        {
+          "id": "04f711199dad280ee65f999ad7fa2bf2d454cf4116803016746f036b6fdc402d",
+          "code": "accessory_quantity_unconfirmed",
+          "field": "quantity_review",
+          "missing_fields": [
+            "quantity_review"
+          ],
+          "message": "数量依据尚未单独确认（旧公式不等于确认）",
+          "object_kind": "knowledge",
+          "object_id": "b5a60f13-12e9-58bb-9430-72e508ba835f",
+          "object_revision": 1,
+          "role_id": null,
+          "package_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "package_revision": 2,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "红盾无纸化会议系统 第8、15行；报价模板第105-106行每套系统配置一套服务端软件。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_knowledge",
+            "rule_id": "b5a60f13-12e9-58bb-9430-72e508ba835f"
+          },
+          "maintenance_url": "/knowledge?rule=b5a60f13-12e9-58bb-9430-72e508ba835f"
+        },
+        {
+          "id": "598369c0cc1a5c35fc39525d0dc956380f7b12c56e8193f11cadfaa9e44bf063",
+          "code": "accessory_quantity_unconfirmed",
+          "field": "quantity_review",
+          "missing_fields": [
+            "quantity_review"
+          ],
+          "message": "数量依据尚未单独确认（旧公式不等于确认）",
+          "object_kind": "knowledge",
+          "object_id": "bb29927a-ccfb-5e8a-bcc1-d2c6e534cbcf",
+          "object_revision": 1,
+          "role_id": null,
+          "package_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "package_revision": 2,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "红盾无纸化会议系统 第35行：保密模式时建议会议室每30平方米配置一套电子围栏。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_knowledge",
+            "rule_id": "bb29927a-ccfb-5e8a-bcc1-d2c6e534cbcf"
+          },
+          "maintenance_url": "/knowledge?rule=bb29927a-ccfb-5e8a-bcc1-d2c6e534cbcf"
+        },
+        {
+          "id": "83cff4f25f50269e3ad44ef2a9be9795536ac83d0c2c1b9eee48bee50062e535",
+          "code": "relation_unconfirmed",
+          "field": "status",
+          "missing_fields": [
+            "status"
+          ],
+          "message": "关系尚未确认",
+          "object_kind": "knowledge",
+          "object_id": "c811b08b-af7e-4631-96ba-615625226171",
+          "object_revision": 1,
+          "role_id": null,
+          "package_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "package_revision": 2,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "2026艾索软件产品及配套产品报价清单0604（V2.2）.xlsx；红盾无纸化会议系统 第45行；来源ID 51b445aa-d99a-4a28-84f5-b44c723b2626；ACS-320M 跟踪型数字会议主机；备注原文“须搭配升降器使用，无法独立使用”。本条单独作为来源配置，不合并同型号。明确参数来自本行原文；未提取/未明确的字段保持未知。\n待确认：运行环境/安装适配条件未明确，不能根据网页访问或下载客户端推定服务器系统。；不能独立使用；兼容升降器型号及数量待确认。\n本关系仅检查原文可确认的系统角色与运行环境，不构成整套配套认证。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_knowledge",
+            "rule_id": "c811b08b-af7e-4631-96ba-615625226171"
+          },
+          "maintenance_url": "/knowledge?rule=c811b08b-af7e-4631-96ba-615625226171"
+        },
+        {
+          "id": "3285c2136f23528bbfa4d9cd83ee19e637193118565c2e6c5ebce0fa8ae1358a",
+          "code": "relation_unconfirmed",
+          "field": "status",
+          "missing_fields": [
+            "status"
+          ],
+          "message": "关系尚未确认",
+          "object_kind": "knowledge",
+          "object_id": "cb6037ba-521a-450a-a91f-c9bbb60a9957",
+          "object_revision": 2,
+          "role_id": null,
+          "package_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "package_revision": 2,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "2026艾索软件产品及配套产品报价清单0604（V2.2）.xlsx；红盾无纸化会议系统 第7行；来源ID 37ee825a-8ddc-4e7b-840c-ff8c87532753；型号 PCS-15110N；名称“无纸化会议主机”；备注原文“因特尔处理器+优班图系统，50-100台终端以使用”。参数依据该行完整技术参数，原文保留在来源记录。备注“50-100台终端以使用”有缺字；容量区间边界和操作系统规范名称待确认，草稿不参与检查。归属确认仅说明本来源对应这条具体配置，未合并其他同型号来源；软件版本、负载和跨系统共用无依据时保持未知。\n本次细化到红盾无纸化会议系统，不作为所有无纸化版本通用条件。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_knowledge",
+            "rule_id": "cb6037ba-521a-450a-a91f-c9bbb60a9957"
+          },
+          "maintenance_url": "/knowledge?rule=cb6037ba-521a-450a-a91f-c9bbb60a9957"
+        },
+        {
+          "id": "4b921a1e06b59d3c275c46f390afeb4dd72a1691b33bfebf1e9fcf8ca86522c6",
+          "code": "relation_unconfirmed",
+          "field": "status",
+          "missing_fields": [
+            "status"
+          ],
+          "message": "关系尚未确认",
+          "object_kind": "knowledge",
+          "object_id": "da2789b8-d849-5d1d-b3cd-8bd27154b4c4",
+          "object_revision": 1,
+          "role_id": null,
+          "package_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "package_revision": 2,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "红盾无纸化会议系统 第41-45行确认必须配会议主机；报价模板第90-99行的14席示例为1台。主机级联、主席席和线路容量尚未形成可执行数量公式。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_knowledge",
+            "rule_id": "da2789b8-d849-5d1d-b3cd-8bd27154b4c4"
+          },
+          "maintenance_url": "/knowledge?rule=da2789b8-d849-5d1d-b3cd-8bd27154b4c4"
+        },
+        {
+          "id": "9508c34ec2c6415ff4c4b622bca24aa35d6a470e2fa49819117a4ab46b68f8ad",
+          "code": "accessory_quantity_missing",
+          "field": "mode",
+          "missing_fields": [
+            "mode"
+          ],
+          "message": "数量公式",
+          "object_kind": "knowledge",
+          "object_id": "da2789b8-d849-5d1d-b3cd-8bd27154b4c4",
+          "object_revision": 1,
+          "role_id": null,
+          "package_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "package_revision": 2,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "红盾无纸化会议系统 第41-45行确认必须配会议主机；报价模板第90-99行的14席示例为1台。主机级联、主席席和线路容量尚未形成可执行数量公式。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_knowledge",
+            "rule_id": "da2789b8-d849-5d1d-b3cd-8bd27154b4c4"
+          },
+          "maintenance_url": "/knowledge?rule=da2789b8-d849-5d1d-b3cd-8bd27154b4c4"
+        },
+        {
+          "id": "80e11e86165dc140613122c318d700e56f7a9caa54b90bf1044940b0d68869d2",
+          "code": "accessory_quantity_missing",
+          "field": "factor",
+          "missing_fields": [
+            "factor"
+          ],
+          "message": "数量公式",
+          "object_kind": "knowledge",
+          "object_id": "da2789b8-d849-5d1d-b3cd-8bd27154b4c4",
+          "object_revision": 1,
+          "role_id": null,
+          "package_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "package_revision": 2,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "红盾无纸化会议系统 第41-45行确认必须配会议主机；报价模板第90-99行的14席示例为1台。主机级联、主席席和线路容量尚未形成可执行数量公式。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_knowledge",
+            "rule_id": "da2789b8-d849-5d1d-b3cd-8bd27154b4c4"
+          },
+          "maintenance_url": "/knowledge?rule=da2789b8-d849-5d1d-b3cd-8bd27154b4c4"
+        },
+        {
+          "id": "93de77904e91874b7ce1ebeb3d96d5157a6327f641653ef37717ee1d7beb5227",
+          "code": "accessory_quantity_unconfirmed",
+          "field": "quantity_review",
+          "missing_fields": [
+            "quantity_review"
+          ],
+          "message": "数量依据尚未单独确认（旧公式不等于确认）",
+          "object_kind": "knowledge",
+          "object_id": "da2789b8-d849-5d1d-b3cd-8bd27154b4c4",
+          "object_revision": 1,
+          "role_id": null,
+          "package_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "package_revision": 2,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "红盾无纸化会议系统 第41-45行确认必须配会议主机；报价模板第90-99行的14席示例为1台。主机级联、主席席和线路容量尚未形成可执行数量公式。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_knowledge",
+            "rule_id": "da2789b8-d849-5d1d-b3cd-8bd27154b4c4"
+          },
+          "maintenance_url": "/knowledge?rule=da2789b8-d849-5d1d-b3cd-8bd27154b4c4"
+        },
+        {
+          "id": "695cc9fb51d87dc4526d079b243b075482fdaa261eb151c7a8643c5a8f212832",
+          "code": "accessory_quantity_unconfirmed",
+          "field": "quantity_review",
+          "missing_fields": [
+            "quantity_review"
+          ],
+          "message": "数量依据尚未单独确认（旧公式不等于确认）",
+          "object_kind": "knowledge",
+          "object_id": "db563f6e-56b0-52a3-801c-e79dda1d2d9b",
+          "object_revision": 1,
+          "role_id": null,
+          "package_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "package_revision": 2,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "红盾无纸化会议系统 第41-47行明确带话筒升降器必须配单元模块；报价模板第90-99行以14台升降器配置1个主席模块和13个代表模块。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_knowledge",
+            "rule_id": "db563f6e-56b0-52a3-801c-e79dda1d2d9b"
+          },
+          "maintenance_url": "/knowledge?rule=db563f6e-56b0-52a3-801c-e79dda1d2d9b"
+        },
+        {
+          "id": "862c9c87c4f38e7acd372871023be1727a89def6903d59bb40cc4d816c70008b",
+          "code": "accessory_quantity_unconfirmed",
+          "field": "quantity_review",
+          "missing_fields": [
+            "quantity_review"
+          ],
+          "message": "数量依据尚未单独确认（旧公式不等于确认）",
+          "object_kind": "knowledge",
+          "object_id": "e43c5d5e-0f36-5ef5-8edd-84590fe208ae",
+          "object_revision": 1,
+          "role_id": null,
+          "package_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "package_revision": 2,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "红盾无纸化会议系统 第15-16行；报价模板第111行按终端席位配置客户端软件。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_knowledge",
+            "rule_id": "e43c5d5e-0f36-5ef5-8edd-84590fe208ae"
+          },
+          "maintenance_url": "/knowledge?rule=e43c5d5e-0f36-5ef5-8edd-84590fe208ae"
+        },
+        {
+          "id": "9c3989a71346de94a14a4e69fc14ac31251929f7f42e8a8ff88082604a262a2d",
+          "code": "relation_unconfirmed",
+          "field": "status",
+          "missing_fields": [
+            "status"
+          ],
+          "message": "关系尚未确认",
+          "object_kind": "knowledge",
+          "object_id": "ea274b7e-28e3-40ab-86ad-c13316465e85",
+          "object_revision": 1,
+          "role_id": null,
+          "package_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "package_revision": 2,
+          "scenario": "independent",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "2026艾索软件产品及配套产品报价清单0604（V2.2）.xlsx；红盾无纸化会议系统 第37行；来源ID bdf2bd91-1306-44d3-b11c-3e4a48f25180；IPH-S156A 15.6寸单屏升降器；备注原文“”。本条单独作为来源配置，不合并同型号。明确参数来自本行原文；未提取/未明确的字段保持未知。\n待确认：运行环境/安装适配条件未明确，不能根据网页访问或下载客户端推定服务器系统。\n\n2026艾索软件产品及配套产品报价清单0604（V2.2）.xlsx；红盾无纸化会议系统 第38行；来源ID 6fa01e14-b20d-4451-a0ca-245f7f1d5c8f；IPH-S173A 17.3寸单屏升降器；备注原文“”。本条单独作为来源配置，不合并同型号。明确参数来自本行原文；未提取/未明确的字段保持未知。\n待确认：运行环境/安装适配条件未明确，不能根据网页访问或下载客户端推定服务器系统。\n\n2026艾索软件产品及配套产品报价清单0604（V2.2）.xlsx；红盾无纸化会议系统 第39行；来源ID 2c57b58a-889e-4068-aecb-8ac1d6ffbe16；IPH-S156B 15.6寸双屏升降器；备注原文“”。本条单独作为来源配置，不合并同型号。明确参数来自本行原文；未提取/未明确的字段保持未知。\n待确认：运行环境/安装适配条件未明确，不能根据网页访问或下载客户端推定服务器系统。\n\n2026艾索软件产品及配套产品报价清单0604（V2.2）.xlsx；红盾无纸化会议系统 第40行；来源ID aabe4d39-36cc-4074-9fd5-b81eb5599210；IPH-S173B 17.3寸双屏升降器；备注原文“”。本条单独作为来源配置，不合并同型号。明确参数来自本行原文；未提取/未明确的字段保持未知。\n待确认：运行环境/安装适配条件未明确，不能根据网页访问或下载客户端推定服务器系统。\n\n2026艾索软件产品及配套产品报价清单0604（V2.2）.xlsx；红盾无纸化会议系统 第41行；来源ID fcb9753d-3e43-4691-a269-52f11c4e94d2；IPH-S156AM 15.6寸单屏带话筒升降器；备注原文“必配升降话筒单元模块和会议主机”。本条单独作为来源配置，不合并同型号。明确参数来自本行原文；未提取/未明确的字段保持未知。\n待确认：运行环境/安装适配条件未明确，不能根据网页访问或下载客户端推定服务器系统。；必需话筒模块与会议主机；模块型号、数量及多台设备共用主机的容量/拓扑待确认，未套用每台一主机。\n\n2026艾索软件产品及配套产品报价清单0604（V2.2）.xlsx；红盾无纸化会议系统 第42行；来源ID 82ef97f3-9fbb-4a50-9d11-ce63810cdc97；IPH-S173AM 17.3寸单屏带话筒升降器；备注原文“必配升降话筒单元模块和会议主机”。本条单独作为来源配置，不合并同型号。明确参数来自本行原文；未提取/未明确的字段保持未知。\n待确认：运行环境/安装适配条件未明确，不能根据网页访问或下载客户端推定服务器系统。；必需话筒模块与会议主机；模块型号、数量及多台设备共用主机的容量/拓扑待确认，未套用每台一主机。\n\n2026艾索软件产品及配套产品报价清单0604（V2.2）.xlsx；红盾无纸化会议系统 第43行；来源ID 44085a0b-bb43-417f-933b-d128fdfeb779；IPH-S156BM 15.6寸双屏带话筒升降器；备注原文“必配升降话筒单元模块和会议主机”。本条单独作为来源配置，不合并同型号。明确参数来自本行原文；未提取/未明确的字段保持未知。\n待确认：运行环境/安装适配条件未明确，不能根据网页访问或下载客户端推定服务器系统。；必需话筒模块与会议主机；模块型号、数量及多台设备共用主机的容量/拓扑待确认，未套用每台一主机。\n\n2026艾索软件产品及配套产品报价清单0604（V2.2）.xlsx；红盾无纸化会议系统 第44行；来源ID bf6ce29f-b7b5-4046-9b84-f2ed17cd87a1；IPH-S173BM 17.3寸双屏带话筒升降器；备注原文“必配升降话筒单元模块和会议主机”。本条单独作为来源配置，不合并同型号。明确参数来自本行原文；未提取/未明确的字段保持未知。\n待确认：运行环境/安装适配条件未明确，不能根据网页访问或下载客户端推定服务器系统。；必需话筒模块与会议主机；模块型号、数量及多台设备共用主机的容量/拓扑待确认，未套用每台一主机。\n本关系仅检查原文可确认的系统角色与运行环境，不构成整套配套认证。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_knowledge",
+            "rule_id": "ea274b7e-28e3-40ab-86ad-c13316465e85"
+          },
+          "maintenance_url": "/knowledge?rule=ea274b7e-28e3-40ab-86ad-c13316465e85"
+        },
+        {
+          "id": "d45221b305acab618fc30f7a700efdfab25ca0665dd207ce33e13f6728582b9c",
+          "code": "sharing_basis_missing",
+          "field": "sharing",
+          "missing_fields": [
+            "sharing"
+          ],
+          "message": "共用部署缺少已确认依据；独立部署不受此项影响",
+          "object_kind": "knowledge_package",
+          "object_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "object_revision": 2,
+          "role_id": null,
+          "package_id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+          "package_revision": 2,
+          "scenario": "shared",
+          "feature": "",
+          "responsibility": "knowledge",
+          "evidence": "红盾无纸化会议系统 第6行；来源 7292073f-30e3-4dfa-8caa-e40f61a55f8b；PCS-1516N 无纸化会议主机；备注：因特尔处理器+优班图系统，50台终端以内使用\n红盾无纸化会议系统 第7行；来源 37ee825a-8ddc-4e7b-840c-ff8c87532753；PCS-15110N 无纸化会议主机；备注：因特尔处理器+优班图系统，50-100台终端以使用\n红盾无纸化会议系统 第8行；来源 a5d62354-ee5d-47f4-8dcc-26c5ffc86a48；RS-MSC100 无纸化会议系统服务端软件(windows)；备注：适用于windows系统\n第8行软件要求 Windows；第6-7行主机备注为优班图。Windows 部署主机、授权数量、资源需求及共用条件待确认。\n角色必要性尚待维护者确认；草稿不代表这些角色均为可选。\n【Windows 分支范围核对 2026-09-28】引用相关配置与原有关系，不确认跨环境兼容、数量、共享或全套覆盖。",
+          "evidence_refs": [],
+          "action": {
+            "type": "edit_definition",
+            "system_definition_id": "a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+          },
+          "maintenance_url": "/knowledge?view=systems&system=a28365ce-7689-4021-ba7c-ebf8fd516bb4"
+        }
+      ],
+      "gap_count": 67
+    }
+  ]
+}

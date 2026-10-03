@@ -1,0 +1,42 @@
+FF                                                                       [100%]
+=================================== FAILURES ===================================
+__________ test_readiness_description_and_agent_share_structured_gaps __________
+
+client = <starlette.testclient.TestClient object at 0x1105974d0>
+catalog = {'imported': {'source_kind': 'excel', 'id': '60dbe231-04ef-4cbd-b5aa-a6ae46629d11', 'filename': 'test.xlsx', 'created_...b2b4-48c3-816f-485939af9f2e', 'revision': 1, 'updated_at': '2026-10-03T09:45:59.695601+00:00', 'actor': '测试维护者', ...}]}
+
+    def test_readiness_description_and_agent_share_structured_gaps(client, catalog):
+        definition, package = published(client, catalog, quantity=False, ranked=False)
+        readiness = client.get(BASE + f"/knowledge-packages/{package['id']}/readiness").json()
+        description = client.post(BASE + "/requirement-description", json=dict(
+            definition_id=definition["id"], knowledge_package_id=package["id"]
+        )).json()
+        agent = call(client, "systems_list", dict(definition_id=definition["id"],
+                                                  knowledge_package_id=package["id"]))
+>       assert readiness["gaps"] == description["generation"]["gaps"]
+               ^^^^^^^^^^^^^^^^^
+E       KeyError: 'gaps'
+
+backend/tests/configuration/test_knowledge_gap_contract.py:14: KeyError
+_______ test_shared_knowledge_gap_does_not_block_independent_generation ________
+
+client = <starlette.testclient.TestClient object at 0x1106bfb10>
+catalog = {'imported': {'source_kind': 'excel', 'id': '535007c2-8578-49ab-8a9d-3fa4ec9a3fb9', 'filename': 'test.xlsx', 'created_...83b3-485f-80bd-23fd4d33552d', 'revision': 1, 'updated_at': '2026-10-03T09:46:00.205320+00:00', 'actor': '测试维护者', ...}]}
+
+    def test_shared_knowledge_gap_does_not_block_independent_generation(client, catalog):
+        definition, package = published(client, catalog)
+        description = client.post(BASE + "/requirement-description", json=dict(
+            definition_id=definition["id"], knowledge_package_id=package["id"]
+        )).json()
+        coverage = description["generation"]
+        assert coverage["supported"]
+>       assert any(g["code"] == "sharing_basis_missing" and g["scenario"] == "shared"
+                   for g in coverage["gaps"])
+E       assert False
+E        +  where False = any(<generator object test_shared_knowledge_gap_does_not_block_independent_generation.<locals>.<genexpr> at 0x110c78e10>)
+
+backend/tests/configuration/test_knowledge_gap_contract.py:30: AssertionError
+=========================== short test summary info ============================
+FAILED backend/tests/configuration/test_knowledge_gap_contract.py::test_readiness_description_and_agent_share_structured_gaps
+FAILED backend/tests/configuration/test_knowledge_gap_contract.py::test_shared_knowledge_gap_does_not_block_independent_generation
+2 failed in 0.91s

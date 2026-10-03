@@ -30,6 +30,14 @@ def task_index(session, *, project_id=None):
         ).all()
     )
     tasks = maintenance_tasks(projects, revisions)
+    from .package_gaps import package_gap_tasks
+
+    structured, package_tasks = package_gap_tasks(session, projects=projects, project_id=project_id)
+    tasks.extend(package_tasks)
     return dict(
-        items=tasks, total=len(tasks), project_count=len(projects), basis="latest_saved_versions"
+        items=tasks,
+        total=len(tasks),
+        project_count=len(projects),
+        basis="latest_saved_versions",
+        knowledge_gaps=structured,
     )

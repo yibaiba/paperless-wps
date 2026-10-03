@@ -55,19 +55,23 @@ class Recommendation(Authored):
 
 
 def generation_coverage(definition, package):
-    gaps = []
-    if not package or package.get("status") != "published":
-        gaps.append(dict(code="published_package_missing", field="knowledge_package_id"))
-    for role in definition["roles"]:
-        quantity, fulfillment = role.get("quantity_basis"), role.get("fulfilled_by")
-        if not fulfillment and (not quantity or quantity.get("status") != "confirmed"):
-            gaps.append(
-                dict(code="role_quantity_missing", role_id=role["id"], field="quantity_basis")
-            )
-        if fulfillment and fulfillment.get("status") != "confirmed":
-            gaps.append(
-                dict(code="role_fulfillment_unconfirmed", role_id=role["id"], field="fulfilled_by")
-            )
+    from .gaps import knowledge_gaps
+
+    gaps = knowledge_gaps(definition, package)
+    basis_codes = {
+        "published_package_missing",
+        "role_quantity_missing",
+        "role_fulfillment_unconfirmed",
+        "role_fulfillment_target_missing",
+        "role_definition_unconfirmed",
+    }
     return dict(
-        supported=not gaps, gaps=gaps, recommendations=(package or {}).get("recommendations", [])
+        supported=not any(g["code"] in basis_codes for g in gaps),
+        independent_ready=not any(g["scenario"] == "independent" for g in gaps),
+        sharing_evidence_present=any(
+            r["kind"] == "sharing" and r["status"] == "confirmed"
+            for r in (package or {}).get("rules", [])
+        ),
+        gaps=gaps,
+        recommendations=(package or {}).get("recommendations", []),
     )

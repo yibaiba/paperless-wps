@@ -1,3 +1,4 @@
+import { KnowledgeGapList, type KnowledgeGap } from "./KnowledgeGapList";
 import { useQuery } from '@tanstack/react-query';
 import { Alert, Button, Card, Collapse, Space, Table, Tag, Typography } from 'antd';
 import { api } from '../../../shared/api';
@@ -18,6 +19,7 @@ type Role = {
   coverage: { evidence: string }[];
 };
 type Report = {
+  gaps: KnowledgeGap[];
   notice: string; roles: Role[]; rules: Rule[]; unmapped_rule_ids: string[];
   sharing_rule_ids: string[]; definition_status: "draft" | "confirmed";
   version_changes: { id: string; name: string; used: number; latest: number | null }[];
@@ -45,7 +47,7 @@ export function PackageReadiness({ bundle, knowledge, definitionRevision, onEdit
         { title: '已关联候选', render: (_, r) => `${r.candidate_ids.length} 个明确配置 / ${r.rule_ids.length} 条关系`, width: 220 },
         { title: '还需要补什么', render: (_, r) => r.missing.join('；') || '已登记覆盖结论，具体适配以项目检查为准' },
       ]} expandable={{ expandedRowRender: r => <Space orientation="vertical">{r.coverage.map((c, i) => <Typography.Paragraph key={i}>{c.evidence}</Typography.Paragraph>)}{r.rule_ids.map(id => { const rule = knowledge.find(k => k.id === id); return rule ? <Button key={id} onClick={() => onEdit(rule)}>维护：{rule.name}</Button> : null; })}</Space> }} />
-      <Collapse items={[{ key: 'rules', label: `配套、数量、条件及出处 · ${data.rules.length} 条`, children: <Table<Rule> rowKey="id" dataSource={data.rules} size="small" scroll={{ x: 850 }} columns={[
+      <Collapse items={[{ key: 'gaps', label: `可定位的资料缺口 · ${data.gaps.length} 项`, children: <KnowledgeGapList gaps={data.gaps} /> }, { key: 'rules', label: `配套、数量、条件及出处 · ${data.rules.length} 条`, children: <Table<Rule> rowKey="id" dataSource={data.rules} size="small" scroll={{ x: 850 }} columns={[
         { title: '固定修订', render: (_, r) => <>{r.name}<div>v{r.revision} · <Status value={r.status} /></div></> },
         { title: '待办', render: (_, r) => <>{r.missing.join('；') || '关系字段已登记，需按具体条件检查'}</> },
         { title: '项目需提供的字段', render: (_, r) => [...r.condition_fields, r.quantity_key].filter(Boolean).join('、') || '本关系未登记输入字段' },

@@ -1,17 +1,11 @@
 """Read-only package inventory, not project compatibility or publication approval."""
 
-from ..knowledge.schemas import accessory_missing_fields
-from ..knowledge.semantics import role_matches
+from ..knowledge.gaps import relation_gaps
+from .gaps import knowledge_gaps, role_gaps, role_rules
 
 
 def rule_readiness(rule):
-    missing = []
-    if rule["status"] != "confirmed":
-        missing.append("关系尚未确认" if rule["status"] == "draft" else "关系已停用")
-    if rule["kind"] == "accessory":
-        missing.extend(accessory_missing_fields(rule))
-        if rule.get("quantity_review") != "confirmed" or not rule.get("quantity_evidence"):
-            missing.append("数量依据尚未单独确认（旧公式不等于确认）")
+    missing = list(dict.fromkeys(message for _, _, message in relation_gaps(rule)))
     return dict(
         id=rule["id"],
         revision=rule["revision"],
@@ -32,29 +26,10 @@ def rule_readiness(rule):
 
 
 def role_inventory(role, *, definition, package):
-    requirement = dict(
-        system_definition_id=definition["id"],
-        system=definition["name"],
-        role_id=role["id"],
-        role=role["name"],
-    )
-    rules = [
-        r
-        for r in package["rules"]
-        if r["kind"] == "suitability" and r["status"] != "disabled" and role_matches(r, requirement)
-    ]
+    rules = role_rules(role, definition=definition, package=package)
     coverage = [c for c in package["coverage"] if c["role_id"] == role["id"]]
-    missing = []
-    if definition["status"] != "confirmed":
-        missing.append("角色必要性及功能分支待确认")
-    if not rules:
-        missing.append("缺少匹配此系统和角色的适用关系")
-    elif not any(r["status"] == "confirmed" and r.get("effect", "allow") == "allow" for r in rules):
-        missing.append("候选适用关系尚未确认")
-    if not coverage or any(c["accessories"] in ("unreviewed", "needs_review") for c in coverage):
-        missing.append("配套覆盖范围尚未核对完整")
-    if not coverage or any(c["resources"] == "unknown" for c in coverage):
-        missing.append("是否需要资源核算待确认")
+    gaps = role_gaps(role, definition=definition, package=package)
+    missing = [g["message"] for g in gaps]
     return dict(
         id=role["id"],
         name=role["name"],
@@ -109,6 +84,7 @@ def package_readiness(package, *, latest):
         unmapped_rule_ids=unmapped,
         version_changes=changes,
         sharing_rule_ids=sharing,
+        gaps=knowledge_gaps(definition, package),
         summary=dict(
             roles=len(roles),
             rules=len(rules),

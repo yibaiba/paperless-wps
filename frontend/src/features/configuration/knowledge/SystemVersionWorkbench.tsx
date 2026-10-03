@@ -48,7 +48,7 @@ export function SystemVersionWorkbench() {
     <Card title={`关系与资料缺口 · ${rules.length} 条`} extra={<Space><Button disabled={!selected.length} onClick={() => setBatchMode("edit")}>批量维护共同条件</Button><Button disabled={!selected.length} onClick={() => setBatchMode("copy")}>批量复制为待核对草稿</Button></Space>}>
       <Table<Knowledge> rowKey="id" dataSource={rules} loading={knowledge.isPending} scroll={{ x: 1050 }}
         rowSelection={{ selectedRowKeys: selected, onChange: (keys) => setSelected(keys as string[]) }} columns={[
-          { title: '关系 / 角色', render: (_, k) => <><strong>{k.name}</strong><div>{labels[k.kind]} · {k.role || '角色待映射'}</div></> },
+          { title: '关系 / 角色', render: (_, k) => <><strong>{k.name}</strong><div>{labels[k.kind]} · {definitions.data?.definitions.find(d => d.id === k.system_definition_id)?.roles.find(r => r.id === k.role_id)?.name || k.role || '角色待映射'}</div></> },
           { title: '关系确认', render: (_, k) => <Status value={k.status} /> },
           { title: '候选配置', render: (_, k) => k.kind === 'accessory' ? `${k.target_variant_ids.length} 个${k.target_variant_ids.length ? '' : ' · 待补'}` : `${k.selector.variant_ids.length} 个 / 类别系列条件` },
           { title: '数量依据', render: (_, k) => k.kind === 'accessory' ? <><Status value={k.quantity_review === 'confirmed' ? 'confirmed' : 'unknown'} /><div>{k.quantity_evidence || '缺少确认依据'}</div></> : '不适用' },
