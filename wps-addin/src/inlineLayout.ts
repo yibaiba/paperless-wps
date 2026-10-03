@@ -13,6 +13,7 @@ export interface InlineLayoutOptions {
   candidateCount: number;
   listVisible: boolean;
   showStatus: boolean;
+  statusRows?: number;
   windowChromeHeight?: number;
 }
 
@@ -30,7 +31,7 @@ export function inlineDialogSize(options: InlineLayoutOptions): InlineDialogSize
   const visibleCandidates = options.listVisible
     ? Math.min(options.candidateCount, MAX_VISIBLE_CANDIDATES) : 0;
   const contentHeight = inputHeight
-    + (options.showStatus ? STATUS_ROW_HEIGHT : 0)
+    + (options.showStatus ? STATUS_ROW_HEIGHT * (options.statusRows ?? 1) : 0)
     + (visibleCandidates * CANDIDATE_ROW_HEIGHT);
   const desiredWidth = options.listVisible
     ? Math.max(options.anchorWidth, INLINE_DIALOG_LIST_WIDTH)

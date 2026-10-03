@@ -9,10 +9,12 @@ import { applyNextEdit, restoreJournal } from '../editJournal';
 import { WpsHostAdapter } from '../host';
 import { LatestRequest } from '../latestRequest';
 import { nextEditAction, nextEditText } from '../nextEditState';
+import { nextEditNotice, NEXT_EDIT_NOTICE_ROWS } from '../nextEditPresentation';
 import { handleInlineTab } from '../nativeTab';
 import { assertInlineSession, assertWorkbookSession, captureWorkbookSession, writeInlineInput } from '../workbookSession';
 import { WorkbookRowIndex } from '../workbookRowIndex';
 import { NextEditPreview, issueText } from './NextEditPreview';
+import { NextEditNotice } from './NextEditNotice';
 
 const POSITION_POLL_MS = 300;
 
@@ -43,6 +45,7 @@ export function BusinessInlineEditor() {
     [host, context?.workbook_key, context?.profile.id, context?.profile.revision]);
   const item = result?.items[selected];
   const ready = Boolean(item && !busy && !error && !writeError && !composing && !preview);
+  const notice = context && ready ? nextEditNotice({ suggestion: item, cell: context.cell, query }) : undefined;
 
   const refresh = useCallback(() => {
     const next = host.inlineContext();
@@ -156,7 +159,7 @@ export function BusinessInlineEditor() {
   const tab = useCallback(() => {
     if (!context || composing) return;
     const action = nextEditAction({ suggestion: item, cell: context.cell, ready,
-      composing, explicit, count: result?.items.length ?? 0 });
+      composing, explicit, count: result?.items.length ?? 0, query });
     if (action === 'native') { host.returnNativeTab(false); return; }
     const operationId = host.claimTab(context.session_id);
     if (!operationId || !item) return;
@@ -169,7 +172,7 @@ export function BusinessInlineEditor() {
       host.selectCell(target); host.showInlineEditor(context.profile, host.readCell(target)); refresh();
     }
     host.restoreNativeTab(context.session_id);
-  }, [apply, composing, context, explicit, host, item, ready, refresh, result]);
+  }, [apply, composing, context, explicit, host, item, ready, refresh, result, query]);
 
   useEffect(() => {
     if (!context) return;
@@ -181,13 +184,15 @@ export function BusinessInlineEditor() {
   useEffect(() => {
     if (!context) return;
     const layout = () => {
+      const statusRows = (notice && !expanded ? NEXT_EDIT_NOTICE_ROWS : 0)
+        + Number(Boolean(error || writeError || busy || result?.issues.length));
       try { setPlacement(host.layoutInlineEditor({ candidateCount: preview ? 4 : result?.items.length ?? 0,
-        listVisible: expanded || preview, showStatus: Boolean(error || busy || result?.issues.length),
+        listVisible: expanded || preview, showStatus: statusRows > 0, statusRows,
       }).placement); } catch (reason) { setError(String(reason)); }
     };
     layout(); const timer = window.setInterval(layout, POSITION_POLL_MS);
     return () => window.clearInterval(timer);
-  }, [host, context, expanded, preview, result, error, busy]);
+  }, [host, context, expanded, preview, result, error, writeError, busy, Boolean(notice)]);
 
   if (!context) return null;
   const text = nextEditText(item, context.cell.column);
@@ -232,6 +237,7 @@ export function BusinessInlineEditor() {
         }} /></div>{busy && <span className="inline-busy" />}</div>
     {error && <div className="inline-error" role="alert">{error}</div>}
     {writeError && <div className="inline-error" role="alert">单元格未写入：{writeError}</div>}
+    {ready && !expanded && <NextEditNotice notice={notice} />}
     {!error && Boolean(result?.issues.length) && <div className="inline-status" title={result!.issues.map(issueText).join('；')}>{issueText(result!.issues[0])}</div>}
     {expanded && !preview && <div className="inline-candidates">{result?.items.map((candidate, i) =>
       <button key={candidate.id} className={i === selected ? 'selected' : ''} onClick={() => { setSelected(i); void choose(candidate); }}>

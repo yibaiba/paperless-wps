@@ -12,9 +12,12 @@ import { handleInlineTab, returnNativeTab } from '../src/nativeTab.ts';
 import { assertWorkbookSession, captureWorkbookSession, inWorkbookSession, writeInlineInput } from '../src/workbookSession.ts';
 import { LatestRequest } from '../src/latestRequest.ts';
 import { applyCandidate } from '../src/candidateAcceptance.ts';
+import { nextEditNotice } from '../src/nextEditPresentation.ts';
+import { inlineDialogSize } from '../src/inlineLayout.ts';
 
-const base = { cell: { sheet: 'quote', row: 3 }, ready: true, composing: false, explicit: false, count: 1,
-  suggestion: { patches: [{ sheet: 'quote', row: 3 }], applicable: true, acceptance: 'inline' } };
+const base = { cell: { sheet: 'quote', row: 3, column: 2 }, ready: true, composing: false, explicit: false, count: 1,
+  suggestion: { patches: [{ sheet: 'quote', row: 3, column: 2, field: 'name', after: '服务器' }],
+    evidence: [{ reason: '隔离测试规则：当前软件缺少服务器配套' }], applicable: true, acceptance: 'inline' } };
 
 test('copied bindings cannot receive an asynchronous receipt intended for another file', () => {
   let filename = '/quotes/original.xlsx';
@@ -69,8 +72,29 @@ test('next edit locates offscreen changes and requires preview for quantities', 
   assert.equal(nextEditAction({ ...base, composing: true }), 'native');
   assert.equal(nextEditAction({ ...base, ready: false }), 'native');
   assert.equal(nextEditAction({ ...base, count: 2 }), 'expand');
-  assert.equal(nextEditAction({ ...base, cell: { sheet: 'quote', row: 9 } }), 'locate');
+  assert.equal(nextEditAction({ ...base, cell: { ...base.cell, row: 9 } }), 'locate');
   assert.equal(nextEditAction({ ...base, suggestion: { ...base.suggestion, acceptance: 'preview' } }), 'preview');
+});
+
+test('offscreen edit discloses target and source reason before the first locate-only Tab', () => {
+  const options = { ...base, cell: { ...base.cell, row: 9 }, query: '' };
+  const notice = nextEditNotice(options);
+  assert.equal(notice.target, 'quote · 第 3 行 · 名称：服务器');
+  assert.match(notice.reason, /当前软件缺少服务器配套/);
+  assert.match(notice.action, /仅定位，不写入/);
+  assert.equal(nextEditAction(options), 'locate');
+  assert.equal(nextEditAction({ ...options, cell: base.cell }), 'apply');
+  assert.equal(inlineDialogSize({ anchorWidth: 360, anchorHeight: 32, candidateCount: 1,
+    listVisible: false, showStatus: true, statusRows: 3 }).height, 122);
+});
+
+test('substring-only candidates are visible choices, never invisible one-Tab writes', () => {
+  const options = { ...base, query: '务器' };
+  assert.equal(nextEditAction(options), 'expand');
+  assert.match(nextEditNotice(options).target, /服务器/);
+  assert.match(nextEditNotice(options).action, /展开候选/);
+  assert.equal(nextEditAction({ ...options, explicit: true }), 'apply');
+  for (const query of ['', '服', '服务器']) assert.equal(nextEditAction({ ...base, query }), 'apply');
 });
 
 test('row index reads once and refreshes only affected rows, structural edits rebuild', () => {

@@ -122,6 +122,8 @@ button, input { font: inherit; letter-spacing: 0; }
 }
 .inline-error { background: #fff1f0; color: #a82218; }
 .inline-status { background: #f7faf8; color: #47534d; }
+.inline-next-notice { flex-basis: 90px; }
+.inline-next-notice > div { line-height: 24px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .inline-empty { background: #fff; height: 100%; }
 .inline-business-preview { overflow: auto; padding: 8px; }
 .inline-business-preview pre { white-space: pre-wrap; overflow-wrap: anywhere; }
