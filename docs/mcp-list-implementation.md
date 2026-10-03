@@ -64,7 +64,7 @@
 }
 ```
 
-每次成功写入、检查、保存都返回新的草稿 `revision`。下一次新操作使用这个修订。网络中断后重试保留原 `operation_id` 和完整请求，包括原 `expected_revision`；数据库回执返回原结果。不能只保留幂等键却修改内容。
+每次成功写入、检查、保存都返回新的草稿 `revision`。`list_save` 还返回 `project_revision`，它才是 `list_export.revision` 需要的项目保存修订；二者不能混用。下一次新操作使用这个修订。网络中断后重试保留原 `operation_id` 和完整请求，包括原 `expected_revision`；数据库回执返回原结果。不能只保留幂等键却修改内容。
 
 错误会明确返回：`VERSION_CONFLICT`（读取后比较再修改）、`CHECK_STALE`（重新检查）、`IDEMPOTENCY_CONFLICT`（同一操作标识被用于不同内容）。事务失败不会留下部分设备或项目版本。
 
@@ -87,6 +87,7 @@
 | --- | --- |
 | room_put / system_put / requirement_put | 按稳定 ID 新增或替换需求对象 |
 | system_setup | 一批建立或修改房间、系统及所选角色需求；重复调用复用角色，保留已选设备 |
+| device_clone | 传 source_device_id、new_device_id 复制为独立设备；可选 supply_allocations。不继承用途、配套抵扣、生成锁定或已采用价格；未明确供货保持待确认 |
 | device_put | 新增或替换实际设备；数量和 hardware/software/license/accessory 类型必填 |
 | remove | 删除明确的房间、系统、角色或设备；删除设备同步删除其供货、分配、报价和图纸引用 |
 | supply_set | 替换指定设备的供货分配，各分配必须属于该设备 |
@@ -199,3 +200,13 @@
 ## 需求驱动方案生成（2026-09-29）
 
 新增 `list_plan`、`requirements_patch`、`proposal_apply` 和提案查询视图。调用方式、知识维护、网页入口及软件／业务验收边界见 [实施与验收记录](mcp-proposal-generation-implementation-2026-09-29.md)。
+
+
+## 2026-10-03 核心收口
+
+- readiness、需求描述和 `systems_list` 的 `generation.gaps` 共用同一固定版本投影；每项包含 code、object_id/object_revision、missing_fields、scenario、evidence_refs、action、maintenance_url。旧文字字段继续保留。
+- `scenario=shared` 只表示共享部署的缺口；独立生成不受共享缺证阻塞。`sharing_evidence_present` 仅表示登记了确认关系，仍须在具体项目检查条件及容量。
+- 网页草稿与 MCP 编辑共用原子操作服务；备注不触发完整适配/ZEN 判断。正式保存仍完整检查。
+- 预期业务错误以 MCP `is_error` 和具体原因返回；冲突时按原幂等键读回或重新比较，不能当作成功。未知运行错误继续记录失败。
+- 导出产物与事务回执关联。回滚清理本次未提交文件；提交确认丢失时读取回执后保留已提交产物。
+- 软件验证、现有业务资料缺口及复现命令见 [验收记录](reviews/2026-10-03-core-closing/acceptance.md)。

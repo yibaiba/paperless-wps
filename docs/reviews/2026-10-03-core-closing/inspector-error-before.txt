@@ -1,0 +1,28 @@
+✖ successful draft retry invalidates the inspector error from the previous state (92.999977ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 558.241637
+
+✖ failing tests:
+
+test at frontend/tests/device-inspector-error.test.mjs:7:1
+✖ successful draft retry invalidates the inspector error from the previous state (92.999977ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+  true !== false
+
+      at TestContext.<anonymous> (file:///Users/yibaiba/Code/RustProject/pi/presales-platform/frontend/tests/device-inspector-error.test.mjs:31:10)
+      at async Test.run (node:internal/test_runner/test:1313:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

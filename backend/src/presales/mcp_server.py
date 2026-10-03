@@ -8,6 +8,7 @@ from typing import Any
 import zen
 from dotenv import load_dotenv
 from mcp.server import MCPServer
+from mcp.server.mcpserver.exceptions import ToolError
 
 from presales.lists.facade import ListApplication
 from presales.lists.schemas import (
@@ -25,6 +26,7 @@ from presales.quotation.artifacts import FileArtifacts
 from presales.quotation.excel import ExcelRenderer
 from presales.quotation.template import TEMPLATE_PATH
 from presales.rules.engine import ZenQuantityEngine
+from presales.rules.repository import RuleConflict
 from presales.storage import database_factory
 
 
@@ -39,6 +41,7 @@ def create_server(*, session_factory, engine, renderer, files, web_origin="http:
             "list_update 操作需要稳定对象 ID；配套通过 list_get issues 读取建议及计算指纹。"
             "每次写入提供预期修订与 operation_id，重试保持相同 ID 和内容。"
             "list_check 后用返回的 check_fingerprint 保存；保存是草稿，不是人工认证。"
+            "list_save 的 revision 是草稿修订；导出必须使用 project_revision 项目修订。"
             "用 list_get 的 template/quotation/issues/evidence/changes 视图按需读取。"
             "价格更新用 price_updates 视图预览，再用 price_versions_adopt 明确采用所选修订。"
         ),
@@ -46,9 +49,13 @@ def create_server(*, session_factory, engine, renderer, files, web_origin="http:
 
     def call(name, arguments):
         with session_factory() as session:
-            return ListApplication(
-                session, engine=engine, renderer=renderer, files=files, web_origin=web_origin
-            ).call(name, arguments)
+            try:
+                return ListApplication(
+                    session, engine=engine, renderer=renderer, files=files, web_origin=web_origin
+                ).call(name, arguments)
+            except (RuleConflict, ValueError) as error:
+                # Expected business failures must reach the Agent, not a generic SDK crash.
+                raise ToolError(str(error)) from error
 
     @server.tool(structured_output=True)
     def systems_list(request: SystemsList) -> dict[str, Any]:

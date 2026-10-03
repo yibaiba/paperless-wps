@@ -1,32 +1,33 @@
 import { useState } from 'react';
 import { Alert, Spin } from 'antd';
 import { DeploymentForm } from './forms/DeploymentForm';
-import type { Checked, Deployment } from '../types';
+import type { Checked, Configuration, Deployment } from '../types';
 import { deviceOperation, type Operation } from './drafts/operations';
 
 interface Props {
   device: Deployment;
+  context: Configuration;
   requiresSupply: boolean;
   execute: (operations: Operation[]) => Promise<Checked>;
   onApply: (checked: Checked) => void;
   onClose: () => void;
 }
 
-export function DeviceInspector({ device, requiresSupply, execute, onApply, onClose }: Props) {
+export function DeviceInspector({ device, context, requiresSupply, execute, onApply, onClose }: Props) {
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<{ message: string; context: Configuration }>();
   const apply = async (operation: Operation, close = false) => {
-    setBusy(true); setError('');
+    setBusy(true); setError(undefined);
     try {
       const checked = await execute([operation]);
       onApply(checked);
       if (close) onClose();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : String(cause));
+      setError({ message: cause instanceof Error ? cause.message : String(cause), context });
     } finally { setBusy(false); }
   };
   return <Spin spinning={busy}>
-    {error ? <Alert type="error" showIcon title={error} /> : null}
+    {error?.context === context ? <Alert type="error" showIcon title={error.message} /> : null}
     <DeploymentForm device={device} requiresSupply={requiresSupply} onClose={onClose}
       disabled={busy}
       onApply={value => {

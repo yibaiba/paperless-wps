@@ -276,7 +276,7 @@ function ConfigurationEditor({
         {showInspector ? <aside className="project-inspector" aria-label="选型与产品属性">
           <Button className="project-inspector-close" onClick={() => { setDeviceModal(undefined); setSelectedRequirement(undefined); }}>收起选型面板</Button>
         {editingDevice ? (
-          <DeviceInspector device={editingDevice} requiresSupply={config.calculation_version === 3}
+          <DeviceInspector device={editingDevice} context={config} requiresSupply={config.calculation_version === 3}
             execute={editor.persistence.execute} onApply={editor.acceptChecked}
             onClose={() => setDeviceModal(undefined)} />
         ) : (

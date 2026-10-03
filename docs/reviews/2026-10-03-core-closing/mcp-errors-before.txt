@@ -1,0 +1,113 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+________________ test_stdio_exposes_actionable_business_errors _________________
+  + Exception Group Traceback (most recent call last):
+  |   File "/Users/yibaiba/Code/RustProject/pi/presales-platform/backend/tests/configuration/test_mcp_error_contract.py", line 18, in test_stdio_exposes_actionable_business_errors
+  |     asyncio.run(verify(database, saved["project_id"]))
+  |     ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "/usr/local/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py", line 205, in run
+  |     return runner.run(main)
+  |            ~~~~~~~~~~^^^^^^
+  |   File "/usr/local/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py", line 128, in run
+  |     return self._loop.run_until_complete(task)
+  |            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  |   File "/usr/local/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py", line 719, in run_until_complete
+  |     return future.result()
+  |            ~~~~~~~~~~~~~^^
+  |   File "/Users/yibaiba/Code/RustProject/pi/presales-platform/backend/tests/configuration/test_mcp_error_contract.py", line 30, in verify
+  |     async with stdio_client(parameters) as (read, write):
+  |                ~~~~~~~~~~~~^^^^^^^^^^^^
+  |   File "/usr/local/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/contextlib.py", line 235, in __aexit__
+  |     await self.gen.athrow(value)
+  |   File "/Users/yibaiba/Code/RustProject/pi/presales-platform/.venv/lib/python3.14/site-packages/mcp/client/stdio.py", line 200, in stdio_client
+  |     async with anyio.create_task_group() as tg:
+  |                ~~~~~~~~~~~~~~~~~~~~~~~^^
+  |   File "/Users/yibaiba/Code/RustProject/pi/presales-platform/.venv/lib/python3.14/site-packages/anyio/_backends/_asyncio.py", line 847, in __aexit__
+  |     raise BaseExceptionGroup(
+  |         "unhandled errors in a TaskGroup", self._exceptions
+  |     ) from None
+  | ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)
+  +-+---------------- 1 ----------------
+    | Exception Group Traceback (most recent call last):
+    |   File "/Users/yibaiba/Code/RustProject/pi/presales-platform/.venv/lib/python3.14/site-packages/mcp/client/stdio.py", line 204, in stdio_client
+    |     yield read_stream, write_stream
+    |   File "/Users/yibaiba/Code/RustProject/pi/presales-platform/backend/tests/configuration/test_mcp_error_contract.py", line 31, in verify
+    |     async with ClientSession(read, write, read_timeout_seconds=15) as client:
+    |                ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/Users/yibaiba/Code/RustProject/pi/presales-platform/.venv/lib/python3.14/site-packages/mcp/client/session.py", line 514, in __aexit__
+    |     result = await self._task_group.__aexit__(exc_type, exc_val, exc_tb)
+    |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/Users/yibaiba/Code/RustProject/pi/presales-platform/.venv/lib/python3.14/site-packages/anyio/_backends/_asyncio.py", line 847, in __aexit__
+    |     raise BaseExceptionGroup(
+    |         "unhandled errors in a TaskGroup", self._exceptions
+    |     ) from None
+    | ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)
+    +-+---------------- 1 ----------------
+      | Traceback (most recent call last):
+      |   File "/Users/yibaiba/Code/RustProject/pi/presales-platform/backend/tests/configuration/test_mcp_error_contract.py", line 37, in verify
+      |     assert "指定的资料修订不存在" in str(result.content)
+      | AssertionError: assert '指定的资料修订不存在' in "[TextContent(type='text', text='Error executing tool list_get', annotations=None, meta=None)]"
+      |  +  where "[TextContent(type='text', text='Error executing tool list_get', annotations=None, meta=None)]" = str([TextContent(type='text', text='Error executing tool list_get', annotations=None, meta=None)])
+      |  +    where [TextContent(type='text', text='Error executing tool list_get', annotations=None, meta=None)] = CallToolResult(meta=None, content=[TextContent(type='text', text='Error executing tool list_get', annotations=None, meta=None)], structured_content=None, is_error=True, result_type='complete').content
+      +------------------------------------
+----------------------------- Captured stderr call -----------------------------
+ERROR:mcp.server.mcpserver.server:Tool 'list_get' raised an unexpected exception
+Traceback (most recent call last):
+  File "/Users/yibaiba/Code/RustProject/pi/presales-platform/.venv/lib/python3.14/site-packages/mcp/server/mcpserver/tools/base.py", line 176, in run
+    result = await self.fn_metadata.call_fn(self.fn, self.is_async, validated, pass_directly)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/yibaiba/Code/RustProject/pi/presales-platform/.venv/lib/python3.14/site-packages/mcp/server/mcpserver/utilities/func_metadata.py", line 164, in call_fn
+    return await anyio.to_thread.run_sync(functools.partial(fn, **kwargs))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/yibaiba/Code/RustProject/pi/presales-platform/.venv/lib/python3.14/site-packages/anyio/to_thread.py", line 65, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        func, args, abandon_on_cancel=abandon_on_cancel, limiter=limiter
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/yibaiba/Code/RustProject/pi/presales-platform/.venv/lib/python3.14/site-packages/anyio/_backends/_asyncio.py", line 2706, in run_sync_in_worker_thread
+    return await future
+           ^^^^^^^^^^^^
+  File "/Users/yibaiba/Code/RustProject/pi/presales-platform/.venv/lib/python3.14/site-packages/anyio/_backends/_asyncio.py", line 1100, in run
+    result = context.run(func, *args)
+  File "/Users/yibaiba/Code/RustProject/pi/presales-platform/backend/src/presales/mcp_server.py", line 92, in list_get
+    return call("list_get", request.model_dump(mode="json"))
+  File "/Users/yibaiba/Code/RustProject/pi/presales-platform/backend/src/presales/mcp_server.py", line 51, in call
+    ).call(name, arguments)
+      ~~~~^^^^^^^^^^^^^^^^^
+  File "/Users/yibaiba/Code/RustProject/pi/presales-platform/backend/src/presales/lists/facade.py", line 36, in call
+    result = self._call(tool, arguments)
+  File "/Users/yibaiba/Code/RustProject/pi/presales-platform/backend/src/presales/lists/facade.py", line 79, in _call
+    result = action(model.model_validate(arguments))
+  File "/Users/yibaiba/Code/RustProject/pi/presales-platform/backend/src/presales/lists/service.py", line 61, in get
+    else saved_revision(
+         ~~~~~~~~~~~~~~^
+        self.repository, project_id=request.project_id, revision=request.revision
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/yibaiba/Code/RustProject/pi/presales-platform/backend/src/presales/lists/queries.py", line 33, in saved_revision
+    result = Definitions(repository.session).revision(record.id, revision, kind="project")
+  File "/Users/yibaiba/Code/RustProject/pi/presales-platform/backend/src/presales/configuration/definitions/service.py", line 23, in revision
+    raise ValueError("指定的资料修订不存在")
+ValueError: 指定的资料修订不存在
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/yibaiba/Code/RustProject/pi/presales-platform/.venv/lib/python3.14/site-packages/mcp/server/mcpserver/server.py", line 433, in _handle_call_tool
+    return await self.call_tool(params.name, params.arguments or {}, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/yibaiba/Code/RustProject/pi/presales-platform/.venv/lib/python3.14/site-packages/mcp/server/mcpserver/server.py", line 539, in call_tool
+    return await self._tool_manager.call_tool(name, arguments, context, convert_result=True)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/yibaiba/Code/RustProject/pi/presales-platform/.venv/lib/python3.14/site-packages/mcp/server/mcpserver/tools/tool_manager.py", line 87, in call_tool
+    return await tool.run(arguments, context, convert_result=convert_result)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/yibaiba/Code/RustProject/pi/presales-platform/.venv/lib/python3.14/site-packages/mcp/server/mcpserver/tools/base.py", line 210, in run
+    raise UnexpectedToolError(f"Error executing tool {self.name}") from exc
+mcp.server.mcpserver.exceptions.UnexpectedToolError: Error executing tool list_get
+=========================== short test summary info ============================
+FAILED backend/tests/configuration/test_mcp_error_contract.py::test_stdio_exposes_actionable_business_errors
+1 failed in 3.46s

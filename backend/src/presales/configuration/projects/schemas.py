@@ -1,3 +1,4 @@
+from collections import Counter
 from decimal import Decimal
 from typing import Literal
 
@@ -135,9 +136,9 @@ class Configuration(Authored):
                     raise ValueError("角色分配设备重复或不存在")
             if requirement.device_id and requirement.device_id not in devices:
                 raise ValueError("角色关联的实际设备不存在")
+        direct_uses = Counter(r.device_id for r in self.requirements if r.device_id)
         for device in self.devices:
-            count = sum(r.device_id == device.id for r in self.requirements)
-            if count > 1 and device.quantity != 1:
+            if direct_uses[device.id] > 1 and device.quantity != 1:
                 raise ValueError("共用设备请按单台实例维护，再关联多个角色")
         if any(item.device_id not in devices for item in self.included_allocations):
             raise ValueError("已含内容抵扣引用的宿主设备不存在")

@@ -1,7 +1,8 @@
 import { useRef, useState } from 'react';
 import { Alert, Button, Checkbox, Drawer, Empty, Select, Space, Table, Tabs, Tag, Typography } from 'antd';
 import { useQuery } from '@tanstack/react-query';
-import type { Checked } from '../types';
+import { BusinessChangeTable } from './BusinessChangeTable';
+import type { BusinessChange, Checked } from '../types';
 import { post, type Workspace } from './drafts/transport';
 import type { Operation } from './drafts/operations';
 
@@ -103,12 +104,12 @@ export function ProposalPanel({ disabled, readyWorkspace, execute, onApply }: Pr
         <Tabs activeKey={view} onChange={value => { setView(value); setPage(1); }} items={[
           { key: 'proposal_lines', label: '建议清单' }, { key: 'proposal_questions', label: '待确认事项' }, { key: 'proposal_decisions', label: '生成依据' }, { key: 'proposal_changes', label: '改单差异' },
         ]} />
-        <Table size="small" loading={details.isFetching} dataSource={details.data?.items ?? []} rowKey={(_, index) => String((page - 1) * 20 + (index ?? 0))}
+        {view === 'proposal_changes' ? <BusinessChangeTable changes={details.data?.items as unknown as BusinessChange[]} loading={details.isFetching} page={{current: page, total: details.data?.total ?? 0, onChange: setPage}} /> : <Table size="small" loading={details.isFetching} dataSource={details.data?.items ?? []} rowKey={(_, index) => String((page - 1) * 20 + (index ?? 0))}
           pagination={{ current: page, pageSize: 20, total: details.data?.total ?? 0, showSizeChanger: false, onChange: setPage }} columns={view === 'proposal_lines' ? [
             { title: '产品', render: (_, row) => String(row.name ?? row.model ?? row.device_id) }, { title: '部署数量', dataIndex: 'quantity' }, { title: '用途 / 来源', render: (_, row) => <Typography.Paragraph style={{ margin: 0 }}>{Array.isArray(row.consumers) ? row.consumers.map((item: Record<string, unknown>) => [item.system, item.role].filter(Boolean).join(' / ')).join('；') : String(row.source_name ?? row.model ?? '见产品与来源详情')}</Typography.Paragraph> },
           ] : view === 'proposal_questions' ? [
             { title: '由谁补充', width: 130, render: (_, row) => <Tag>{row.recipient === 'customer' ? '客户 / 项目' : '内部维护者'}</Tag> }, { title: '待确认事项', dataIndex: 'message' }, { title: '需要补充', render: (_, row) => String(row.missing_fields) },
-          ] : [{ title: view === 'proposal_decisions' ? '采用依据与数量计算' : '变更前后', render: (_, row) => <Typography.Paragraph style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', margin: 0 }}>{JSON.stringify(row, null, 2)}</Typography.Paragraph> }]} />
+          ] : [{ title: view === 'proposal_decisions' ? '采用依据与数量计算' : '变更前后', render: (_, row) => <Typography.Paragraph style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', margin: 0 }}>{JSON.stringify(row, null, 2)}</Typography.Paragraph> }]} />}
       </> : null}
     </Drawer>
   </>;

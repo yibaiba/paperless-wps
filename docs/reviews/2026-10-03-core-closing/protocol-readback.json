@@ -1,0 +1,355 @@
+[
+  {
+    "tool": "list_create",
+    "elapsed_ms": 267.64
+  },
+  {
+    "tool": "list_check",
+    "elapsed_ms": 41.81
+  },
+  {
+    "tool": "list_get",
+    "elapsed_ms": 11.33
+  },
+  {
+    "tool": "list_get",
+    "elapsed_ms": 6.32
+  },
+  {
+    "tool": "list_get",
+    "elapsed_ms": 12.36
+  },
+  {
+    "scenario": "两台独立服务器",
+    "checks": [
+      {
+        "kind": "capacity",
+        "status": "pass"
+      },
+      {
+        "kind": "capacity",
+        "status": "pass"
+      }
+    ],
+    "procurement_hardware": 2,
+    "exact_http_match": true
+  },
+  {
+    "tool": "list_create",
+    "elapsed_ms": 34.44
+  },
+  {
+    "tool": "list_check",
+    "elapsed_ms": 56.6
+  },
+  {
+    "tool": "list_get",
+    "elapsed_ms": 8.55
+  },
+  {
+    "tool": "list_get",
+    "elapsed_ms": 5.62
+  },
+  {
+    "tool": "list_get",
+    "elapsed_ms": 11.69
+  },
+  {
+    "scenario": "一台共享缺依据",
+    "checks": [
+      {
+        "kind": "capacity",
+        "status": "pass"
+      },
+      {
+        "kind": "sharing",
+        "status": "unknown"
+      }
+    ],
+    "procurement_hardware": 1,
+    "exact_http_match": true
+  },
+  {
+    "tool": "list_create",
+    "elapsed_ms": 33.7
+  },
+  {
+    "tool": "list_check",
+    "elapsed_ms": 71.41
+  },
+  {
+    "tool": "list_get",
+    "elapsed_ms": 7.41
+  },
+  {
+    "tool": "list_get",
+    "elapsed_ms": 5.19
+  },
+  {
+    "tool": "list_get",
+    "elapsed_ms": 11.24
+  },
+  {
+    "scenario": "测试依据共享通过",
+    "checks": [
+      {
+        "kind": "capacity",
+        "status": "pass"
+      },
+      {
+        "kind": "sharing",
+        "status": "pass"
+      }
+    ],
+    "procurement_hardware": 1,
+    "exact_http_match": true
+  },
+  {
+    "tool": "list_create",
+    "elapsed_ms": 91.3
+  },
+  {
+    "tool": "list_check",
+    "elapsed_ms": 54.79
+  },
+  {
+    "tool": "list_get",
+    "elapsed_ms": 10.49
+  },
+  {
+    "tool": "list_get",
+    "elapsed_ms": 5.86
+  },
+  {
+    "tool": "list_get",
+    "elapsed_ms": 14.2
+  },
+  {
+    "scenario": "客户已有服务器",
+    "checks": [
+      {
+        "kind": "capacity",
+        "status": "pass"
+      },
+      {
+        "kind": "sharing",
+        "status": "pass"
+      }
+    ],
+    "procurement_hardware": 0,
+    "exact_http_match": true
+  },
+  {
+    "tool": "list_create",
+    "elapsed_ms": 31.1
+  },
+  {
+    "tool": "list_check",
+    "elapsed_ms": 75.09
+  },
+  {
+    "tool": "list_get",
+    "elapsed_ms": 8.53
+  },
+  {
+    "tool": "list_get",
+    "elapsed_ms": 7.01
+  },
+  {
+    "tool": "list_get",
+    "elapsed_ms": 12.24
+  },
+  {
+    "scenario": "共享容量超量",
+    "checks": [
+      {
+        "kind": "capacity",
+        "status": "conflict"
+      },
+      {
+        "kind": "sharing",
+        "status": "pass"
+      }
+    ],
+    "procurement_hardware": 0,
+    "exact_http_match": true
+  },
+  {
+    "tool": "list_get",
+    "elapsed_ms": 10.91
+  },
+  {
+    "view": "devices",
+    "exact_http_match": true
+  },
+  {
+    "tool": "list_get",
+    "elapsed_ms": 8.64
+  },
+  {
+    "view": "procurement",
+    "exact_http_match": true
+  },
+  {
+    "tool": "list_get",
+    "elapsed_ms": 9.46
+  },
+  {
+    "view": "quotation",
+    "exact_http_match": true
+  },
+  {
+    "tool": "list_get",
+    "elapsed_ms": 10.97
+  },
+  {
+    "view": "issues",
+    "exact_http_match": true
+  },
+  {
+    "tool": "list_get",
+    "elapsed_ms": 7.78
+  },
+  {
+    "view": "allocations",
+    "exact_http_match": true
+  },
+  {
+    "tool": "list_get",
+    "elapsed_ms": 8.49
+  },
+  {
+    "tool": "list_create",
+    "elapsed_ms": 29.58
+  },
+  {
+    "tool": "list_update",
+    "elapsed_ms": 29.44
+  },
+  {
+    "tool": "list_update",
+    "elapsed_ms": 6.37
+  },
+  {
+    "tool": "list_plan",
+    "elapsed_ms": 65.54
+  },
+  {
+    "tool": "list_update",
+    "elapsed_ms": 30.53
+  },
+  {
+    "tool": "list_get",
+    "elapsed_ms": 4.86
+  },
+  {
+    "seats": "32",
+    "quantities": [
+      "1",
+      "32"
+    ]
+  },
+  {
+    "tool": "list_update",
+    "elapsed_ms": 26.3
+  },
+  {
+    "tool": "list_update",
+    "elapsed_ms": 4.73
+  },
+  {
+    "tool": "list_plan",
+    "elapsed_ms": 58.83
+  },
+  {
+    "tool": "list_update",
+    "elapsed_ms": 28.55
+  },
+  {
+    "tool": "list_get",
+    "elapsed_ms": 4.23
+  },
+  {
+    "seats": "48",
+    "quantities": [
+      "1",
+      "48"
+    ]
+  },
+  {
+    "tool": "list_update",
+    "elapsed_ms": 25.81
+  },
+  {
+    "tool": "list_update",
+    "elapsed_ms": 5.34
+  },
+  {
+    "tool": "list_plan",
+    "elapsed_ms": 99.84
+  },
+  {
+    "tool": "list_update",
+    "elapsed_ms": 68.22
+  },
+  {
+    "tool": "list_get",
+    "elapsed_ms": 4.74
+  },
+  {
+    "seats": "16",
+    "quantities": [
+      "1",
+      "16"
+    ]
+  },
+  {
+    "tool": "list_check",
+    "elapsed_ms": 53.36
+  },
+  {
+    "tool": "list_save",
+    "elapsed_ms": 59.74
+  },
+  {
+    "tool": "list_export",
+    "elapsed_ms": 476.54
+  },
+  {
+    "saved_revision": 5,
+    "artifacts": [
+      {
+        "id": "5d3c8cbe-3e4e-5dd9-865e-788bc8f75f21",
+        "revision": 1,
+        "updated_at": "2026-10-03T10:25:57.400805+00:00",
+        "project_id": "d7f6b860-93c4-4678-b69d-96967a6e1dc9",
+        "project_revision": 5,
+        "output": "configuration",
+        "filename": "设备清单-v5.xlsx",
+        "sha256": "47bcc54d5d0eab76db792d0b0ad49c3e1de0e480c2a2b4799e980586dd7bde60",
+        "path": "/Users/yibaiba/Code/RustProject/pi/presales-platform/outputs/core-closing/artifacts/5d3c8cbe-3e4e-5dd9-865e-788bc8f75f21.xlsx",
+        "template_sha256": null,
+        "download_path": "/api/list-artifacts/5d3c8cbe-3e4e-5dd9-865e-788bc8f75f21",
+        "download_url": "http://127.0.0.1:5176/api/list-artifacts/5d3c8cbe-3e4e-5dd9-865e-788bc8f75f21"
+      },
+      {
+        "id": "4f49a5f7-d7ea-57c2-8af8-ac2323e682ff",
+        "revision": 1,
+        "updated_at": "2026-10-03T10:25:57.403603+00:00",
+        "project_id": "d7f6b860-93c4-4678-b69d-96967a6e1dc9",
+        "project_revision": 5,
+        "output": "quotation",
+        "filename": "报价单-v5.xlsx",
+        "sha256": "3519e594678aeb18a698ebb956baecfc7dff8f5ad8162f107ee34e8ea0a5acb0",
+        "path": "/Users/yibaiba/Code/RustProject/pi/presales-platform/outputs/core-closing/artifacts/4f49a5f7-d7ea-57c2-8af8-ac2323e682ff.xlsx",
+        "template_sha256": "1209dba11ed73324ef1fbb2e361c9288049f07d8f8d3da9182152b6337d8800e",
+        "download_path": "/api/list-artifacts/4f49a5f7-d7ea-57c2-8af8-ac2323e682ff",
+        "download_url": "http://127.0.0.1:5176/api/list-artifacts/4f49a5f7-d7ea-57c2-8af8-ac2323e682ff"
+      }
+    ]
+  },
+  {
+    "tool": "list_get",
+    "elapsed_ms": 7.4
+  }
+]

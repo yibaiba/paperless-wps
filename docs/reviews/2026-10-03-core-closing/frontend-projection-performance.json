@@ -1,0 +1,16 @@
+[
+  {
+    "rows": 100,
+    "median_projection_ms": 0.03659600000000296,
+    "writes": 1,
+    "cells": 1,
+    "unchanged_writes": 0
+  },
+  {
+    "rows": 500,
+    "median_projection_ms": 0.1731489999999951,
+    "writes": 1,
+    "cells": 1,
+    "unchanged_writes": 0
+  }
+]

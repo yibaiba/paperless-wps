@@ -1,0 +1,45 @@
+{
+  "candidate_count": 2,
+  "role_count": 1,
+  "samples": [
+    {
+      "first_ms": 33.26616599224508,
+      "replay_second_ms": 47.93054098263383
+    },
+    {
+      "first_ms": 36.476003006100655,
+      "replay_second_ms": 57.32200399506837
+    },
+    {
+      "first_ms": 55.19129801541567,
+      "replay_second_ms": 59.827800025232136
+    },
+    {
+      "first_ms": 34.872377989813685,
+      "replay_second_ms": 56.224872008897364
+    },
+    {
+      "first_ms": 46.2714119348675,
+      "replay_second_ms": 47.07113606855273
+    },
+    {
+      "first_ms": 30.94996907748282,
+      "replay_second_ms": 48.66181197576225
+    },
+    {
+      "first_ms": 30.106586986221373,
+      "replay_second_ms": 47.59763402398676
+    },
+    {
+      "first_ms": 34.00710609275848,
+      "replay_second_ms": 47.87377896718681
+    },
+    {
+      "first_ms": 34.479207010008395,
+      "replay_second_ms": 54.358807974494994
+    }
+  ],
+  "median_first_ms": 34.479207010008395,
+  "median_replay_second_ms": 48.66181197576225,
+  "scope": "TestClient HTTP service elapsed including generation, not browser network"
+}

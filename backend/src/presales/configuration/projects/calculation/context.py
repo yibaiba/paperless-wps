@@ -20,7 +20,12 @@ class RoleContext:
 def prepare_roles(data, *, definitions):
     # Copy mutable role inputs only; fixed catalog/knowledge snapshots remain read-only.
     owned = dict(
-        data, requirements=deepcopy(data["requirements"]), systems=deepcopy(data["systems"])
+        data,
+        requirements=[
+            owned_fields(r, ("environment", "resources", "allocations"))
+            for r in data["requirements"]
+        ],
+        systems=[owned_fields(s, ("inputs", "features")) for s in data["systems"]],
     )
     allocated, aliases = project_allocations(owned)
     projected, checks, policies = prepare_inspections(allocated, definitions)
@@ -36,3 +41,10 @@ def prepare_demands(context, *, variants, catalog, engine, decisions):
         decisions=decisions,
     )
     return included_fulfillment(context.data, demands)
+
+
+def owned_fields(item, fields):
+    # Scalar IDs/text are immutable; copy only mutable inputs used by each branch.
+    return dict(
+        item, **{key: deepcopy(item[key]) if item[key] else [] for key in fields if key in item}
+    )

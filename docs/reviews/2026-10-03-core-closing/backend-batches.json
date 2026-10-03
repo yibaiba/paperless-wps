@@ -1,0 +1,192 @@
+[
+  {
+    "log": "backend-batch-01.txt",
+    "files": [
+      "backend/tests/configuration/decisions/test_runtime.py",
+      "backend/tests/configuration/test_accessory_demands.py",
+      "backend/tests/configuration/test_accessory_source_preferences.py",
+      "backend/tests/configuration/test_accessory_variant_preferences.py",
+      "backend/tests/configuration/test_alias_quantity_checks.py",
+      "backend/tests/configuration/test_candidate_combination_inputs.py"
+    ],
+    "exit_code": 0
+  },
+  {
+    "log": "backend-batch-02.txt",
+    "files": [
+      "backend/tests/configuration/test_catalog.py",
+      "backend/tests/configuration/test_catalog_search_matching.py",
+      "backend/tests/configuration/test_catalog_updates.py",
+      "backend/tests/configuration/test_check_classification.py",
+      "backend/tests/configuration/test_concurrency.py",
+      "backend/tests/configuration/test_core_review_fixes.py"
+    ],
+    "exit_code": 0
+  },
+  {
+    "log": "backend-batch-03.txt",
+    "files": [
+      "backend/tests/configuration/test_customer_constraint_fixes.py",
+      "backend/tests/configuration/test_decision_versions.py",
+      "backend/tests/configuration/test_device_clone.py",
+      "backend/tests/configuration/test_device_removal_projection.py",
+      "backend/tests/configuration/test_drawing.py",
+      "backend/tests/configuration/test_evolution.py"
+    ],
+    "exit_code": 0
+  },
+  {
+    "log": "backend-batch-04.txt",
+    "files": [
+      "backend/tests/configuration/test_evolution_contracts.py",
+      "backend/tests/configuration/test_evolution_sharing.py",
+      "backend/tests/configuration/test_evolution_versions.py",
+      "backend/tests/configuration/test_excel_workflow.py",
+      "backend/tests/configuration/test_export_atomicity.py",
+      "backend/tests/configuration/test_extraction.py"
+    ],
+    "exit_code": 0
+  },
+  {
+    "log": "backend-batch-05.txt",
+    "files": [
+      "backend/tests/configuration/test_feature_scope_lifecycle.py",
+      "backend/tests/configuration/test_feature_scope_removal.py",
+      "backend/tests/configuration/test_fulfilled_role_quantity_review.py",
+      "backend/tests/configuration/test_import_merges.py",
+      "backend/tests/configuration/test_included_content.py",
+      "backend/tests/configuration/test_included_review.py"
+    ],
+    "exit_code": 0
+  },
+  {
+    "log": "backend-batch-06.txt",
+    "files": [
+      "backend/tests/configuration/test_inspection_profiles.py",
+      "backend/tests/configuration/test_interpretation_lifecycle.py",
+      "backend/tests/configuration/test_knowledge.py",
+      "backend/tests/configuration/test_knowledge_gap_contract.py",
+      "backend/tests/configuration/test_knowledge_reconciliation.py",
+      "backend/tests/configuration/test_list_concurrency.py"
+    ],
+    "exit_code": 0
+  },
+  {
+    "log": "backend-batch-07.txt",
+    "files": [
+      "backend/tests/configuration/test_list_edges.py",
+      "backend/tests/configuration/test_list_mcp.py",
+      "backend/tests/configuration/test_list_snapshots.py",
+      "backend/tests/configuration/test_maintenance_tasks.py",
+      "backend/tests/configuration/test_manual_relationship_fixes.py",
+      "backend/tests/configuration/test_mcp_error_contract.py"
+    ],
+    "exit_code": 0
+  },
+  {
+    "log": "backend-batch-08.txt",
+    "files": [
+      "backend/tests/configuration/test_mcp_protocol.py",
+      "backend/tests/configuration/test_migration.py",
+      "backend/tests/configuration/test_package_changes.py",
+      "backend/tests/configuration/test_package_knowledge_scope.py",
+      "backend/tests/configuration/test_package_readiness.py",
+      "backend/tests/configuration/test_package_trials.py"
+    ],
+    "exit_code": 0
+  },
+  {
+    "log": "backend-batch-09.txt",
+    "files": [
+      "backend/tests/configuration/test_price_adoption.py",
+      "backend/tests/configuration/test_price_concurrency.py",
+      "backend/tests/configuration/test_price_review_regressions.py",
+      "backend/tests/configuration/test_project_output.py",
+      "backend/tests/configuration/test_projects.py",
+      "backend/tests/configuration/test_proposal_concurrency.py"
+    ],
+    "exit_code": 0
+  },
+  {
+    "log": "backend-batch-10.txt",
+    "files": [
+      "backend/tests/configuration/test_proposal_evolution.py",
+      "backend/tests/configuration/test_proposal_generation.py",
+      "backend/tests/configuration/test_proposal_prices_and_cycles.py",
+      "backend/tests/configuration/test_proposal_protection.py",
+      "backend/tests/configuration/test_proposal_protocol.py",
+      "backend/tests/configuration/test_proposal_review.py"
+    ],
+    "exit_code": 0
+  },
+  {
+    "log": "backend-batch-11.txt",
+    "files": [
+      "backend/tests/configuration/test_quantity_review_fixes.py",
+      "backend/tests/configuration/test_quotation_details.py",
+      "backend/tests/configuration/test_quote_formula_scaling.py",
+      "backend/tests/configuration/test_readiness.py",
+      "backend/tests/configuration/test_regeneration_fixes.py",
+      "backend/tests/configuration/test_requirement_setup.py"
+    ],
+    "exit_code": 0
+  },
+  {
+    "log": "backend-batch-12.txt",
+    "files": [
+      "backend/tests/configuration/test_reuse_boundary_review.py",
+      "backend/tests/configuration/test_review_regressions.py",
+      "backend/tests/configuration/test_role_partial_reuse.py",
+      "backend/tests/configuration/test_scoped_quantity_setup.py",
+      "backend/tests/configuration/test_scoped_requirement_edits.py",
+      "backend/tests/configuration/test_search.py"
+    ],
+    "exit_code": 0
+  },
+  {
+    "log": "backend-batch-13.txt",
+    "files": [
+      "backend/tests/configuration/test_second_review_fixes.py",
+      "backend/tests/configuration/test_selection_binding_review.py",
+      "backend/tests/configuration/test_shared_calculation_context.py",
+      "backend/tests/configuration/test_sheet_edits.py",
+      "backend/tests/configuration/test_source_partial_reuse.py",
+      "backend/tests/configuration/test_web_draft_concurrency.py"
+    ],
+    "exit_code": 0
+  },
+  {
+    "log": "backend-batch-14.txt",
+    "files": [
+      "backend/tests/configuration/test_web_draft_edges.py",
+      "backend/tests/configuration/test_web_drafts.py",
+      "backend/tests/configuration/test_zen_combinations.py",
+      "backend/tests/configuration/test_zen_protocol.py",
+      "backend/tests/test_attribute_concurrency.py",
+      "backend/tests/test_attributes.py"
+    ],
+    "exit_code": 0
+  },
+  {
+    "log": "backend-batch-15.txt",
+    "files": [
+      "backend/tests/test_catalog.py",
+      "backend/tests/test_drawio.py",
+      "backend/tests/test_projects.py",
+      "backend/tests/test_review_concurrency.py",
+      "backend/tests/test_reviews.py",
+      "backend/tests/test_rule_validation.py"
+    ],
+    "exit_code": 0
+  },
+  {
+    "log": "backend-batch-16.txt",
+    "files": [
+      "backend/tests/test_rules.py",
+      "backend/tests/test_rules_concurrency.py",
+      "backend/tests/test_topology.py",
+      "backend/tests/test_topology_concurrency.py"
+    ],
+    "exit_code": 0
+  }
+]
