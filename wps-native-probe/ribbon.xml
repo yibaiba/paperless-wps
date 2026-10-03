@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<customUI xmlns="http://schemas.microsoft.com/office/2006/01/customui" onLoad="OnAddinLoad">
+  <ribbon><tabs><tab id="nativeProbe" label="原生能力验证"><group id="probe" label="仅在空白测试工作簿运行">
+    <button id="start" label="开始记录" onAction="OnAction"/>
+    <button id="sample" label="读取已提交值长度" onAction="OnAction"/>
+    <button id="arm" label="测试下一次 Tab" onAction="OnAction"/>
+    <button id="stop" label="停止并恢复 Tab" onAction="OnAction"/>
+    <button id="report" label="导出记录" onAction="OnAction"/>
+  </group></tab></tabs></ribbon>
+</customUI>

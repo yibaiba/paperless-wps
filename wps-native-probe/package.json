@@ -1,0 +1,7 @@
+{
+  "name": "presales-native-capability-probe",
+  "version": "0.1.0",
+  "private": true,
+  "addonType": "et",
+  "scripts": { "debug": "../wps-addin/node_modules/.bin/wpsjs debug" }
+}
