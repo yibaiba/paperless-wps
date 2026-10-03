@@ -30,7 +30,8 @@ export function usePersistentDraft(options: Options) {
   const { modal } = App.useApp();
   const creationId = useRef(crypto.randomUUID());
   const currentKey = key(options.configuration);
-  const unsynced = currentKey !== synced.current;
+  // An unacknowledged command may not have changed the local projection yet.
+  const unsynced = currentKey !== synced.current || Boolean(pending.current);
   const saveTransaction = useRef<ReturnType<typeof createSaveTransaction> | undefined>(undefined);
   saveTransaction.current ??= createSaveTransaction({
     post, newId: () => crypto.randomUUID(),
@@ -123,17 +124,23 @@ export function usePersistentDraft(options: Options) {
     return ensure();
   };
   const execute = async (operations: Operation[]) => {
-    const workspace = await readyWorkspace();
+    if (running.current || pending.current || key(live.current.configuration) !== synced.current) throw new Error('草稿尚未同步，请完成同步后编辑。');
+    // Reserve the draft before ensure() yields to another event handler.
     running.current = true; setSyncing(true); setError('');
     const beforeKey = key(live.current.configuration);
-    const request = writeRequest(workspace, operations);
     pendingKey.current = beforeKey; operationPending.current = true;
-    checkpoints.current.set(beforeKey, workspace.revision);
-    pending.current = async () => mergeDelta(workspace, await post<Delta>(`/work-drafts/${workspace.id}/edit`, request));
+    let workspace: Workspace | undefined;
+    let request: ReturnType<typeof writeRequest> | undefined;
+    // Keep the command even if creating the work draft loses its response.
+    pending.current = async () => {
+      workspace ??= await ensure();
+      request ??= writeRequest(workspace, operations);
+      checkpoints.current.set(beforeKey, workspace.revision);
+      return mergeDelta(workspace, await post<Delta>(`/work-drafts/${workspace.id}/edit`, request));
+    };
     try {
       const result = await pending.current();
       remote.current = result; pending.current = undefined; pendingKey.current = undefined; operationPending.current = false;
-      checkpoints.current.set(beforeKey, workspace.revision);
       checkpoints.current.set(key(result.configuration), result.revision);
       synced.current = key(result.configuration);
       if (key(live.current.configuration) !== beforeKey) throw new Error('采用期间本地已变化，提案已同步但未覆盖本地编辑，请恢复草稿核对。');

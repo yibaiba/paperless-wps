@@ -1,0 +1,64 @@
+✖ pending offline operation remains protected and retries with its original identity (135.037291ms)
+✖ pending ack-lost operation remains protected and retries with its original identity (37.565249ms)
+✖ two simultaneous business edits cannot both reserve the same draft revision (32.168564ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 0
+ℹ fail 3
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 612.807048
+
+✖ failing tests:
+
+test at frontend/tests/persistent-draft-operations.test.mjs:81:3
+✖ pending offline operation remains protected and retries with its original identity (135.037291ms)
+  AssertionError [ERR_ASSERTION]: unacknowledged operation is unsynced even before local projection changes
+
+  false !== true
+
+      at TestContext.<anonymous> (file:///Users/yibaiba/Code/RustProject/pi/presales-platform/frontend/tests/persistent-draft-operations.test.mjs:85:12)
+      at async Test.run (node:internal/test_runner/test:1313:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at frontend/tests/persistent-draft-operations.test.mjs:81:3
+✖ pending ack-lost operation remains protected and retries with its original identity (37.565249ms)
+  AssertionError [ERR_ASSERTION]: unacknowledged operation is unsynced even before local projection changes
+
+  false !== true
+
+      at TestContext.<anonymous> (file:///Users/yibaiba/Code/RustProject/pi/presales-platform/frontend/tests/persistent-draft-operations.test.mjs:85:12)
+      at async Test.run (node:internal/test_runner/test:1313:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:897:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at frontend/tests/persistent-draft-operations.test.mjs:100:1
+✖ two simultaneous business edits cannot both reserve the same draft revision (32.168564ms)
+  AssertionError [ERR_ASSERTION]: only one operation may enter the transport
+
+  2 !== 1
+
+      at TestContext.<anonymous> (file:///Users/yibaiba/Code/RustProject/pi/presales-platform/frontend/tests/persistent-draft-operations.test.mjs:107:10)
+      at async Test.run (node:internal/test_runner/test:1313:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:897:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 2,
+    expected: 1,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

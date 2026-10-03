@@ -1,0 +1,32 @@
+✔ uncertain check-before: retry commits once (2.793213ms)
+✔ edit after check-before: previous receipt never substitutes for the new save (1.049381ms)
+✔ uncertain check-after: retry commits once (0.753531ms)
+✔ edit after check-after: previous receipt never substitutes for the new save (1.705176ms)
+✔ uncertain save-before: retry commits once (0.380758ms)
+✔ edit after save-before: previous receipt never substitutes for the new save (0.493879ms)
+✔ uncertain save-after: retry commits once (0.452948ms)
+✔ edit after save-after: previous receipt never substitutes for the new save (0.404811ms)
+✔ uncertain workspace-read: retry commits once (0.501022ms)
+✔ edit after workspace-read: previous receipt never substitutes for the new save (0.559965ms)
+✔ uncertain project-read: retry commits once (0.617529ms)
+✔ edit after project-read: previous receipt never substitutes for the new save (0.291371ms)
+✔ a later project save cannot masquerade as the acknowledged revision (0.371324ms)
+✔ check rejected: expose the conflict and permit subsequent draft edits (0.36457ms)
+✔ save rejected: expose the conflict and permit subsequent draft edits (0.233814ms)
+✔ check conflict: immediate retry cannot save another editor configuration (145.020281ms)
+✔ save conflict: immediate retry cannot save another editor configuration (40.853336ms)
+✔ save validation rejection can retry using its own acknowledged check revision (31.549979ms)
+✔ edit after save acknowledgement cannot silently become the next local save baseline (50.859621ms)
+✔ pending offline operation remains protected and retries with its original identity (147.630698ms)
+✔ pending ack-lost operation remains protected and retries with its original identity (39.582101ms)
+✔ two simultaneous business edits cannot both reserve the same draft revision (29.572071ms)
+✔ first edit survives create-offline before the work draft is available (40.1026ms)
+✔ first edit survives create-ack-lost before the work draft is available (42.536265ms)
+ℹ tests 24
+ℹ suites 0
+ℹ pass 24
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 724.305778
