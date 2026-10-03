@@ -6,8 +6,9 @@ from ...knowledge.semantics import role_matches
 from ..calculation.combinations import combination_checks, role_definition
 from ..calculation.demands import accessory_demands_v3
 from ..calculation.inclusions import included_fulfillment
+from ..calculation.inspections import prepare_inspections
 from ..planning.quantities import role_quantity
-from ..role_allocations import project_allocations
+from ..role_allocations import project_allocations, restore_requirement_ids
 from ..schemas import Deployment
 from .definition_snapshot import project_knowledge, resolve_definitions
 
@@ -80,7 +81,8 @@ class CandidateCombinations:
             dict(r, device_id=identity, allocations=[]) if r["id"] == self.requirement["id"] else r
             for r in data["requirements"]
         ]
-        data, _ = project_allocations(data)
+        data, aliases = project_allocations(data)
+        data, _, _ = prepare_inspections(data, self.definitions)
         variants = dict(self.variants, **{identity: variant})
         suggestions = accessory_demands_v3(
             data,
@@ -98,6 +100,7 @@ class CandidateCombinations:
             engine=self.repository.engine,
             decisions=self.decisions,
         )
+        checks = restore_requirement_ids(checks, aliases)
         statuses = {c["status"] for c in checks} | {candidate["status"]}
         status = (
             "conflict" if "conflict" in statuses else "unknown" if "unknown" in statuses else "pass"
