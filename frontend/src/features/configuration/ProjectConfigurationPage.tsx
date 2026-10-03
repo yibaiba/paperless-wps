@@ -1,4 +1,5 @@
-import { requirementDeviceIds, unlinkRoleDevice } from "./projects/roleAllocations";
+import { DeviceInspector } from "./projects/DeviceInspector";
+import { requirementDeviceIds } from "./projects/roleAllocations";
 import { ProposalPanel } from "./projects/ProposalPanel";
 import { AssignDeviceDialog } from "./projects/AssignDeviceDialog";
 import { DraftRecovery } from "./projects/drafts/DraftRecovery";
@@ -14,7 +15,6 @@ import type { ProjectConfiguration } from "./types";
 import { ROOT } from "./shared";
 import { businessKey, useProjectEditor } from "./projects/useProjectEditor";
 import {
-  DeploymentForm,
   ProjectAuthor,
   RequirementForm,
   SystemForm,
@@ -276,69 +276,9 @@ function ConfigurationEditor({
         {showInspector ? <aside className="project-inspector" aria-label="选型与产品属性">
           <Button className="project-inspector-close" onClick={() => { setDeviceModal(undefined); setSelectedRequirement(undefined); }}>收起选型面板</Button>
         {editingDevice ? (
-          <DeploymentForm
-            key={editingDevice.id + editingDevice.quantity + editingDevice.name}
-            device={editingDevice}
-            requiresSupply={config.calculation_version === 3}
-            onClose={() => setDeviceModal(undefined)}
-            onApply={(d) =>
-              drawing.mutate({
-                next: {
-                  ...config,
-                  devices: config.devices.map((old) =>
-                    old.id === d.id ? d : old,
-                  ),
-                },
-              })
-            }
-            onDelete={() => {
-              const removedDemandIds = new Set(
-                (checked?.suggestions ?? [])
-                  .filter(
-                    (item) =>
-                      item.scope === "device" &&
-                      item.scope_id === editingDevice.id,
-                  )
-                  .map((item) => item.id),
-              );
-              drawing.mutate({
-                next: {
-                  ...config,
-                  devices: config.devices.filter(
-                    (d) => d.id !== editingDevice.id,
-                  ),
-                  requirements: config.requirements.map((r) =>
-                    unlinkRoleDevice(r, editingDevice.id),
-                  ),
-                  supply_allocations: (config.supply_allocations ?? []).filter((a) => a.device_id !== editingDevice.id),
-                  accessory_choices: (config.accessory_choices ?? []).filter((c) => !removedDemandIds.has(c.demand_id)),
-                  included_allocations: (config.included_allocations ?? []).filter((a) => a.device_id !== editingDevice.id && !removedDemandIds.has(a.demand_id)),
-                  accessory_allocations: config.accessory_allocations.filter(
-                    (item) =>
-                      item.device_id !== editingDevice.id &&
-                      !removedDemandIds.has(item.demand_id),
-                  ),
-                },
-                removeId: editingDevice.id,
-              });
-              setDeviceModal(undefined);
-            }}
-            onClone={(supply) => {
-              const clone = {
-                ...editingDevice,
-                id: crypto.randomUUID(),
-                name: editingDevice.name + " 副本",
-                origin_suggestion: null,
-              };
-              drawing.mutate({
-                next: { ...config, devices: [...config.devices, clone], supply_allocations: supply ? [
-                  ...(config.supply_allocations ?? []), { id: crypto.randomUUID(), device_id: clone.id, quantity: clone.quantity, ...supply },
-                ] : config.supply_allocations },
-                addIds: [clone.id],
-              });
-              setDeviceModal(undefined);
-            }}
-          />
+          <DeviceInspector device={editingDevice} requiresSupply={config.calculation_version === 3}
+            execute={editor.persistence.execute} onApply={editor.acceptChecked}
+            onClose={() => setDeviceModal(undefined)} />
         ) : (
           <ProjectCandidates
             configuration={config}

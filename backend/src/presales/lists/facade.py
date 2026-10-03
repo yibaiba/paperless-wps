@@ -32,6 +32,17 @@ class ListApplication:
         )
 
     def call(self, tool, arguments):
+        try:
+            result = self._call(tool, arguments)
+            self.session.commit()
+        except Exception:
+            self.session.rollback()
+            self.exports.rollback_files()
+            raise
+        self.exports.committed()
+        return result
+
+    def _call(self, tool, arguments):
         from presales.configuration.projects.planning.service import ProposalService
 
         operations = {
@@ -68,5 +79,4 @@ class ListApplication:
             result = action(model.model_validate(arguments))
         else:
             raise ValueError("工具不存在")
-        self.session.commit()
         return result

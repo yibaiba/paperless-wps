@@ -3,6 +3,7 @@ from pathlib import Path
 from uuid import NAMESPACE_URL, UUID, uuid5
 
 from presales.configuration.common import Entities, view
+from presales.configuration.models import Entity
 from presales.lists.queries import saved_revision
 from presales.lists.receipts import once
 
@@ -38,12 +39,28 @@ class FileArtifacts:
             raise ValueError("导出文件校验失败，文件已变化")
         return path
 
+    def remove(self, identity):
+        self.path(identity).unlink(missing_ok=True)
+
 
 class ListExports:
     def __init__(self, session, *, repository, renderer, files, web_origin):
         self.session, self.repository = session, repository
         self.renderer, self.files = renderer, files
         self.web_origin = web_origin.rstrip("/")
+        self.pending_files = []
+
+    def rollback_files(self):
+        # Only files written by this attempt, never artifacts returned by a receipt replay.
+        for identity in self.pending_files:
+            # Commit acknowledgment can be lost after a successful database commit.
+            # Read in the new transaction before deleting anything recoverable by its receipt.
+            if self.session.get(Entity, identity) is None:
+                self.files.remove(identity)
+        self.pending_files.clear()
+
+    def committed(self):
+        self.pending_files.clear()
 
     def export(self, request):
         result = once(
@@ -72,6 +89,7 @@ class ListExports:
             filename = (
                 "设备清单" if kind == "configuration" else "报价单"
             ) + f"-v{request.revision}.xlsx"
+            self.pending_files.append(identity)
             path = self.files.write(identity, content)
             artifact = Entities(self.session).save(
                 "list_artifact",

@@ -8,7 +8,7 @@ from presales.rules.calculation import digest
 from presales.rules.repository import RuleConflict
 from presales.storage import Project
 
-from .catalog_snapshot import DraftCatalog, capture_catalog, edit_catalog_snapshot
+from .catalog_snapshot import DraftCatalog, capture_catalog
 from .queries import saved_revision
 from .receipts import once
 from .views import read_view, summary
@@ -100,31 +100,13 @@ class ListService:
 
     def _update(self, request):
         record = self.locked(request)
-        from presales.configuration.projects.planning.application import validate_proposal_batch
-
-        validate_proposal_batch(self.repository, record, request.operations)
         if any(op.action == "accessory_apply" for op in request.operations) and (
             record.payload["checked_config_hash"] != digest(record.payload["configuration"])
         ):
             raise RuleConflict("CHECK_STALE：应用配套前请先检查当前草稿")
-        from presales.configuration.projects.services.incremental import edit_check
+        from .editing import edit_draft
 
-        catalog_id = edit_catalog_snapshot(self.session, record.payload, request.operations)
-        self.repository.catalog = DraftCatalog(self.session, catalog_id)
-        checked = edit_check(
-            record.payload["checked"], request.operations, repository=self.repository
-        )
-        payload = dict(
-            record.payload,
-            catalog_snapshot_id=catalog_id,
-            configuration=checked["configuration"],
-            checked=checked,
-            checked_config_hash=None,
-            check_fingerprint=None,
-        )
-        result = self.entities.save(
-            "list_draft", payload, entity_id=record.id, expected_revision=record.revision
-        )
+        result = edit_draft(self, record, operations=request.operations)
         return summary(result)
 
     def check(self, request):

@@ -6,6 +6,18 @@ const deviceInput = ({ source_snapshot, variant_snapshot, origin_suggestion, gen
   void source_snapshot; void variant_snapshot; void origin_suggestion; void generated_origin; return value;
 };
 
+export function deviceOperation(previous: Deployment | undefined, value: Deployment): Operation | undefined {
+  const next = deviceInput(value);
+  const prev = previous ? deviceInput(previous) : undefined;
+  if (equal(prev, next)) return undefined;
+  if (prev && equal({ ...prev, quantity: next.quantity, note: next.note }, next)) {
+    return { action: 'device_patch', device_id: value.id,
+      ...(prev.quantity !== next.quantity ? { quantity: next.quantity } : {}),
+      ...(prev.note !== next.note ? { note: next.note } : {}) };
+  }
+  return { action: 'device_put', value: next };
+}
+
 /** Forms express intent locally; the server alone validates and applies these commands. */
 export function configurationOperations(before: Configuration, after: Configuration): Operation[] {
   const operations: Operation[] = [];
@@ -16,13 +28,8 @@ export function configurationOperations(before: Configuration, after: Configurat
       const previous = old.get(value.id);
       if (equal(previous, value)) continue;
       if (collection !== 'devices') { operations.push({ action, value }); continue; }
-      const next = deviceInput(value as Deployment);
-      const prev = previous ? deviceInput(previous as Deployment) : undefined;
-      if (prev && equal({ ...prev, quantity: next.quantity, note: next.note }, next)) {
-        operations.push({ action: 'device_patch', device_id: value.id,
-          ...(prev.quantity !== next.quantity ? { quantity: next.quantity } : {}),
-          ...(prev.note !== next.note ? { note: next.note } : {}) });
-      } else if (!equal(prev, next)) operations.push({ action, value: next });
+      const operation = deviceOperation(previous as Deployment | undefined, value as Deployment);
+      if (operation) operations.push(operation);
     }
   }
   for (const system of after.systems) {

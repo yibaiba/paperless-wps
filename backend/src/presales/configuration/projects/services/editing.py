@@ -95,6 +95,10 @@ def apply_operation(data, *, operation, repository):
         return edit_quote_device(data, operation)
     if action in ("device_patch", "section_set"):
         return patch_device(data, operation)
+    if action == "device_clone":
+        from .device_clone import clone_device
+
+        return clone_device(data, operation)
     if action in PUT_COLLECTIONS:
         return put(data, operation)
     if action == "remove":

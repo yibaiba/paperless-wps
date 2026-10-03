@@ -1,0 +1,66 @@
+FF.                                                                      [100%]
+=================================== FAILURES ===================================
+_________ test_clone_is_independent_and_retry_does_not_duplicate[web] __________
+
+client = <starlette.testclient.TestClient object at 0x11670b4d0>
+catalog = {'imported': {'source_kind': 'excel', 'id': '5e9ee02b-5e6b-41fd-8888-309d4c8d4f0f', 'filename': 'test.xlsx', 'created_...a4c3-43f5-bd8e-4c65d5228fff', 'revision': 1, 'updated_at': '2026-10-03T09:32:15.176942+00:00', 'actor': '测试维护者', ...}]}
+entry = 'web'
+
+    @pytest.mark.parametrize("entry", ["web", "mcp"])
+    def test_clone_is_independent_and_retry_does_not_duplicate(client, catalog, entry):
+        draft = start(client, saved_project(client, catalog))
+        operation_id = str(uuid4())
+        operations = [dict(action="device_clone", source_device_id="server", new_device_id="clone")]
+>       request = mutation(draft, operations=operations, operation_id=operation_id)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+backend/tests/configuration/test_device_clone.py:14: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+draft = {'id': '8cbe54c7-a63e-4ee8-b7c8-eeb0fae55019', 'revision': 1, 'updated_at': '2026-10-03T09:32:15.351816', 'origin': 'web', ...}
+extra = {'operations': [{'action': 'device_clone', 'source_device_id': 'server', 'new_device_id': 'clone'}], 'operation_id': 'dc07929a-1a92-4eba-a22e-c45fe7581d38'}
+
+    def mutation(draft, **extra):
+>       return dict(
+            draft_id=draft["id"],
+            expected_revision=draft["revision"],
+            operation_id=str(uuid4()),
+            **extra,
+        )
+E       TypeError: dict() got multiple values for keyword argument 'operation_id'
+
+backend/tests/configuration/test_list_mcp.py:17: TypeError
+_________ test_clone_is_independent_and_retry_does_not_duplicate[mcp] __________
+
+client = <starlette.testclient.TestClient object at 0x11671f750>
+catalog = {'imported': {'source_kind': 'excel', 'id': '947e8dd5-a695-4d13-a2a1-b6beb798ce04', 'filename': 'test.xlsx', 'created_...5fbb-4aa3-91da-916e4df16a41', 'revision': 1, 'updated_at': '2026-10-03T09:32:15.591658+00:00', 'actor': '测试维护者', ...}]}
+entry = 'mcp'
+
+    @pytest.mark.parametrize("entry", ["web", "mcp"])
+    def test_clone_is_independent_and_retry_does_not_duplicate(client, catalog, entry):
+        draft = start(client, saved_project(client, catalog))
+        operation_id = str(uuid4())
+        operations = [dict(action="device_clone", source_device_id="server", new_device_id="clone")]
+>       request = mutation(draft, operations=operations, operation_id=operation_id)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+backend/tests/configuration/test_device_clone.py:14: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+draft = {'id': 'afd9f32a-1a68-4164-acbd-8acbf32f0466', 'revision': 1, 'updated_at': '2026-10-03T09:32:15.734162', 'origin': 'web', ...}
+extra = {'operations': [{'action': 'device_clone', 'source_device_id': 'server', 'new_device_id': 'clone'}], 'operation_id': 'b1df8094-330b-4d2f-bc5e-c9eff3aaa504'}
+
+    def mutation(draft, **extra):
+>       return dict(
+            draft_id=draft["id"],
+            expected_revision=draft["revision"],
+            operation_id=str(uuid4()),
+            **extra,
+        )
+E       TypeError: dict() got multiple values for keyword argument 'operation_id'
+
+backend/tests/configuration/test_list_mcp.py:17: TypeError
+=========================== short test summary info ============================
+FAILED backend/tests/configuration/test_device_clone.py::test_clone_is_independent_and_retry_does_not_duplicate[web]
+FAILED backend/tests/configuration/test_device_clone.py::test_clone_is_independent_and_retry_does_not_duplicate[mcp]
+2 failed, 1 passed in 1.09s

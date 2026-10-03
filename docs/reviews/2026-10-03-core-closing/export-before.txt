@@ -1,0 +1,33 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+_________ test_second_file_failure_leaves_no_published_file_or_receipt _________
+
+client = <starlette.testclient.TestClient object at 0x11507f230>
+catalog = {'imported': {'source_kind': 'excel', 'id': '53310ce0-ccec-4b96-adaf-9d95409cc2ef', 'filename': 'test.xlsx', 'created_...f4f0-4faf-9751-e05994e76441', 'revision': 1, 'updated_at': '2026-10-03T09:35:01.131370+00:00', 'actor': '测试维护者', ...}]}
+tmp_path = PosixPath('/private/var/folders/vv/2pbkx3_s66n0ybf417p97q_r0000gn/T/pytest-of-yibaiba/pytest-253/test_second_file_failure_leave0')
+
+    def test_second_file_failure_leaves_no_published_file_or_receipt(client, catalog, tmp_path):
+        class FailingFiles(FileArtifacts):
+            count = 0
+    
+            def write(self, identity, content):
+                self.count += 1
+                if self.count == 2:
+                    raise OSError("isolated disk failure")
+                return super().write(identity, content)
+    
+        client.app.state.artifact_files = FailingFiles(tmp_path)
+        saved = saved_project(client, catalog)
+        request = dict(project_id=saved["project_id"], revision=1, output="both", operation_id="atomic")
+        with pytest.raises(OSError, match="disk failure"):
+            client.post("/api/list-tools/list_export", json=request)
+>       assert list(tmp_path.iterdir()) == []
+E       AssertionError: assert [PosixPath('/...a8b185.xlsx')] == []
+E         
+E         Left contains one more item: PosixPath('/private/var/folders/vv/2pbkx3_s66n0ybf417p97q_r0000gn/T/pytest-of-yibaiba/pytest-253/test_second_file_failure_leave0/cd765205-833a-50b2-93ce-3d83baa8b185.xlsx')
+E         Use -v to get more diff
+
+backend/tests/configuration/test_export_atomicity.py:25: AssertionError
+=========================== short test summary info ============================
+FAILED backend/tests/configuration/test_export_atomicity.py::test_second_file_failure_leaves_no_published_file_or_receipt
+1 failed in 0.82s

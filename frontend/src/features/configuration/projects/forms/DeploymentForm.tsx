@@ -11,6 +11,7 @@ export function DeploymentForm({
   onDelete,
   onClone,
   requiresSupply,
+  disabled = false,
 }: {
   device: Deployment;
   onApply: (device: Deployment) => void;
@@ -18,6 +19,7 @@ export function DeploymentForm({
   onDelete: () => void;
   onClone: (supply?: SupplyChoice) => void;
   requiresSupply?: boolean;
+  disabled?: boolean;
 }) {
   const [form] = Form.useForm();
   useEffect(() => { form.setFieldsValue(device); }, [device, form]);
@@ -35,6 +37,7 @@ export function DeploymentForm({
         onClone(supply); setSupplyOpen(false);
       }} /> : null}
       <Form
+        disabled={disabled}
         form={form}
         layout="vertical"
         initialValues={device}

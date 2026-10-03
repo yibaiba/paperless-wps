@@ -52,6 +52,13 @@ class DeviceInput(Deployment):
         return self
 
 
+class DeviceClone(Input):
+    action: Literal["device_clone"]
+    source_device_id: Text
+    new_device_id: Text
+    supply_allocations: list[SupplyAllocation] = Field(default_factory=list)
+
+
 class DevicePut(Input):
     action: Literal["device_put"]
     value: DeviceInput
@@ -211,6 +218,7 @@ Operation = Annotated[
     | SystemPut
     | RequirementPut
     | DevicePut
+    | DeviceClone
     | Remove
     | SupplySet
     | AccessoryChoice

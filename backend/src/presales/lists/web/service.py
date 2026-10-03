@@ -122,29 +122,12 @@ class WebDrafts:
 
     def _edit(self, request):
         record = self.lists.locked(request)
-        from presales.configuration.projects.planning.application import validate_proposal_batch
+        from ..editing import edit_draft
 
-        validate_proposal_batch(self.repository, record, request.operations)
         before = record.payload["configuration"]
         previous = record.payload["checked"]
-        catalog_id = edit_catalog_snapshot(self.session, record.payload, request.operations)
-        self.repository.catalog = DraftCatalog(self.session, catalog_id)
-        checked = edit_check(
-            record.payload["checked"], request.operations, repository=self.repository
-        )
-        result = self.entities.save(
-            "list_draft",
-            dict(
-                record.payload,
-                catalog_snapshot_id=catalog_id,
-                configuration=checked["configuration"],
-                checked=checked,
-                checked_config_hash=None,
-                check_fingerprint=None,
-            ),
-            entity_id=record.id,
-            expected_revision=record.revision,
-        )
+        result = edit_draft(self.lists, record, operations=request.operations)
+        checked = result["checked"]
         return dict(
             id=result["id"],
             revision=result["revision"],
