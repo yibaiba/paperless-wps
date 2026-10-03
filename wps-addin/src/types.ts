@@ -67,7 +67,9 @@ export interface SuggestionFeedbackPayload {
 
 export type DiagnosticEventType = 'inline_open' | 'focus_lost' | 'query_start'
   | 'query_success' | 'query_error' | 'no_match' | 'tab_register' | 'tab_restore'
-  | 'tab_accept' | 'tab_expand' | 'accept_success' | 'accept_error';
+  | 'tab_accept' | 'tab_expand' | 'accept_success' | 'accept_error'
+  | 'completion_shown' | 'completion_accepted' | 'completion_undone'
+  | 'completion_replaced' | 'completion_retained';
 
 export interface DiagnosticEventPayload {
   event_id: string;
@@ -89,6 +91,7 @@ export interface DiagnosticEventPayload {
 }
 
 export type DiagnosticEventInput = Pick<DiagnosticEventPayload, 'event_type'>
+  & Partial<Pick<DiagnosticEventPayload, 'event_id'>>
   & Partial<Pick<DiagnosticEventPayload,
     'completion_phase' | 'duration_ms' | 'candidate_count' | 'completion_ready'
     | 'outcome' | 'error_code' | 'template_profile_id' | 'template_profile_revision'>>;
@@ -120,6 +123,9 @@ export interface LineBinding {
   device_id?: string;
   variant_id: string;
   source_id: string;
+  kind?: ProductKind;
+  requirement_id?: string;
+  confirmed_values?: Partial<Record<TemplateField, string>>;
 }
 
 export interface BindingState {
@@ -137,12 +143,15 @@ export interface BindingState {
 }
 
 export interface WorkbookMetadata {
-  schema_version: 1;
+  schema_version: 1 | 2;
   workbook_instance_id: string;
   profile_id?: string;
   profile_revision?: number;
   binding?: BindingState;
   line_bindings: LineBinding[];
+  business?: WorkbookBusinessState;
+  pending_sync?: { request: Record<string, unknown>; local_revision: number;
+    operations: WorkbookBusinessState['operations']; line_bindings: LineBinding[] };
 }
 
 export interface WorkbookLine {
@@ -182,3 +191,4 @@ export interface SyncPreviewResult {
   has_changes: boolean;
   operation_count: number;
 }
+import type { ProductKind, WorkbookBusinessState } from './businessTypes';

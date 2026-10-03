@@ -2,6 +2,7 @@ import type {
   BindingState, Candidate, CatalogScopePreview, DiagnosticEventPayload, ProjectSummary,
   SuggestionFeedbackPayload, SyncPreviewResult, TemplateProfile, WorkbookLine,
 } from './types';
+import type { CompletionPreviewResult, WorkbookBusinessContext } from './businessTypes';
 
 const API_BASE = (import.meta.env.VITE_API_BASE as string | undefined)?.replace(/\/$/, '') ?? '';
 
@@ -69,6 +70,16 @@ export class WpsApi {
   }
 
   binding(id: string) { return this.request<BindingState>(`/bindings/${id}`); }
+
+  businessContext(id: string) {
+    return this.request<WorkbookBusinessContext>(`/bindings/${encodeURIComponent(id)}/context`);
+  }
+
+  completionPreview(value: Record<string, unknown>, signal?: AbortSignal) {
+    return this.request<CompletionPreviewResult>('/completion/preview', {
+      method: 'POST', body: JSON.stringify(value), signal,
+    });
+  }
 
   preview(value: Record<string, unknown>) {
     return this.request<SyncPreviewResult>('/sync/preview', {

@@ -27,17 +27,28 @@ export function rowAnchor(row: SheetRow) {
 export function bindingForRow(row: SheetRow, bindings: LineBinding[]) {
   const exact = bindings.find((item) => item.sheet === row.sheet && item.row === row.row);
   if (exact && (!exact.anchor_fingerprint || exact.anchor_fingerprint === rowAnchor(row))) return exact;
-  const matches = bindings.filter((item) => item.anchor_fingerprint === rowAnchor(row));
+  const matches = bindings.filter((item) => item.sheet === row.sheet
+    && item.anchor_fingerprint === rowAnchor(row));
   return matches.length === 1 ? matches[0] : undefined;
 }
 
 export function scanWorkbook(rows: SheetRow[], metadata: WorkbookMetadata) {
   const lines: WorkbookLine[] = [];
   const unresolved: string[] = [];
+  const identities = new Set<string>();
   for (const row of rows) {
     const binding = bindingForRow(row, metadata.line_bindings);
     if (!binding) {
       unresolved.push(`${row.sheet} 第 ${row.row} 行尚未确认具体产品配置`);
+      continue;
+    }
+    if (identities.has(binding.line_id)) {
+      unresolved.push(`${row.sheet} 第 ${row.row} 行与其他行重复匹配，请明确各行身份`);
+      continue;
+    }
+    identities.add(binding.line_id);
+    if (metadata.schema_version === 2 && !binding.kind) {
+      unresolved.push(`${row.sheet} 第 ${row.row} 行尚未确认产品类型`);
       continue;
     }
     if (row.formula_fields.includes('quantity') || row.formula_fields.includes('price')) {
@@ -67,7 +78,7 @@ export function scanWorkbook(rows: SheetRow[], metadata: WorkbookMetadata) {
       price: price || null,
       note: value(row, 'note'),
       section: value(row, 'section'),
-      kind: 'hardware',
+      kind: binding.kind ?? 'hardware',
       variant_id: binding.variant_id,
       source_id: binding.source_id,
       ...(binding.device_id ? { device_id: binding.device_id } : {}),

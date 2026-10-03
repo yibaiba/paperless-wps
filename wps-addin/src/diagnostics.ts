@@ -6,6 +6,7 @@ const PLUGIN_VERSION = '0.1.0';
 const EVENT_TYPES = new Set([
   'inline_open', 'focus_lost', 'query_start', 'query_success', 'query_error', 'no_match',
   'tab_register', 'tab_restore', 'tab_accept', 'tab_expand', 'accept_success', 'accept_error',
+  'completion_shown', 'completion_accepted', 'completion_undone', 'completion_replaced', 'completion_retained',
 ]);
 const EVENT_KEYS = new Set([
   'event_id', 'installation_id', 'session_id', 'occurred_at', 'plugin_version', 'host_os',

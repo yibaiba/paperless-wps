@@ -25,7 +25,7 @@ export function suggestionContext(options: SuggestionContextInput) {
   const { cell, row, metadata } = options;
   const sheetBindings = metadata.line_bindings.filter((item) => item.sheet === cell.sheet);
   const section = row.values.section?.trim() || options.inheritedSection?.trim() || '';
-  const current = bindingForRow(row, sheetBindings);
+  const current = bindingForRow({ ...row, sheet: cell.sheet, row: cell.row }, sheetBindings);
   const exact = sheetBindings.find((item) => item.row === cell.row);
   const changedIdentity = Boolean(row.values.model?.trim() || row.values.name?.trim());
   const stableBindings = exact?.anchor_fingerprint && exact !== current && changedIdentity

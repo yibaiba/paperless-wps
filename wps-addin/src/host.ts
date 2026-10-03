@@ -3,6 +3,9 @@ import type {
   SheetRow, TemplateField, TemplateProfile, SuggestionFeedbackPayload, WorkbookMetadata,
 } from './types';
 import { CredentialStore } from './credentialStore.ts';
+import type { WorkbookEditJournal } from './businessTypes';
+import { MetadataRecords, readMetadataRecords, writeMetadataRecords } from './metadataRecords.ts';
+import { sheetChange, subscribeHostEvent, type SheetChange } from './hostEvents.ts';
 import { DiagnosticRecorder } from './diagnostics.ts';
 import { enqueueFeedback, parseFeedbackOutbox, removeFeedback } from './feedbackOutbox.ts';
 import { InlineDialogManager } from './inlineDialog.ts';
@@ -37,6 +40,10 @@ export interface HostAdapter {
   sheetNames(): string[];
   readHeader(sheet: string, row: number): string[];
   readRow(profile: TemplateProfile, row: number): SheetRow;
+  readCell(cell: Pick<ActiveCell, 'sheet' | 'row' | 'column'>): ActiveCell;
+  selectCell(cell: Pick<ActiveCell, 'sheet' | 'row' | 'column'>): void;
+  journals(): WorkbookEditJournal[];
+  writeJournal(journal: WorkbookEditJournal): void;
   readInheritedField(
     profile: TemplateProfile,
     options: { row: number; field: TemplateField },
@@ -67,7 +74,8 @@ export interface HostAdapter {
   removeSuggestionFeedback(operationId: string): void;
   writeCellValue(cell: ActiveCell, value: string): void;
   moveSelection(rowOffset: number, columnOffset: number): void;
-  onSheetChange(callback: () => void): () => void;
+  onSheetChange(callback: (event: SheetChange) => void): () => void;
+  businessRevision(): number;
   onSelectionChange(callback: () => void): () => void;
   onSheetActivate(callback: () => void): () => void;
   onWorkbookBeforeClose(callback: () => void): () => void;
@@ -82,6 +90,7 @@ export class WpsHostAdapter implements HostAdapter {
   private readonly diagnostics: DiagnosticRecorder;
   private readonly inlineDialog: InlineDialogManager;
   private readonly tabCoordinator: WpsTabCoordinator;
+  private recordStores = new Map<string, MetadataRecords>();
 
   constructor() {
     this.app = window.Application ?? window.wps?.EtApplication?.();
@@ -178,6 +187,18 @@ export class WpsHostAdapter implements HostAdapter {
     return this.mappedRow(this.sheet(profile.sheet_selector), profile, row);
   }
 
+  readCell(cell: Pick<ActiveCell, 'sheet' | 'row' | 'column'>): ActiveCell {
+    const target = this.sheet(cell.sheet).Cells.Item(cell.row, cell.column);
+    return { ...cell, value: text(target.Value2), formula: text(target.Formula),
+      merged: Boolean(target.MergeCells) };
+  }
+
+  selectCell(cell: Pick<ActiveCell, 'sheet' | 'row' | 'column'>) {
+    const sheet = this.sheet(cell.sheet);
+    sheet.Activate();
+    sheet.Cells.Item(cell.row, cell.column).Select();
+  }
+
   readInheritedField(
     profile: TemplateProfile,
     options: { row: number; field: TemplateField },
@@ -229,6 +250,7 @@ export class WpsHostAdapter implements HostAdapter {
     if (!raw) return fallback;
     try {
       const parsed = JSON.parse(raw) as WorkbookMetadata;
+      if (parsed.schema_version === 2) return readMetadataRecords(this.records(sheet));
       if (parsed.schema_version !== 1) throw new Error('unsupported schema');
       return parsed;
     } catch {
@@ -244,10 +266,36 @@ export class WpsHostAdapter implements HostAdapter {
       sheet = workbook.Worksheets.Add();
       sheet.Name = META_SHEET;
     }
-    sheet.Range(META_CELL).Value2 = JSON.stringify(value);
+    if (value.schema_version === 2) writeMetadataRecords(this.records(sheet), value);
+    else sheet.Range(META_CELL).Value2 = JSON.stringify(value);
     sheet.Visible = 2;
     if (active && active.Name !== META_SHEET) active.Activate();
     this.stateSet('presales_metadata_nonce', this.metadataNonce() + 1);
+  }
+
+  journals(): WorkbookEditJournal[] {
+    const sheet = this.optionalSheet(META_SHEET);
+    if (!sheet) return [];
+    return Object.values(this.records(sheet).records('journal/')) as WorkbookEditJournal[];
+  }
+
+  writeJournal(journal: WorkbookEditJournal) {
+    const metadata = this.readMetadata();
+    if (metadata.schema_version !== 2) throw new Error('编辑日志需要先确认 v2 业务设置');
+    this.records(this.sheet(META_SHEET)).write({ [`journal/${journal.operation_id}`]: journal });
+  }
+
+  private records(sheet: any) {
+    const key = text(this.requireWorkbook().FullName ?? this.requireWorkbook().Name);
+    let store = this.recordStores.get(key);
+    if (!store) {
+      store = new MetadataRecords({
+        read: (row) => text(sheet.Cells.Item(row, 1).Value2),
+        write: (row, value) => { sheet.Cells.Item(row, 1).Value2 = value; },
+      });
+      this.recordStores.set(key, store);
+    }
+    return store;
   }
 
   metadataNonce() { return Number(this.stateGet('presales_metadata_nonce') || 0); }
@@ -255,7 +303,7 @@ export class WpsHostAdapter implements HostAdapter {
   inlineContext(): InlineEditorContext | null { return this.inlineDialog.context(); }
 
   showInlineEditor(profile: TemplateProfile, cell: ActiveCell) {
-    if (cell.formula || cell.merged) return this.hideInlineEditor();
+    if (cell.formula.startsWith('=') || cell.merged) return this.hideInlineEditor();
     const issues = this.inlineCapabilityIssues();
     if (issues.length) throw new Error(`当前 WPS 缺少内联补全能力：${issues.join('、')}`);
     this.inlineDialog.show({ profile, cell });
@@ -331,20 +379,34 @@ export class WpsHostAdapter implements HostAdapter {
     selection.Offset(rowOffset, columnOffset).Select();
   }
 
-  onSheetChange(callback: () => void) { return this.event('SheetChange', callback); }
+  businessRevision() {
+    const metadata = this.readMetadata();
+    return (metadata.business?.local_revision ?? 0) + Number(this.stateGet(this.editKey()) || 0);
+  }
+
+  private editKey() {
+    return `presales_edit_epoch:${text(this.requireWorkbook().FullName ?? this.requireWorkbook().Name)}`;
+  }
+
+  onSheetChange(callback: (event: SheetChange) => void) {
+    return this.event('SheetChange', (sheet: unknown, target: unknown) => {
+      const change = sheetChange(sheet, target);
+      if (change.sheet === META_SHEET) return;
+      this.stateSet(this.editKey(), Number(this.stateGet(this.editKey()) || 0) + 1);
+      callback(change);
+    });
+  }
 
   onSelectionChange(callback: () => void) { return this.event('SheetSelectionChange', callback); }
 
   onSheetActivate(callback: () => void) { return this.event('SheetActivate', callback); }
 
   onWorkbookBeforeClose(callback: () => void) {
-    return this.event('WorkbookBeforeClose', callback);
+    return this.event('WorkbookBeforeClose', () => { this.recordStores.clear(); callback(); });
   }
 
-  private event(name: string, callback: () => void) {
-    const handler = () => callback();
-    this.app.ApiEvent.AddApiEventListener(name, handler);
-    return () => this.app.ApiEvent.RemoveApiEventListener(name, handler);
+  private event(name: string, callback: (...args: any[]) => void) {
+    return subscribeHostEvent(this.app.ApiEvent, name, callback);
   }
 
   private requireWorkbook() {
