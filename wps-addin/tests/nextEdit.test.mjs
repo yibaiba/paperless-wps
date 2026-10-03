@@ -9,7 +9,9 @@ import { BusinessPrefetch, businessPrefetchKey } from '../src/businessPrefetch.t
 import { ambiguousStructuralIdentities, scanWorkbook } from '../src/workbook.ts';
 import { completionRequest } from '../src/businessWorkbook.ts';
 import { handleInlineTab, returnNativeTab } from '../src/nativeTab.ts';
-import { assertWorkbookSession, captureWorkbookSession } from '../src/workbookSession.ts';
+import { assertWorkbookSession, captureWorkbookSession, inWorkbookSession } from '../src/workbookSession.ts';
+import { LatestRequest } from '../src/latestRequest.ts';
+import { applyCandidate } from '../src/candidateAcceptance.ts';
 
 const base = { cell: { sheet: 'quote', row: 3 }, ready: true, composing: false, explicit: false, count: 1,
   suggestion: { patches: [{ sheet: 'quote', row: 3 }], applicable: true, acceptance: 'inline' } };
@@ -26,6 +28,26 @@ test('copied bindings cannot receive an asynchronous receipt intended for anothe
   assert.doesNotThrow(() => assertWorkbookSession(host, session));
   metadata.binding.binding_id = 'rebound';
   assert.throws(() => assertWorkbookSession(host, session), /项目绑定/);
+});
+
+test('legacy late response and acceptance cannot write to a switched workbook', async () => {
+  let filename = 'A.xlsx'; let writes = 0; const candidates = [];
+  const host = { workbookKey: () => filename, readMetadata: () => ({ schema_version: 1 }),
+    writeCandidate: () => { writes++; }, writeMetadata: () => { writes++; } };
+  const session = captureWorkbookSession(host);
+  const latest = new LatestRequest(); const request = latest.begin();
+  const transport = Promise.withResolvers();
+  const pending = transport.promise.then((items) => {
+    if (request.isCurrent()) inWorkbookSession(host, { session, run: () => candidates.push(...items) });
+  });
+  // App's WorkbookActivate cancels the request and invalidates its candidate session synchronously.
+  filename = 'B.xlsx'; latest.cancel();
+  transport.resolve([{ key: 'old-candidate' }]); await pending;
+  assert.deepEqual(candidates, []);
+  assert.throws(() => inWorkbookSession(host, { session, run: () => applyCandidate({
+    host, cell: { row: 8 }, profile: { sheet_selector: 'A' }, candidate: {}, metadata: {},
+  }) }), /工作簿或项目绑定/);
+  assert.equal(writes, 0);
 });
 test('next edit locates offscreen changes and requires preview for quantities', () => {
   assert.equal(nextEditAction(base), 'apply');

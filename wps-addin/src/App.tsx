@@ -20,7 +20,7 @@ import type {
   WorkbookMetadata,
 } from './types';
 import { bindingForRow } from './workbook.ts';
-import { assertWorkbookSession, captureWorkbookSession } from './workbookSession';
+import { assertWorkbookSession, captureWorkbookSession, inWorkbookSession } from './workbookSession';
 
 type View = 'account' | 'suggestions' | 'mapping' | 'binding' | 'business' | 'sync';
 const HOST_STATE_POLL_MS = 250;
@@ -43,6 +43,9 @@ export function App() {
   const requests = useRef(new LatestRequest());
   const attemptedFeedback = useRef(new Set<string>());
   const diagnosticsInFlight = useRef(false);
+  const candidateSession = useRef<ReturnType<typeof captureWorkbookSession> | undefined>(undefined);
+  const [workbookKey, setWorkbookKey] = useState(() => host.ready() ? host.workbookKey() : '');
+  const workbookKeyRef = useRef(workbookKey);
   const capabilityIssues = useMemo(() => host.inlineCapabilityIssues(), [host]);
 
   const loadProfiles = useCallback(async () => {
@@ -63,7 +66,7 @@ export function App() {
     assertWorkbookSession(host, session);
     setProfile(matched);
     if (!matched) setView('mapping');
-  }, [api, host, metadata.profile_id, metadata.profile_revision, token]);
+  }, [api, host, metadata.profile_id, metadata.profile_revision, token, workbookKey]);
 
   useEffect(() => { loadProfiles().catch((reason) => setError(String(reason))); }, [loadProfiles]);
 
@@ -88,7 +91,7 @@ export function App() {
   }, [api, host, metadata, token]);
 
   const queryCell = useCallback((showEditor: boolean) => {
-    if (!profile || capabilityIssues.length) return;
+    if (!profile || capabilityIssues.length || host.workbookKey() !== workbookKey) return;
     let current: ActiveCell;
     try { current = host.activeCell(); } catch (reason) { setError(String(reason)); return; }
     const suggestionFields: TemplateField[] = ['model', 'name', 'description'];
@@ -96,6 +99,7 @@ export function App() {
       (field) => profile.field_columns[field] === current.column,
     );
     requests.current.cancel();
+    candidateSession.current = undefined;
     clearTimeout(timer.current);
     setCell(allowed && current.sheet === profile.sheet_selector ? current : undefined);
     setCandidates([]);
@@ -111,10 +115,12 @@ export function App() {
     if (inlineOwnsQuery) return;
     if (metadata.schema_version === 2) return;
     if (!current.value.trim()) return;
+    const session = captureWorkbookSession(host);
     timer.current = setTimeout(async () => {
       const request = requests.current.begin();
       setBusy(true); setError('');
       try {
+        assertWorkbookSession(host, session);
         const currentRow = host.readRow(profile, current.row);
         const inheritedSection = currentRow.values.section?.trim() ? '' : host.readInheritedField(
           profile,
@@ -132,14 +138,18 @@ export function App() {
           current_row: currentRow?.values ?? {},
           context: productContext,
         }, request.signal);
-        if (request.isCurrent()) setCandidates(result.items);
+        if (request.isCurrent()) {
+          assertWorkbookSession(host, session);
+          candidateSession.current = session;
+          setCandidates(result.items);
+        }
       } catch (reason) {
         if (request.isCurrent()) {
           setError(reason instanceof Error ? reason.message : String(reason));
         }
       } finally { if (request.isCurrent()) setBusy(false); }
     }, SUGGESTION_DEBOUNCE_MS);
-  }, [api, capabilityIssues, host, metadata, profile]);
+  }, [api, capabilityIssues, host, metadata, profile, workbookKey]);
 
   const queryCellRef = useRef(queryCell);
   queryCellRef.current = queryCell;
@@ -148,33 +158,51 @@ export function App() {
     if (!profile || capabilityIssues.length) return undefined;
     const removeChange = host.onSheetChange(() => queryCellRef.current(false));
     const removeSelection = host.onSelectionChange(() => queryCellRef.current(true));
-    const removeSheetActivate = host.onSheetActivate(() => host.hideInlineEditor());
-    const removeWorkbookClose = host.onWorkbookBeforeClose(() => host.hideInlineEditor());
-    const removeWorkbookActivate = host.onWorkbookActivate(() => {
-      host.hideInlineEditor(); setMetadata(host.readMetadata());
-    });
+    const clearContext = () => {
+      requests.current.cancel(); clearTimeout(timer.current); candidateSession.current = undefined;
+      setCandidates([]); setCell(undefined); setBusy(false); host.hideInlineEditor();
+    };
+    const removeSheetActivate = host.onSheetActivate(clearContext);
+    const removeWorkbookClose = host.onWorkbookBeforeClose(clearContext);
     queryCellRef.current(true);
     return () => {
-      removeChange(); removeSelection(); removeSheetActivate(); removeWorkbookClose(); removeWorkbookActivate();
+      removeChange(); removeSelection(); removeSheetActivate(); removeWorkbookClose();
       requests.current.cancel(); clearTimeout(timer.current);
       host.hideInlineEditor();
     };
   }, [capabilityIssues, host, profile]);
 
+  useEffect(() => {
+    if (capabilityIssues.length) return undefined;
+    return host.onWorkbookActivate(() => {
+      host.hideInlineEditor();
+      const key = host.workbookKey();
+      if (key === workbookKeyRef.current) return;
+      workbookKeyRef.current = key;
+      requests.current.cancel(); clearTimeout(timer.current); candidateSession.current = undefined;
+      setCandidates([]); setCell(undefined); setProfile(undefined); setBusy(false);
+      setMetadata(host.readMetadata()); setWorkbookKey(key);
+    });
+  }, [capabilityIssues.length, host]);
+
   const accept = useCallback((candidate: Candidate) => {
     if (!profile || !cell) return;
     setCandidates([]);
     try {
-      const currentRow = host.readRow(profile, cell.row);
-      const section = currentRow.values.section?.trim() || host.readInheritedField(
-        profile, { row: cell.row, field: 'section' },
-      ).trim();
-      const lineBinding = bindingForRow(currentRow, metadata.line_bindings)
-        ?? metadata.line_bindings.find((item) => item.sheet === cell.sheet && item.row === cell.row)
-        ?? null;
-      setMetadata(applyCandidate({
-        host, profile, cell, metadata, candidate, section, lineBinding,
-      }));
+      const session = candidateSession.current;
+      candidateSession.current = undefined;
+      inWorkbookSession(host, { session, run: () => {
+        const currentRow = host.readRow(profile, cell.row);
+        const section = currentRow.values.section?.trim() || host.readInheritedField(
+          profile, { row: cell.row, field: 'section' },
+        ).trim();
+        const lineBinding = bindingForRow(currentRow, metadata.line_bindings)
+          ?? metadata.line_bindings.find((item) => item.sheet === cell.sheet && item.row === cell.row)
+          ?? null;
+        setMetadata(applyCandidate({
+          host, profile, cell, metadata, candidate, section, lineBinding,
+        }));
+      } });
     } catch (reason) { setError(reason instanceof Error ? reason.message : String(reason)); }
   }, [cell, host, metadata, profile]);
 

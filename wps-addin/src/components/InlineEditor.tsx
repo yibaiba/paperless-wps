@@ -283,6 +283,7 @@ export function InlineEditor() {
     if (busy || error || composing || context.nonce !== contextNonce.current) return;
     accepting.current = true;
     try {
+      if (host.workbookKey() !== context.workbook_key) throw new Error('工作簿已切换，请重新输入');
       const feedback = completionFeedbackPayload({
         operationId,
         context,
