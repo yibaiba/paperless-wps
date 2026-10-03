@@ -177,11 +177,15 @@ class ProjectConfigurations:
         )
         return partition.restore(result) if partition else result
 
-    def scoped(self, scope):
+    def scoped(self, scope, *, before=None):
         from .planning.scoped_evaluation import ScopedEvaluation
 
         repository = copy(self)
         repository.evaluation_scope = ScopedEvaluation(scope)
+        if before is not None:
+            repository.evaluation_scope = repository.evaluation_scope.retaining(
+                before, session=self.session
+            )
         return repository
 
     def _check(self, data, *, refresh=False, upgrade=False, upgrade_decisions=False):

@@ -54,11 +54,15 @@ def workbook_projection(sync, request):
             operation_references(
                 [op.model_dump(mode="json") for op in request.business_operations]
             ),
-        )
+        ),
+        before=state["configuration"],
     )
     repository.catalog = DraftCatalog(sync.session, state["draft"].payload["catalog_snapshot_id"])
     data = edit_configuration(state["configuration"], operations, repository=repository)
     checked = repository.check(data)
+    repository = repository.scoped(
+        repository.evaluation_scope.scope, before=checked["configuration"]
+    )
     return {
         "state": state,
         "repository": repository,

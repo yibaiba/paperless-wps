@@ -10,6 +10,12 @@ class ScopedEvaluation:
     def __init__(self, scope):
         self.scope = scope
 
+    def retaining(self, data, *, session):
+        full = data.model_dump(mode="json") if isinstance(data, Configuration) else data
+        definitions, _ = resolve_definitions(session, full)
+        rules = project_knowledge(full, definitions)
+        return ScopedEvaluation(self.scope.retaining(full, rules))
+
     def partition(self, data, *, session):
         full = data.model_dump(mode="json") if isinstance(data, Configuration) else deepcopy(data)
         definitions, _ = resolve_definitions(session, full)

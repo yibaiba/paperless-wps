@@ -6,6 +6,7 @@ import pytest
 from presales.configuration.projects.planning.dependency_scope import DependencyScope
 from presales.configuration.projects.repository import ProjectConfigurations
 from presales.configuration.projects.schemas import Configuration
+from presales.configuration.projects.services.device_removal import remove_devices
 from presales.rules.calculation import digest
 
 from .test_wps_next_edits import accept, completion_body, preview, sync_body
@@ -122,6 +123,9 @@ def test_dependency_closure_keeps_shared_supply_and_cross_room_allocations():
         dict(device_id="d-a", demand_id=digest(["accessory", "system", "outside"]))
     ]
     assert DependencyScope("a").closure(data, [rule])["system"] == {"a", "b", "outside"}
+    retained = DependencyScope("a").retaining(data, [rule])
+    data["accessory_allocations"] = []
+    assert retained.closure(data, [rule])["system"] == {"a", "b", "outside"}
 
 
 def test_dependency_closure_keeps_room_and_project_combination_targets():
@@ -147,3 +151,55 @@ def test_explicit_room_and_allocation_edits_are_scope_roots():
     data["accessory_allocations"] = [dict(id="allocation", device_id="d-outside", demand_id="x")]
     scoped = DependencyScope("a", frozenset({"allocation"})).closure(data, [])
     assert scoped["system"] == {"a", "outside"}
+
+
+def test_shared_device_removal_retains_former_consumers_in_checks(client, catalog):
+    headers, body = completion_body(client, catalog)
+    seed_unrelated_systems(client, headers, body, 8)
+    body = accept(body, preview(client, headers, body)["items"][0])
+    before = preview(client, headers, body)["configuration"]
+    before["devices"][0]["quantity"] = "1"
+    for allocation in before["supply_allocations"]:
+        allocation["quantity"] = "1"
+    before["requirements"].append(
+        dict(before["requirements"][0], id="shared-role", system_id="unrelated-0")
+    )
+    with client.app.state.session_factory() as session:
+        repository = ProjectConfigurations(session, client.app.state.quantity_engine)
+        old = repository.check(Configuration.model_validate(before))
+        removed = remove_devices(before, {before["devices"][0]["id"]}, demands=old["suggestions"])
+        scoped = repository.scoped(DependencyScope("system"), before=before).check(
+            Configuration.model_validate(removed)
+        )
+        full = repository.check(Configuration.model_validate(removed))
+    assert set(scoped["evaluation_scope"]["system"]) == {"system", "unrelated-0"}
+    assert scoped["checks"] == [
+        c for c in full["checks"] if c.get("system_id") in {None, "system", "unrelated-0"}
+    ]
+
+
+def test_http_removal_preview_reports_missing_roles_in_both_former_rooms(client, catalog):
+    headers, body = completion_body(client, catalog)
+    body["business_operations"][0]["system"]["inputs"][0]["value"] = "1"
+    seed_unrelated_systems(client, headers, body, 8)
+    body = accept(body, preview(client, headers, body)["items"][0])
+    projected = preview(client, headers, body)["configuration"]
+    body["business_operations"].append(
+        dict(
+            action="requirement_put",
+            value=dict(projected["requirements"][0], id="shared-role", system_id="unrelated-0"),
+        )
+    )
+    line = body["lines"][0]
+    body.update(intent="remove")
+    body["active_cell"].update(
+        row=line["row"],
+        values={key: str(line[key]) for key in ("model", "name", "quantity")},
+    )
+    result = preview(client, headers, body)
+    assert set(result["evaluation_scope"]["system"]) == {"system", "unrelated-0"}
+    removal = result["items"][0]
+    assert any(c["kind"] == "devices" and c["after"] is None for c in removal["changes"])
+    assert any(
+        i.get("requirement_id") == "shared-role" for i in removal["issues"] if isinstance(i, dict)
+    )

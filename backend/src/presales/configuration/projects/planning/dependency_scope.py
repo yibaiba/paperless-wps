@@ -1,7 +1,7 @@
 """Conservative business dependency closure for read-only next-edit checks."""
 
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from presales.rules.calculation import digest
 
@@ -91,6 +91,10 @@ def dependency_graph(data, rules):
 class DependencyScope:
     system_id: str
     references: frozenset[str] = frozenset()
+
+    def retaining(self, data, rules):
+        identities = set().union(*self.closure(data, rules).values())
+        return replace(self, references=self.references | identities)
 
     def closure(self, data, rules):
         graph = dependency_graph(data, rules)
