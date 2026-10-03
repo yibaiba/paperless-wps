@@ -38,4 +38,6 @@ function Check() {
   </main>;
 }
 
-createRoot(document.getElementById('root')!).render(<Check />);
+const root = createRoot(document.getElementById('root')!);
+root.render(<Check />);
+if (import.meta.hot) import.meta.hot.dispose(() => root.unmount());

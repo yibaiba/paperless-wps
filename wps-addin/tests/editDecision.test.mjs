@@ -5,6 +5,7 @@ import { verifiedEditTarget } from '../src/nextEditTarget.ts';
 import { acceptedEdit, undoneEdit, observedQuantityEdits, recentHistoryKey } from '../src/recentBusinessEdits.ts';
 import { WorkbookRowIndex } from '../src/workbookRowIndex.ts';
 import { rowAnchor } from '../src/workbook.ts';
+import { nextEditNotice } from '../src/nextEditPresentation.ts';
 
 const suggestion = { id: 's', acceptance: 'inline', applicable: true, context_fingerprint: 'context',
   local_revision: 3, patches: [{ sheet: 'quote', row: 8, column: 2, field: 'name', before: '', after: '硬件' }],
@@ -36,6 +37,14 @@ test('next target validates version original value and identity without selectin
   revision = 3;
   assert.throws(() => verifiedEditTarget({ host, suggestion,
     result: { ...result, next_target: { ...target, line_id: 'moved' } } }), /已移动/);
+});
+
+test('quantity target notice shows its actual proposed value, not the product name', () => {
+  const quantity = { ...target, column: 4, field: 'quantity' };
+  const item = { ...suggestion, patches: [{ ...quantity, before: '1', after: '4' }],
+    line_bindings: [{ confirmed_values: { name: '硬件' } }] };
+  const notice = nextEditNotice({ suggestion: item, target: quantity, cell: target, query: '' });
+  assert.equal(notice.target, 'quote · 第 8 行 · 数量：4');
 });
 
 test('accept and undo retain stable action context and ordered structured changes', () => {

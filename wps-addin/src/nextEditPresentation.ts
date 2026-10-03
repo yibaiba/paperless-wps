@@ -34,8 +34,10 @@ export function nextEditNotice(options: {
   const prefix = visiblePrefix(suggestion, cell.column, query);
   if (!elsewhere && prefix) return undefined;
   const location = target ? `${target.sheet} · 第 ${target.row} 行 · ${FIELD_NAMES[target.field] ?? target.field}` : '业务关联';
+  const proposed = target && suggestion.patches.find((patch) => patch.sheet === target.sheet
+    && patch.row === target.row && patch.column === target.column)?.after;
   return {
-    target: `${location}：${nextEditText(suggestion, cell.column)}`,
+    target: `${location}：${proposed ?? nextEditText(suggestion, cell.column)}`,
     reason: evidenceText(suggestion.evidence) ?? '未提供文字理由，请展开核对结构化证据',
     action: !prefix ? 'Tab 展开候选，明确选择后接受' : 'Tab 仅定位，不写入；定位后再次确认',
   };
