@@ -5,6 +5,9 @@ from typing import Literal
 from pydantic import Field, model_validator
 
 from presales.configuration.common import Input, Text
+from presales.configuration.projects.evolution_schemas import SupplyAllocation
+
+from .business_schemas import BusinessOperation, CompletionLocation
 
 TemplateField = Literal[
     "model", "name", "description", "quantity", "unit", "brand", "price", "note", "section"
@@ -27,9 +30,7 @@ DiagnosticEventType = Literal[
     "accept_success",
     "accept_error",
 ]
-CompletionPhase = Literal[
-    "typing", "loading", "ghost", "ambiguous", "list", "no-match", "error"
-]
+CompletionPhase = Literal["typing", "loading", "ghost", "ambiguous", "list", "no-match", "error"]
 
 
 class PairingExchange(Input):
@@ -197,13 +198,17 @@ class WorkbookLine(Input):
     price: Decimal | None = Field(default=None, ge=0, allow_inf_nan=False)
     note: str = ""
     section: str = ""
-    kind: Literal["hardware", "software", "license", "accessory"] = "hardware"
+    kind: Literal["hardware", "software", "license", "accessory"] | None = None
     variant_id: Text
     source_id: Text
     device_id: str | None = None
+    supply_allocations: list[SupplyAllocation] | None = None
 
 
 class SyncPreview(Input):
+    schema_version: Literal[1, 2] = 1
+    expected_binding_revision: int | None = Field(default=None, ge=1)
+    business_operations: list[BusinessOperation] = Field(default_factory=list)
     binding_id: Text
     expected_draft_revision: int = Field(ge=1)
     expected_project_revision: int = Field(ge=0)
@@ -213,6 +218,12 @@ class SyncPreview(Input):
 
     @model_validator(mode="after")
     def unique_lines(self):
+        if self.schema_version == 1 and self.business_operations:
+            raise ValueError("业务关联修改需要工作簿协议 v2")
+        if self.schema_version == 2 and self.expected_binding_revision is None:
+            raise ValueError("业务工作簿需要绑定修订")
+        if self.schema_version == 2 and any(line.kind is None for line in self.lines):
+            raise ValueError("请明确每行是硬件、软件、授权还是配件")
         if len({line.line_id for line in self.lines}) != len(self.lines):
             raise ValueError("工作簿行标识不能重复")
         if len(set(self.known_device_ids)) != len(self.known_device_ids):
@@ -223,3 +234,9 @@ class SyncPreview(Input):
 class SyncCommit(SyncPreview):
     preview_fingerprint: Text
     operation_id: Text
+
+
+class CompletionPreview(SyncPreview, CompletionLocation):
+    schema_version: Literal[2] = 2
+    selected_variant_id: str | None = None
+    selected_source_id: str | None = None

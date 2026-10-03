@@ -12,6 +12,7 @@ from presales.lists.schemas import CheckList, SaveList, UpdateList
 from presales.rules.calculation import digest
 from presales.rules.repository import RuleConflict
 
+from .business import supply_operations
 from .schemas import SyncCommit, SyncPreview, WorkbookLine
 from .templates import TemplateProfiles
 
@@ -100,6 +101,7 @@ class WorkbookSync:
         binding = state["binding"]
         payload = dict(
             binding.payload,
+            schema_version=request.schema_version,
             project_id=saved["project_id"],
             base_revision=saved["project_revision"],
             draft_revision=saved["revision"],
@@ -124,11 +126,21 @@ class WorkbookSync:
 
     def _state(self, request):
         binding = self.entities.get(request.binding_id, kind="wps_workbook_binding")
+        if binding.payload.get("schema_version", 1) > request.schema_version:
+            raise RuleConflict("PROTOCOL_UPGRADE_REQUIRED：此工作簿请使用 v2 插件同步")
+        if request.expected_binding_revision is not None and (
+            binding.revision != request.expected_binding_revision
+        ):
+            raise RuleConflict("VERSION_CONFLICT：工作簿绑定已变化，请重新载入")
         draft = self.entities.get(binding.payload["draft_id"], kind="list_draft")
         if draft.revision != request.expected_draft_revision:
             raise RuleConflict("VERSION_CONFLICT：插件草稿已变化，请重新载入")
         if binding.payload["base_revision"] != request.expected_project_revision:
             raise RuleConflict("VERSION_CONFLICT：项目基线已变化，请重新绑定或载入")
+        if binding.payload["project_id"]:
+            current = self.lists.repository.record(binding.payload["project_id"])
+            if current and current.revision != request.expected_project_revision:
+                raise RuleConflict("VERSION_CONFLICT：项目已产生新版本，请重新绑定或载入")
         if binding.payload["template_profile_revision"] != request.template_profile_revision:
             raise RuleConflict("VERSION_CONFLICT：模板映射版本不一致，请重新映射")
         TemplateProfiles(self.session).get(
@@ -160,18 +172,28 @@ class WorkbookSync:
             )
         current_ids, line_bindings = set(), []
         managed = set(state["binding"].payload.get("managed_device_ids", []))
+        existing_ids = {d["id"] for d in state["configuration"]["devices"]}
+        allowed_ids = managed | existing_ids if request.schema_version == 2 else managed
         for line in request.lines:
             device_id = self._device_id(request.binding_id, line)
-            if line.device_id and line.device_id not in managed:
+            local_id = str(
+                uuid5(NAMESPACE_URL, f"presales-wps-device:{request.binding_id}:{line.line_id}")
+            )
+            local_new = request.schema_version == 2 and line.device_id == local_id
+            if line.device_id and line.device_id not in allowed_ids and not local_new:
                 raise ValueError(f"第 {line.row} 行引用了不属于此工作簿的设备")
             variant = variants.get(line.variant_id)
             if variant is None or line.source_id not in variant["source_ids"]:
                 raise ValueError(f"第 {line.row} 行产品配置与资料来源不匹配")
             current_ids.add(device_id)
+            if any(item["device_id"] == device_id for item in line_bindings):
+                raise ValueError("同一设备不能重复绑定到两个产品行，请用用途分配表达共享")
             raw.extend(self._line_operations(line, device_id, variant))
+            raw.extend(supply_operations(line, device_id=device_id, version=request.schema_version))
             line_bindings.append(self._line_binding(line, device_id))
         for device_id in sorted(managed - current_ids):
             raw.append({"action": "remove", "collection": "devices", "id": device_id})
+        raw.extend(op.model_dump(mode="json") for op in request.business_operations)
         return OPERATIONS.validate_python(raw), line_bindings
 
     def _proposed(self, state, operations):
@@ -196,27 +218,9 @@ class WorkbookSync:
                     "variant_id": line.variant_id,
                     "source_id": line.source_id,
                     "quantity": line.quantity,
-                    "kind": line.kind,
+                    "kind": line.kind or "hardware",
                     "note": line.note,
                 },
-            },
-            {
-                "action": "supply_set",
-                "device_id": device_id,
-                "allocations": [
-                    {
-                        "id": str(
-                            uuid5(
-                                NAMESPACE_URL,
-                                f"presales-wps-purchase:{device_id}",
-                            )
-                        ),
-                        "device_id": device_id,
-                        "quantity": line.quantity,
-                        "source": "purchase",
-                        "evidence": f"WPS {line.sheet} 第 {line.row} 行显式同步",
-                    }
-                ],
             },
             {"action": "description_set", "device_id": device_id, "text": line.description},
             {"action": "section_set", "device_id": device_id, "section": line.section},
@@ -255,6 +259,7 @@ class WorkbookSync:
             "device_id": device_id,
             "variant_id": line.variant_id,
             "source_id": line.source_id,
+            "kind": line.kind,
         }
 
     @staticmethod

@@ -9,10 +9,13 @@ from presales.lists.schemas import ListSearch
 
 from .auth import WpsAuth, bearer_token
 from .bindings import WorkbookBindings
+from .business import binding_context
 from .diagnostics import WpsDiagnostics
 from .feedback import CompletionFeedback
+from .next_edits import completion_preview
 from .schemas import (
     BindingCreate,
+    CompletionPreview,
     DiagnosticBatchWrite,
     PairingExchange,
     SourceScopePreview,
@@ -159,6 +162,11 @@ def get_binding(
     )
 
 
+@router.get("/bindings/{binding_id}/context")
+def get_binding_context(binding_id: str, app=Depends(application), access=Depends(principal)):
+    return execute(lambda: binding_context(WorkbookSync(app.session, app.lists), binding_id))
+
+
 @router.post("/sync/preview")
 def preview_sync(
     data: SyncPreview,
@@ -168,6 +176,13 @@ def preview_sync(
     return execute(
         lambda: commit(app.session, lambda: WorkbookSync(app.session, app.lists).preview(data))
     )
+
+
+@router.post("/completion/preview")
+def preview_completion(
+    data: CompletionPreview, app=Depends(application), access=Depends(principal)
+):
+    return execute(lambda: completion_preview(WorkbookSync(app.session, app.lists), data))
 
 
 @router.post("/sync/commit")
