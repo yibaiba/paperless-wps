@@ -83,3 +83,7 @@ env LC_ALL=C perl -e 'alarm 60; exec @ARGV' .venv/bin/python scripts/wps_busines
 ```
 
 验收模式检查至少 30 条轨迹、三类模板、证据指纹及人工核对字段；不能用目录序列或合成 fixture 补数。脚本单测仅验证评分器本身，不是业务得分。没有真实清单时不输出虚构准确率。
+
+回放分别统计排名正确与初始 Tab 动作。空白行灰字覆盖率只计“首选正确、唯一、当前行且允许 inline 应用”的建议；需展开选择、先定位其他行或进入数量/关联预览的建议仍可计入 Top-1/Top-3，但不能冒充一次 Tab 的灰字覆盖。活动工作表及行列缺失时明确报错。`initial_tab_action` 对齐插件状态机的初始非 IME 状态，不验证真实按键与焦点。
+
+报告的 `incorrect_direct_edits` 是只读 API 回放发现的错误直接接受建议数，不是已执行的工作簿误写数。`evidence_scope: read_only_api_replay` 和 `host_writes_verified: false` 明确这一边界；零错误实际写入仍须真机矩阵确认。

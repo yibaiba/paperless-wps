@@ -41,6 +41,7 @@ def validate_manifest(manifest, *, root, acceptance):
             raise ValueError(f"案例 {case['id']} 必须指定期望编辑或明确待确认问题")
         if not case.get("evidence_confirmed") and case.get("expected_edits"):
             raise ValueError("未确认业务证据的案例只能期望待确认问题，不能预设采购答案")
+        request_location(case.get("request", {}))
     selected = [
         c
         for c in cases
@@ -67,27 +68,62 @@ def edit_signature(item):
     }
 
 
+def request_location(request):
+    cell = request.get("active_cell", {})
+    if (
+        not isinstance(cell, dict)
+        or not isinstance(cell.get("sheet"), str)
+        or not cell["sheet"].strip()
+        or any(type(cell.get(key)) is not int or cell[key] < 1 for key in ("row", "column"))
+        or not isinstance(request.get("query", ""), str)
+    ):
+        raise ValueError("业务回放需要真实活动工作表、行列和文本查询，不能推测 Tab 目标")
+    return cell
+
+
+def initial_tab_action(request, items):
+    """Mirror nextEditAction's initial, non-IME state; not a host write measurement."""
+    cell = request_location(request)
+    if not items:
+        return "native"
+    if len(items) > 1:
+        return "expand"
+    item = items[0]
+    text = next(
+        (p["after"] for p in item["patches"] if p["column"] == cell["column"]), None
+    )
+    if text is None:
+        bindings = item["line_bindings"]
+        text = (bindings[0].get("confirmed_values", {}).get("name") if bindings else None)
+        if text is None:
+            text = item.get("label", "")
+    if not text or not text.lower().startswith(request.get("query", "").lower()):
+        return "expand"
+    target = next(iter(item["patches"]), None)
+    if target and (target["sheet"], target["row"]) != (cell["sheet"], cell["row"]):
+        return "locate"
+    return "apply" if item["acceptance"] == "inline" and item["applicable"] else "preview"
+
+
 def evaluate(case, result):
     items = result["items"]
     expected = case.get("expected_edits", [])
     matches = [i["applicable"] and edit_signature(i) in expected for i in items]
     codes = {i.get("code") for i in result["issues"] if isinstance(i, dict)}
     questions_ok = set(case.get("expected_questions", [])) <= codes
+    action = initial_tab_action(case["request"], items)
+    top1 = bool(matches and matches[0])
     return {
         "id": case["id"],
         "decidable": bool(expected),
-        "top1": bool(matches and matches[0]),
+        "top1": top1,
         "top3": any(matches[:3]),
-        "inline_error": bool(
-            items
-            and items[0]["acceptance"] == "inline"
-            and items[0]["applicable"]
-            and not (matches and matches[0])
-        ),
+        "initial_tab_action": action,
+        "inline_error": action == "apply" and not top1,
         "questions_ok": questions_ok,
         "unexpected_edit": not expected and any(i["applicable"] for i in items),
         "blank_decidable": bool(expected) and not case["request"].get("query", ""),
-        "blank_covered": any(matches),
+        "blank_covered": top1 and action == "apply",
     }
 
 
@@ -99,6 +135,8 @@ def summary(rows):
         sum(bool(r[key]) for r in values) / len(values) if values else None
     )
     result = {
+        "evidence_scope": "read_only_api_replay",
+        "host_writes_verified": False,
         "cases": len(rows),
         "decidable": len(decided),
         "top1": ratio(decided, "top1"),
