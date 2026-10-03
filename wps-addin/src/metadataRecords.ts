@@ -49,6 +49,7 @@ export class MetadataRecords {
   write(values: Record<string, unknown>, replacePrefix?: string) {
     const previous = this.manifest();
     const records = { ...previous.records };
+    const pendingCache = new Map<string, { location: string; value: string }>();
     let row = previous.next;
     const append = (raw: string): Location => {
       const first = row;
@@ -71,7 +72,7 @@ export class MetadataRecords {
       if (old && (cached?.location === JSON.stringify(old)
         ? cached.value : this.readLocation(old)) === raw) continue;
       records[key] = append(raw);
-      this.cache.set(key, { location: JSON.stringify(records[key]), value: raw });
+      pendingCache.set(key, { location: JSON.stringify(records[key]), value: raw });
     }
     // All data precedes the single-cell pointer flip; failed writes leave the old root readable.
     const indexRow = row;
@@ -87,6 +88,8 @@ export class MetadataRecords {
     const header = JSON.stringify({ schema_version: 2, format: 'presales-records-v2', manifest });
     this.cells.write(1, header);
     if (this.cells.read(1) !== header) throw new Error('隐藏元数据根索引写入核对失败');
+    // Unpublished row locations may be reused by another page after a failed root write.
+    for (const [key, value] of pendingCache) this.cache.set(key, value);
   }
 }
 
