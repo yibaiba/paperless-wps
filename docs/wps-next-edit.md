@@ -14,6 +14,8 @@
 
 接受候选后仅读取当前产品行，不再为取得当前行调用整表扫描；以单测禁止该路径重新引入 readRows。查找下一空产品行复用已缓存的占用行，不逐行调用 WPS。完整 completionRequest 的 1,000 行替身测试覆盖连续 20 次查询：1 次初始整表读取、40 次单行读取。实际宿主延迟仍需真机测量。
 
+下一步预览使用共享检查器的业务依赖闭包：当前系统、共享设备关联的系统、配套分配及规则明确声明的房间/项目范围。显式修改的房间、设备和分配身份也纳入检查；项目级规则存在时仍可能涉及全项目，不以裁剪依赖换取通过。返回的 `evaluation_scope` 明确本次检查范围，`configuration` 保留完整临时配置；局部通过不代表全项目通过，正式同步仍全量检查。隔离 HTTP 测试验证增加 1,000 个无关系统后，每次候选检查仍只接收相关系统；这不是实际 API p95 测量。
+
 ## 业务同步协议 v2
 
 `GET /api/wps/bindings/{binding_id}/context` 读取固定基线与定义。同步请求增加 `schema_version: 2`、`expected_binding_revision` 与明确的 `business_operations`。产品行必须填写真实 kind；省略供货分配表示保留原状态，新设备供货未知，不能默认采购。角色、系统设置和配套关联通过既有类型验证及项目检查重新计算。v1 请求不能改写已经提交为 v2 的绑定。
@@ -43,6 +45,8 @@
 同步重新扫描可见行、复验业务关联和版本，显式确认后才保存正式项目。请求在本地保留 pending_sync；网络中断或服务端成功而元数据回写失败时，重试相同 operation_id 恢复回执。同步之后撤销生成新的本地变化，保留已经保存的基线。已移除设备的历史行—设备映射仅允许原对应身份恢复。
 
 异步操作核对物理工作簿与项目绑定。即使复制文件保留相同 workbook_instance_id/binding_id，切换文件后也不把原请求回执写入副本；原文件保留 pending_sync，返回后重试原操作恢复。未完成回执或日志恢复前不能重新绑定。
+
+v1 候选兼容路径同样执行会话校验。切换物理工作簿时取消请求、清空候选与模板；响应到达和接受前再次校验来源，旧候选不能写入新文件。
 
 无候选、加载或错误状态的浮层 Tab 先关闭窗口、恢复 OnKey、激活工作簿，再通过 WPS SendKeys 交还宿主处理；不使用 Range.Offset 模拟原生 Tab。Shift+Tab 同样交还，IME 期间不处理补全键。启动检测包含 SendKeys 与窗口 Activate 能力，具体构建的焦点与原生导航仍须真机验证。依据：[OnKey](https://open.wps.cn/documents/app-integration-dev/wps365/client/wpsoffice/jsapi/et/Application/member/OnKey)、[SendKeys](https://open.wps.cn/documents/app-integration-dev/wps365/client/wpsoffice/jsapi/et/Application/member/SendKeys)、[Activate](https://open.wps.cn/documents/app-integration-dev/wps365/client/wpsoffice/jsapi/et/Window/member/Activate)。
 

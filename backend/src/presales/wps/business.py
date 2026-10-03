@@ -2,7 +2,12 @@
 
 from uuid import NAMESPACE_URL, uuid5
 
+from presales.configuration.projects.planning.dependency_scope import (
+    DependencyScope,
+    operation_references,
+)
 from presales.configuration.projects.services.definition_snapshot import resolve_definitions
+from presales.configuration.projects.services.editing import edit_configuration
 from presales.lists.catalog_snapshot import DraftCatalog
 from presales.rules.calculation import digest
 
@@ -43,10 +48,20 @@ def workbook_projection(sync, request):
     state = sync._state(request)
     operations, bindings = sync._operations(request, state)
     repository = sync.lists.repository
+    repository = repository.scoped(
+        DependencyScope(
+            request.scope.system_id,
+            operation_references(
+                [op.model_dump(mode="json") for op in request.business_operations]
+            ),
+        )
+    )
     repository.catalog = DraftCatalog(sync.session, state["draft"].payload["catalog_snapshot_id"])
-    checked = sync._proposed(state, operations)
+    data = edit_configuration(state["configuration"], operations, repository=repository)
+    checked = repository.check(data)
     return {
         "state": state,
+        "repository": repository,
         "checked": checked,
         "line_bindings": bindings,
         "versions": context_versions(state["draft"]),

@@ -76,7 +76,7 @@ class NextEditContext(PlanningContext):
 
 
 def scoped_roles(context):
-    data, tasks, questions = prepare_roles(context)
+    data, tasks, questions = prepare_roles(context, system_ids={context.system_id})
     original_ids = {r["id"] for r in context.configuration["requirements"]}
     data["requirements"] = [
         r

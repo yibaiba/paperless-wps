@@ -35,7 +35,8 @@ def completion_preview(sync, request):
     catalog_scope = profile.get("catalog_scope")
     if not catalog_scope:
         raise ValueError("请先确认模板产品来源范围")
-    catalog = sync.lists.repository.catalog.variants()
+    repository = projection["repository"]
+    catalog = repository.catalog.variants()
     sources = {
         v["id"]: [
             s["id"]
@@ -45,7 +46,7 @@ def completion_preview(sync, request):
         for v in catalog
     }
     context = NextEditContext(
-        repository=sync.lists.repository,
+        repository=repository,
         configuration=checked["configuration"],
         proposal_id=projection["fingerprint"],
         deployment="independent",
@@ -90,6 +91,7 @@ def completion_preview(sync, request):
         local_revision=request.local_revision,
         line_bindings=projection["line_bindings"],
         configuration=checked["configuration"],
+        evaluation_scope=checked["evaluation_scope"],
     )
 
 

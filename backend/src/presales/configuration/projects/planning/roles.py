@@ -10,7 +10,7 @@ from .questions import question
 from .role_choices import candidate_branches
 
 
-def prepare_roles(context):
+def prepare_roles(context, *, system_ids=None):
     data, tasks, questions = deepcopy(context.configuration), [], []
     if not data["systems"]:
         questions.append(
@@ -19,6 +19,8 @@ def prepare_roles(context):
             )
         )
     for system in data["systems"]:
+        if system_ids is not None and system["id"] not in system_ids:
+            continue
         package = context.packages.get(system["knowledge_package_id"])
         if not package:
             questions.append(

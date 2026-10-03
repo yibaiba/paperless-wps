@@ -1,4 +1,4 @@
-from copy import deepcopy
+from copy import copy, deepcopy
 
 from sqlalchemy import delete, select
 
@@ -45,6 +45,7 @@ def empty_configuration(*, decision_runtime="python-v3"):
 
 class ProjectConfigurations:
     def __init__(self, session, engine, *, catalog=None):
+        self.evaluation_scope = None
         self.session, self.engine = session, engine
         self.decisions = (
             engine.decision_service.request() if hasattr(engine, "decision_service") else None
@@ -159,11 +160,29 @@ class ProjectConfigurations:
 
         from .services.issue_actions import with_issue_actions
 
+        partition = (
+            self.evaluation_scope.partition(data, session=self.session)
+            if self.evaluation_scope
+            else None
+        )
         checked = self._check(
-            data, refresh=refresh, upgrade=upgrade, upgrade_decisions=upgrade_decisions
+            partition.selected if partition else data,
+            refresh=refresh,
+            upgrade=upgrade,
+            upgrade_decisions=upgrade_decisions,
         )
         knowledge = checked.pop("_calculation_knowledge")
-        return with_issue_actions(with_quotation(apply_review_checks(checked, knowledge=knowledge)))
+        result = with_issue_actions(
+            with_quotation(apply_review_checks(checked, knowledge=knowledge))
+        )
+        return partition.restore(result) if partition else result
+
+    def scoped(self, scope):
+        from .planning.scoped_evaluation import ScopedEvaluation
+
+        repository = copy(self)
+        repository.evaluation_scope = ScopedEvaluation(scope)
+        return repository
 
     def _check(self, data, *, refresh=False, upgrade=False, upgrade_decisions=False):
         payload, variants, catalog_variants = self.prepare(data, refresh=refresh)
