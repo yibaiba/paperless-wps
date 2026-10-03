@@ -1,0 +1,1343 @@
+{
+  "date": "2026-10-03T17:24:57.700822+08:00",
+  "dialect": "postgresql",
+  "sources": 459,
+  "linked_sources": 410,
+  "blocked_sources": 49,
+  "entities": [
+    {
+      "kind": "list_draft",
+      "count": 3
+    },
+    {
+      "kind": "system_definition",
+      "count": 4
+    },
+    {
+      "kind": "knowledge_snapshot",
+      "count": 8
+    },
+    {
+      "kind": "list_catalog_snapshot",
+      "count": 1
+    },
+    {
+      "kind": "definition_snapshot",
+      "count": 1
+    },
+    {
+      "kind": "knowledge_package",
+      "count": 4
+    },
+    {
+      "kind": "wps_template_profile",
+      "count": 1
+    },
+    {
+      "kind": "inspection_profile",
+      "count": 1
+    },
+    {
+      "kind": "list_operation",
+      "count": 18
+    },
+    {
+      "kind": "knowledge",
+      "count": 209
+    },
+    {
+      "kind": "product",
+      "count": 242
+    },
+    {
+      "kind": "project",
+      "count": 2
+    },
+    {
+      "kind": "variant",
+      "count": 242
+    }
+  ],
+  "knowledge": [
+    {
+      "id": "03c9a43a-07b8-4fb0-a64f-0c2d091633a9",
+      "revision": 1,
+      "status": "draft",
+      "name": "无纸化拓扑示例（待确认）：IPH-S156AM 必配 ACS-320M"
+    },
+    {
+      "id": "9a15d9d6-5481-47f5-a18a-eac6526dbdae",
+      "revision": 1,
+      "status": "draft",
+      "name": "无纸化带话筒升降器：选择主席/代表模块（待确认）"
+    },
+    {
+      "id": "2a5fd98f-3d01-466d-8c06-55259b73c38a",
+      "revision": 1,
+      "status": "draft",
+      "name": "无纸化带话筒升降器：检查会议主机（待确认）"
+    },
+    {
+      "id": "50948d87-d9c4-42a1-9845-b4f2ef402953",
+      "revision": 1,
+      "status": "draft",
+      "name": "无纸化终端：共享服务器容量（待确认）"
+    },
+    {
+      "id": "e3a4436b-420c-536e-9d4e-a8d03908750f",
+      "revision": 2,
+      "status": "confirmed",
+      "name": "会议平板 · 每30台建议配置一台无线 AP"
+    },
+    {
+      "id": "e43c5d5e-0f36-5ef5-8edd-84590fe208ae",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "红盾 Windows 无纸化终端 · 每台配客户端软件"
+    },
+    {
+      "id": "b5a60f13-12e9-58bb-9430-72e508ba835f",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "红盾 Windows 无纸化系统 · 每套配服务端软件"
+    },
+    {
+      "id": "92448610-d44e-55bf-9234-71ce7eae7a43",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "红盾安卓投屏终端 · 配投屏客户端软件"
+    },
+    {
+      "id": "1e3ad259-37f8-5497-96ff-eb7d45b80de2",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "红盾安卓投票终端 · 配投票客户端软件"
+    },
+    {
+      "id": "db563f6e-56b0-52a3-801c-e79dda1d2d9b",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "红盾带话筒升降器 · 每席配一个话筒单元模块"
+    },
+    {
+      "id": "cd7e5e13-83a6-4866-8584-56bb471e0236",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "CRIR-1516N · 会议预约服务端"
+    },
+    {
+      "id": "507264c1-b7cd-4074-a8af-1928b458c09b",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "CRIR-GL20S · 会议预约服务端软件"
+    },
+    {
+      "id": "b4f3376a-a13e-4175-bf75-2ed4c18e6f26",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "CRIR-WE20S · 会议预约移动端软件"
+    },
+    {
+      "id": "e00ce321-f3ab-46e4-b793-361f22bff304",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "CSIS-B101YD · 会议预约预约显示终端"
+    },
+    {
+      "id": "ecade75d-d1a9-4c89-b83e-682a98b12f44",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "CSIS-B156YD · 会议预约预约显示终端"
+    },
+    {
+      "id": "fecb3046-52d1-4d13-90a4-8ccd94acf6b5",
+      "revision": 1,
+      "status": "draft",
+      "name": "CSIS-B215YD · 会议预约预约显示终端（待确认）"
+    },
+    {
+      "id": "3c5eafa9-d720-4698-a2a1-e1891c29c2d3",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "CRIR-M9 · 会议预约信发终端"
+    },
+    {
+      "id": "06d12e63-4bed-4e00-9e8f-0a85116699e3",
+      "revision": 2,
+      "status": "disabled",
+      "name": "RS-MSC100｜无纸化服务端软件的 Windows 条件"
+    },
+    {
+      "id": "f4d588ea-611e-474e-b0a9-3ba0ba51650a",
+      "revision": 2,
+      "status": "confirmed",
+      "name": "PCS-1516N · 无纸化服务端"
+    },
+    {
+      "id": "f94ab4e1-e1df-485f-b7a9-f03da6ba4122",
+      "revision": 2,
+      "status": "confirmed",
+      "name": "RS-MSC100-K · 无纸化服务端软件"
+    },
+    {
+      "id": "a4d595d1-6385-4a0d-b9c4-64ff22877d9c",
+      "revision": 2,
+      "status": "confirmed",
+      "name": "RS-MSC100-U · 无纸化服务端软件"
+    },
+    {
+      "id": "cb6037ba-521a-450a-a91f-c9bbb60a9957",
+      "revision": 2,
+      "status": "draft",
+      "name": "PCS-15110N · 无纸化服务端（待确认）"
+    },
+    {
+      "id": "f600165d-d06f-493e-ba0a-8b17639032f3",
+      "revision": 2,
+      "status": "draft",
+      "name": "PCS-1880N · 无纸化服务端（待确认）"
+    },
+    {
+      "id": "f5bf7c4a-efa6-4a0e-a990-ea59693fd9c4",
+      "revision": 2,
+      "status": "draft",
+      "name": "PCS-1680N · 无纸化服务端（待确认）"
+    },
+    {
+      "id": "12402b44-2fe5-4f6d-9f91-dfa1b45e1b1a",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "RS-MSC200 · 红盾无纸化充电柜传输版 · 服务端软件"
+    },
+    {
+      "id": "e881ea5b-a493-4a3e-95f8-49ae45e3a2d2",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "RS-MSC200-K · 红盾无纸化充电柜传输版 · 服务端软件"
+    },
+    {
+      "id": "0cf63684-7003-448d-814e-f473cece7920",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "RS-MSC200-U · 红盾无纸化充电柜传输版 · 服务端软件"
+    },
+    {
+      "id": "7c35ee75-136c-480c-b9ba-8ae6673dbe0e",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "RS-MSC100 · 红盾无纸化会议系统华为版本 · 服务端软件"
+    },
+    {
+      "id": "62892ad0-f893-4e7c-9610-2a738a5dcc01",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "RS-MSC100-K · 红盾无纸化会议系统华为版本 · 服务端软件"
+    },
+    {
+      "id": "b4937595-8dc0-4019-913f-b61e32e20f3c",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "RS-MSC100-U · 红盾无纸化会议系统华为版本 · 服务端软件"
+    },
+    {
+      "id": "0b66fb40-2b87-4703-8833-8a5b90acfa9b",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "RS-MSC100C-H · 红盾无纸化会议系统华为版本 · 客户端软件"
+    },
+    {
+      "id": "e86befbe-cb6f-42d0-a367-bb0a606770f6",
+      "revision": 2,
+      "status": "draft",
+      "name": "PCS-PB30S · 安全无纸化V3.0 · 客户端软件"
+    },
+    {
+      "id": "da2789b8-d849-5d1d-b3cd-8bd27154b4c4",
+      "revision": 1,
+      "status": "draft",
+      "name": "红盾带话筒升降器 · 会议主机数量待确认"
+    },
+    {
+      "id": "4643e503-03d4-4b90-9475-dea65fe88b56",
+      "revision": 2,
+      "status": "confirmed",
+      "name": "PCS-PB20S · 分布式无纸化会务系统2.0 · 客户端软件"
+    },
+    {
+      "id": "bb29927a-ccfb-5e8a-bcc1-d2c6e534cbcf",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "红盾保密会议室 · 每30平方米建议一套电子围栏"
+    },
+    {
+      "id": "51421c1f-6a71-55c5-908f-599e2b8163f2",
+      "revision": 1,
+      "status": "draft",
+      "name": "红盾 Windows 服务端硬件 · 操作系统冲突待确认"
+    },
+    {
+      "id": "0cbb2c67-4432-572e-851b-53e27bffeb4e",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "红盾麒麟终端 · 每台配麒麟客户端软件"
+    },
+    {
+      "id": "3fbcc14c-2b11-5aee-afc1-ac57652b50d4",
+      "revision": 1,
+      "status": "draft",
+      "name": "红盾飞腾终端 · 统信客户端关系待确认"
+    },
+    {
+      "id": "33191fa4-c037-50dd-ac41-d4bc8f66584e",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "红盾麒麟无纸化系统 · 每套配麒麟服务端软件"
+    },
+    {
+      "id": "a4f29896-fa37-513c-aaf5-59cc60c3a34b",
+      "revision": 1,
+      "status": "draft",
+      "name": "红盾统信服务端软件 · 终端系统待确认"
+    },
+    {
+      "id": "e123be48-4a60-5b78-94e1-e3a493b0924e",
+      "revision": 1,
+      "status": "draft",
+      "name": "红盾麒麟服务端硬件 · 容量口径待确认"
+    },
+    {
+      "id": "7078ba2b-3081-5389-9573-970639ce69fe",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "红盾麒麟投屏终端 · 每台配投屏软件"
+    },
+    {
+      "id": "3cc4289c-38d6-5a2f-9d08-2ccc6fd32b2a",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "红盾麒麟投票终端 · 每台配投票软件"
+    },
+    {
+      "id": "dc98f8d3-6491-52b1-b2ef-32353c22eed4",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "红盾安卓候会终端 · 每台配候会播报软件"
+    },
+    {
+      "id": "22fe89f1-4139-56c4-93fd-1f8f673e7a27",
+      "revision": 1,
+      "status": "draft",
+      "name": "红盾麒麟候会终端 · 候会软件兼容性待确认"
+    },
+    {
+      "id": "056a7633-8a09-58f7-a2fc-190dc18e1af7",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "红盾华为版安卓投屏终端 · 每台配投屏软件"
+    },
+    {
+      "id": "0e17178f-747d-5cb5-b620-e2b460a5b925",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "红盾华为版麒麟投屏终端 · 每台配投屏软件"
+    },
+    {
+      "id": "4fe5a3c6-6471-59c8-9dc2-ce4df6e2172c",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "红盾华为版安卓投票终端 · 每台配投票软件"
+    },
+    {
+      "id": "fd38af94-b673-5cc3-b12c-8288f56b4927",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "红盾华为版麒麟投票终端 · 每台配投票软件"
+    },
+    {
+      "id": "a6d90dad-dbe2-5522-8a33-471928bbdf5c",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "红盾华为版安卓候会终端 · 每台配候会软件"
+    },
+    {
+      "id": "a639a83f-1947-596c-9ed7-69cad5df0a4d",
+      "revision": 1,
+      "status": "draft",
+      "name": "红盾华为版麒麟候会终端 · 软件兼容性待确认"
+    },
+    {
+      "id": "51e9eb50-6683-5707-85ed-d19f00a4044e",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "红盾华为版保密会议室 · 每30平方米建议电子围栏"
+    },
+    {
+      "id": "d3d7e8f6-bca6-5a76-a5c0-d9d0fb21ed6c",
+      "revision": 1,
+      "status": "draft",
+      "name": "红盾华为版 Windows 服务端硬件 · 系统冲突待确认"
+    },
+    {
+      "id": "6b8a8769-2be7-5251-9f90-487ae3a457bc",
+      "revision": 1,
+      "status": "draft",
+      "name": "红盾华为版麒麟服务端硬件 · 容量口径待确认"
+    },
+    {
+      "id": "04e9022f-8168-5625-ad18-7edaa6c8baa4",
+      "revision": 1,
+      "status": "draft",
+      "name": "红盾华为版统信服务端硬件 · 系统冲突待确认"
+    },
+    {
+      "id": "acc2c6d0-dd2e-5ea3-936b-4a971a2138a0",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "华为擎云 C7 · 可选 CD54-S 触控笔"
+    },
+    {
+      "id": "da1f945d-7e76-5d42-a2bc-4fb32a46b1b4",
+      "revision": 1,
+      "status": "draft",
+      "name": "充电柜传输版 Windows 服务端硬件 · 系统冲突待确认"
+    },
+    {
+      "id": "f4cab549-7b18-5689-aacd-fe7db308e0fd",
+      "revision": 1,
+      "status": "draft",
+      "name": "充电柜传输版麒麟服务端硬件 · 容量口径待确认"
+    },
+    {
+      "id": "9c96a41c-80c9-571f-8204-e772ef6d3a84",
+      "revision": 1,
+      "status": "draft",
+      "name": "充电柜传输版统信服务端硬件 · 系统冲突待确认"
+    },
+    {
+      "id": "a8a6274c-3ad0-5cdf-b684-bb89109540db",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "AI智能纪要 · 服务端软件"
+    },
+    {
+      "id": "ec7c138e-55a4-58ee-9676-758e439dcd31",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "AI智能纪要 · 语音识别及声纹引擎"
+    },
+    {
+      "id": "4fc25d2b-bd50-5319-a603-0801c3752408",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "AI智能纪要 · AI大模型引擎"
+    },
+    {
+      "id": "202895ae-2a46-5993-b738-97aefeb0ae6d",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "AI智能纪要 · 并发授权"
+    },
+    {
+      "id": "015bc76d-97be-5c7c-8cf8-c560749bbc6d",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "AI智能纪要 · 服务端"
+    },
+    {
+      "id": "a07a08c6-ca79-5bbb-8b12-af8bd201c950",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "AI智能纪要 · 语音采集盒"
+    },
+    {
+      "id": "823bc100-6e48-5685-9d31-96c470fe52a8",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "AI智能纪要 · 字幕投屏盒"
+    },
+    {
+      "id": "2b50406e-3c31-5ba1-a003-1da238865dc8",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "智能协作系统 · 应用终端"
+    },
+    {
+      "id": "58c977a7-4082-50bf-b90f-a4fe0e90e783",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "智能协作系统 · Windows客户端软件"
+    },
+    {
+      "id": "e2c016c3-3a6b-5cdf-b7d0-c32de3586e7f",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "智能协作系统 · Android客户端软件"
+    },
+    {
+      "id": "449b2be8-7e40-535c-a713-295b73620693",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "会议预约 · 可选系统集成服务"
+    },
+    {
+      "id": "f909fe6e-a27d-59ba-a69b-fb53cd851e29",
+      "revision": 1,
+      "status": "draft",
+      "name": "AI智能纪要服务端软件 · 专用服务器关系待确认"
+    },
+    {
+      "id": "357115e5-31e8-551b-a05c-51147cd80a78",
+      "revision": 1,
+      "status": "draft",
+      "name": "AI智能纪要 · 语音识别引擎关系待确认"
+    },
+    {
+      "id": "912a66ac-11c0-5cf4-a1b6-fd2470c0159c",
+      "revision": 1,
+      "status": "draft",
+      "name": "AI智能纪要 · AI大模型引擎关系待确认"
+    },
+    {
+      "id": "e73174f4-0f27-5e3f-85a5-8bf626a758c6",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "AI智能纪要 · 每个采集会议室配置语音采集盒"
+    },
+    {
+      "id": "d4226bdb-0708-5c98-9120-fdbf376b2bdd",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "AI智能纪要 · 启用字幕的会议室配置字幕投屏盒"
+    },
+    {
+      "id": "9c340c4c-3f74-5752-afe4-f29475992992",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "AI智能纪要 · 按明确附加并发数配置授权"
+    },
+    {
+      "id": "2f416475-2ee9-5bdd-b8bc-3cdcaff77810",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "会议预约管理系统 · 可选邮件系统对接"
+    },
+    {
+      "id": "9c7037e8-c66c-53d7-8cfc-215457e12f12",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "会议预约管理系统 · 可选单点登录对接"
+    },
+    {
+      "id": "6b0313c5-d909-5de5-9df4-73962a4a1710",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "会议预约管理系统 · 可选短信平台对接"
+    },
+    {
+      "id": "09c02fb0-ae25-5d09-981f-0a9f74980e38",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "会议预约管理系统 · 可选企业微信对接"
+    },
+    {
+      "id": "9466963b-b93a-5f28-ba60-c0fad32d504a",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "会议预约管理系统 · 可选钉钉对接"
+    },
+    {
+      "id": "db5977e3-7aec-51e0-98e7-a8390723f173",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "会议预约管理系统 · 可选OA系统对接"
+    },
+    {
+      "id": "0198c3f5-27fd-5dee-aed9-4b58e0af8f31",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "会议预约管理系统 · 可选第三方中控对接"
+    },
+    {
+      "id": "81fd2226-a1a0-5c9d-9af1-c95a3aa3ce91",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "会议预约管理系统 · 可选第三方门禁对接"
+    },
+    {
+      "id": "ef8cfa34-fad4-5270-886b-489fedba80b6",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "EG 会议主机 · 按明确布线数量选择会议延长线"
+    },
+    {
+      "id": "db98cea2-0d66-508e-b5fc-00a58462c0d6",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "EG 会议主机 · 按明确安装数量配置6芯地插盒"
+    },
+    {
+      "id": "ed92f61b-d2c2-508c-8193-4a53b39ca5fc",
+      "revision": 1,
+      "status": "draft",
+      "name": "华为平板 · AF63 触控笔具体型号待核对"
+    },
+    {
+      "id": "06893fd2-5fb9-4222-9acd-ef6aec7e0b78",
+      "revision": 2,
+      "status": "confirmed",
+      "name": "会议预约显示终端 · 每台配一套 CRIR-KA20S"
+    },
+    {
+      "id": "083aa6f5-c430-44b8-a73c-65c1d00ae4b4",
+      "revision": 2,
+      "status": "disabled",
+      "name": "EG-620D 配 BE6/T 分线盒（待确认适用范围）"
+    },
+    {
+      "id": "6deda355-58d8-45e8-98ce-7b52003406ee",
+      "revision": 1,
+      "status": "draft",
+      "name": "分布式无纸化会务系统2.0 · 人脸识别功能 · 适配条件待确认"
+    },
+    {
+      "id": "70f42e14-ee7b-48f7-b7b3-b0941120edc9",
+      "revision": 1,
+      "status": "draft",
+      "name": "分布式无纸化会务系统2.0 · 人脸识别授权 · 适配条件待确认"
+    },
+    {
+      "id": "033887ec-73d7-5485-aeb7-affbc922f1f2",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "会议预约管理系统 · 每套配一台服务端服务器"
+    },
+    {
+      "id": "cab07f43-1f38-4166-8591-8ed54ae795df",
+      "revision": 1,
+      "status": "draft",
+      "name": "分布式无纸化会务系统2.0 · 对接服务 · 适配条件待确认"
+    },
+    {
+      "id": "53f5b3ae-72e2-4268-a01e-1ab8fc757bea",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "分布式无纸化会务系统2.0 · 服务端 · Linux"
+    },
+    {
+      "id": "5891ce03-6ff7-4bb8-827d-24390ceaa427",
+      "revision": 1,
+      "status": "draft",
+      "name": "分布式无纸化会务系统2.0 · 服务端 · 适配条件待确认"
+    },
+    {
+      "id": "b9b2c3e5-e6ad-4e5b-96f0-12c9d2131fa1",
+      "revision": 1,
+      "status": "draft",
+      "name": "分布式无纸化会务系统2.0 · 会议室授权 · 适配条件待确认"
+    },
+    {
+      "id": "6135be18-06b5-42e5-86fb-812b9a958026",
+      "revision": 1,
+      "status": "draft",
+      "name": "分布式无纸化会务系统2.0 · 维护管理软件 · 适配条件待确认"
+    },
+    {
+      "id": "89998afc-0d87-45eb-bf55-dfccd6e96c88",
+      "revision": 1,
+      "status": "draft",
+      "name": "分布式无纸化会务系统2.0 · 信号输入控制器 · 适配条件待确认"
+    },
+    {
+      "id": "77628484-fcd0-48ff-a70c-fac86e0831f7",
+      "revision": 1,
+      "status": "draft",
+      "name": "分布式无纸化会务系统2.0 · 信号输出控制器 · 适配条件待确认"
+    },
+    {
+      "id": "b9e60489-48d7-45e2-8f8a-b7b530f56018",
+      "revision": 1,
+      "status": "draft",
+      "name": "分布式无纸化会务系统2.0 · 流媒体服务器 · 适配条件待确认"
+    },
+    {
+      "id": "52d8dff6-e007-445c-b8b8-16b7b86a834f",
+      "revision": 1,
+      "status": "draft",
+      "name": "分布式无纸化会务系统2.0 · 流媒体服务软件 · 适配条件待确认"
+    },
+    {
+      "id": "95447600-a1d7-4b77-a452-72471b1a6ab5",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "分布式无纸化会务系统2.0 · 桌面终端 · Windows"
+    },
+    {
+      "id": "40cc3869-d01e-4387-b152-e3496cc8c653",
+      "revision": 1,
+      "status": "draft",
+      "name": "分布式无纸化会务系统2.0 · 桌面终端 · 适配条件待确认"
+    },
+    {
+      "id": "fcda5fd9-f835-4b49-9e61-e1049594ba42",
+      "revision": 1,
+      "status": "draft",
+      "name": "分布式无纸化会务系统2.0 · 桌面终端软件 · 适配条件待确认"
+    },
+    {
+      "id": "41b4d79e-b703-4b61-bb5e-746ee6dc8602",
+      "revision": 1,
+      "status": "draft",
+      "name": "分布式无纸化会务系统2.0 · 升降/翻转显示设备 · 适配条件待确认"
+    },
+    {
+      "id": "7eec224d-a09d-44a7-ac65-ed3cf145fe80",
+      "revision": 1,
+      "status": "draft",
+      "name": "分布式无纸化会务系统2.0 · 数字会议主机 · 适配条件待确认"
+    },
+    {
+      "id": "521939e5-83e6-48c2-87ca-c84242bbf2aa",
+      "revision": 1,
+      "status": "draft",
+      "name": "分布式无纸化会务系统2.0 · 主席话筒模块 · 适配条件待确认"
+    },
+    {
+      "id": "348da6dc-76bd-4f5a-ae38-b3c494f2530b",
+      "revision": 1,
+      "status": "draft",
+      "name": "分布式无纸化会务系统2.0 · 代表话筒模块 · 适配条件待确认"
+    },
+    {
+      "id": "c03bee36-e40f-4641-aefe-476d3f8d784e",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "分布式无纸化会务系统2.0 · 信息发布终端 · Android"
+    },
+    {
+      "id": "33087568-fbb2-4a86-a082-7ddbae6a7616",
+      "revision": 1,
+      "status": "draft",
+      "name": "分布式无纸化会务系统2.0 · 信息发布软件 · 适配条件待确认"
+    },
+    {
+      "id": "55d2cbd7-e682-42b9-a28d-0f25b1100ab8",
+      "revision": 1,
+      "status": "draft",
+      "name": "分布式无纸化会务系统2.0 · 会议服务终端 · 适配条件待确认"
+    },
+    {
+      "id": "8ab6daa5-10e1-4169-8764-1f875f07e196",
+      "revision": 1,
+      "status": "draft",
+      "name": "分布式无纸化会务系统2.0 · 会议服务软件 · 适配条件待确认"
+    },
+    {
+      "id": "d544cbbf-881c-4658-be5d-0737a9258698",
+      "revision": 1,
+      "status": "draft",
+      "name": "分布式无纸化会务系统2.0 · 候会语音播报终端 · 适配条件待确认"
+    },
+    {
+      "id": "227a2531-edc7-4352-91e0-1daa71f8c942",
+      "revision": 1,
+      "status": "draft",
+      "name": "分布式无纸化会务系统2.0 · 候会播报软件 · 适配条件待确认"
+    },
+    {
+      "id": "2d160b25-9026-47d9-8fde-3af56d7031e2",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "安全无纸化V3.0 · 服务端 · Linux"
+    },
+    {
+      "id": "cce8a71d-3233-4af2-bcca-971cac3bf06d",
+      "revision": 1,
+      "status": "draft",
+      "name": "安全无纸化V3.0 · 服务端 · 适配条件待确认"
+    },
+    {
+      "id": "5fbd58cc-8101-4a58-92c5-9e064dbc88e2",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "安全无纸化V3.0 · 投屏终端 · Android"
+    },
+    {
+      "id": "d514ac44-d9cf-4ad0-9fb2-983a6e2c0ac0",
+      "revision": 1,
+      "status": "draft",
+      "name": "安全无纸化V3.0 · 投屏客户端软件 · 适配条件待确认"
+    },
+    {
+      "id": "bb638ff1-61bc-4561-a560-551997289c59",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "安全无纸化V3.0 · 投票终端 · Android"
+    },
+    {
+      "id": "fd866ff3-4ef3-4a44-ae4d-8e6b0e8cf6af",
+      "revision": 1,
+      "status": "draft",
+      "name": "安全无纸化V3.0 · 投票客户端软件 · 适配条件待确认"
+    },
+    {
+      "id": "f775c3e6-7816-42f7-9db6-96492d0db212",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "安全无纸化V3.0 · 候会播报终端 · Android"
+    },
+    {
+      "id": "c811b08b-af7e-4631-96ba-615625226171",
+      "revision": 1,
+      "status": "draft",
+      "name": "红盾无纸化会议系统 · 数字会议主机 · 适配条件待确认"
+    },
+    {
+      "id": "cc5c4625-28bf-4b1e-b3e4-3f1dfcc85802",
+      "revision": 1,
+      "status": "draft",
+      "name": "安全无纸化V3.0 · 候会播报软件 · 适配条件待确认"
+    },
+    {
+      "id": "6413c896-ed46-4b21-9a9a-ac8ffa39acf7",
+      "revision": 1,
+      "status": "draft",
+      "name": "红盾无纸化会议系统 · 客户端软件 · 适配条件待确认"
+    },
+    {
+      "id": "6ed67515-c527-4804-845a-a3ab02a5022e",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "红盾无纸化会议系统 · 客户端软件 · 纯血鸿蒙"
+    },
+    {
+      "id": "bb609f24-9765-410d-87c8-45de9669932f",
+      "revision": 1,
+      "status": "draft",
+      "name": "红盾无纸化会议系统 · 桌面终端 · 适配条件待确认"
+    },
+    {
+      "id": "f179f0f4-3f89-4bde-ba2b-cbceb0d5e450",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "红盾无纸化会议系统 · 客户端软件 · 银河麒麟"
+    },
+    {
+      "id": "e4099d71-6b9b-42a5-8889-807458906ee9",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "红盾无纸化会议系统 · 客户端软件 · 统信"
+    },
+    {
+      "id": "bb9de473-ad01-4d50-a0fe-0b9a08aff272",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "红盾无纸化会议系统 · 候会播报终端 · Android"
+    },
+    {
+      "id": "0dccf8c1-bbb5-4c00-b09a-396641286629",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "红盾无纸化会议系统 · 候会播报终端 · 银河麒麟"
+    },
+    {
+      "id": "7f73f232-b103-4e9e-9a0d-58d4a4b85579",
+      "revision": 1,
+      "status": "draft",
+      "name": "红盾无纸化会议系统 · 候会播报软件 · 适配条件待确认"
+    },
+    {
+      "id": "8ff6c848-a8fe-4ebf-8663-21b40efff81b",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "红盾无纸化会议系统 · 投屏终端 · Android"
+    },
+    {
+      "id": "86a5b9de-38c1-4f39-a11a-aa68b1ed48cd",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "红盾无纸化会议系统 · 投屏客户端软件 · Android"
+    },
+    {
+      "id": "05014174-b96b-4264-874e-4878317702b8",
+      "revision": 1,
+      "status": "draft",
+      "name": "红盾无纸化会议系统 · 主席话筒模块 · 适配条件待确认"
+    },
+    {
+      "id": "ea2a03d0-ba21-4a65-9181-31a2919e3e10",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "红盾无纸化会议系统 · 投屏终端 · 银河麒麟"
+    },
+    {
+      "id": "ab60226c-0440-4dbc-a714-612e32665d7a",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "红盾无纸化会议系统 · 投屏客户端软件 · 银河麒麟"
+    },
+    {
+      "id": "7606e099-9b1a-4907-b468-9832d370c666",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "红盾无纸化会议系统 · 投票终端 · Android"
+    },
+    {
+      "id": "f9e2eb50-642b-44c3-a7af-e02c29c9bad0",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "红盾无纸化会议系统 · 投票客户端软件 · Android"
+    },
+    {
+      "id": "e55ea262-fa78-4148-8e66-45ad223aaefb",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "红盾无纸化会议系统 · 投票终端 · 银河麒麟"
+    },
+    {
+      "id": "8571c348-9e93-414e-be00-124358425eaf",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "红盾无纸化会议系统 · 投票客户端软件 · 银河麒麟"
+    },
+    {
+      "id": "07c0434b-0a9b-45c3-a2ca-31adaab76db3",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "红盾无纸化会议系统 · 投票/投屏客户端软件 · Android"
+    },
+    {
+      "id": "6479b80b-68bf-4570-8150-6ea8ed849348",
+      "revision": 1,
+      "status": "draft",
+      "name": "红盾无纸化会议系统 · 电子围栏 · 适配条件待确认"
+    },
+    {
+      "id": "ea274b7e-28e3-40ab-86ad-c13316465e85",
+      "revision": 1,
+      "status": "draft",
+      "name": "红盾无纸化会议系统 · 升降/翻转显示设备 · 适配条件待确认"
+    },
+    {
+      "id": "9bed79ec-567a-4ca0-a124-4a24792646cf",
+      "revision": 1,
+      "status": "draft",
+      "name": "红盾无纸化会议系统 · 代表话筒模块 · 适配条件待确认"
+    },
+    {
+      "id": "79091ce7-e6e6-4c2b-882f-c23c9ba41870",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "红盾无纸化会议系统华为版本 · 服务端 · Linux"
+    },
+    {
+      "id": "29e8580b-b696-43af-9122-bfb691ee54ca",
+      "revision": 1,
+      "status": "draft",
+      "name": "红盾无纸化会议系统华为版本 · 服务端 · 适配条件待确认"
+    },
+    {
+      "id": "71e5bb65-bc98-4a6b-a38d-f1c09aab4bb8",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "红盾无纸化会议系统华为版本 · 平板终端 · 鸿蒙"
+    },
+    {
+      "id": "94e5df19-12d0-4f2f-b679-f9acb7535219",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "红盾无纸化会议系统华为版本 · 投屏终端 · Android"
+    },
+    {
+      "id": "8481b598-d9b1-4e9b-be4c-22cfb5eca10c",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "红盾无纸化会议系统华为版本 · 投屏客户端软件 · Android"
+    },
+    {
+      "id": "a33823d6-89c3-4507-bfba-c7971a8d62a7",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "红盾无纸化会议系统华为版本 · 投屏终端 · 银河麒麟"
+    },
+    {
+      "id": "93b7983a-b882-4c74-bea8-77a6c930b460",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "红盾无纸化会议系统华为版本 · 投屏客户端软件 · 银河麒麟"
+    },
+    {
+      "id": "f0635ed2-963c-4a29-8843-cc2cbaed0a51",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "红盾无纸化会议系统华为版本 · 投票终端 · Android"
+    },
+    {
+      "id": "dae18e88-4a5c-4030-9c09-5c417a1fd788",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "红盾无纸化会议系统华为版本 · 投票客户端软件 · Android"
+    },
+    {
+      "id": "1526d0e2-04ec-4892-a453-11eef3cf9e50",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "红盾无纸化会议系统华为版本 · 投票终端 · 银河麒麟"
+    },
+    {
+      "id": "37a885db-6da3-404c-a4c0-b8147f09a58e",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "红盾无纸化会议系统华为版本 · 投票客户端软件 · 银河麒麟"
+    },
+    {
+      "id": "609b283f-c00c-4ceb-afa2-eb188cd12a68",
+      "revision": 1,
+      "status": "draft",
+      "name": "红盾无纸化会议系统华为版本 · 候会播报软件 · 适配条件待确认"
+    },
+    {
+      "id": "5dc45fca-8381-4968-8096-3348715260c2",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "红盾无纸化会议系统华为版本 · 候会播报终端 · Android"
+    },
+    {
+      "id": "f05262d7-f487-4acf-8dac-e5270a69fea2",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "红盾无纸化会议系统华为版本 · 候会播报终端 · 银河麒麟"
+    },
+    {
+      "id": "ca7b8c84-cb1d-4043-939d-19df6566a81d",
+      "revision": 1,
+      "status": "draft",
+      "name": "红盾无纸化会议系统华为版本 · 电子围栏 · 适配条件待确认"
+    },
+    {
+      "id": "73f0cfc1-506e-4800-be6d-2cc4b79b4bcd",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "红盾无纸化充电柜传输版 · 服务端 · Linux"
+    },
+    {
+      "id": "c74e6e8a-fe55-402f-9955-367225fde02b",
+      "revision": 1,
+      "status": "draft",
+      "name": "红盾无纸化充电柜传输版 · 服务端 · 适配条件待确认"
+    },
+    {
+      "id": "563d771d-3f50-4bcd-82f5-b9d5cef683d9",
+      "revision": 1,
+      "status": "draft",
+      "name": "红盾无纸化充电柜传输版 · 客户端软件 · 适配条件待确认"
+    },
+    {
+      "id": "cc54c040-4eb9-4c07-b25b-6ef7e8f88f87",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "红盾无纸化充电柜传输版 · 客户端软件 · 纯血鸿蒙"
+    },
+    {
+      "id": "bd3efe41-949b-50d0-8ed8-ff74879ac3f7",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "会议预约人脸签到 · 每台签到终端配一个授权"
+    },
+    {
+      "id": "ee2a9f41-ac1c-5aaf-bf22-7b1620376c0e",
+      "revision": 1,
+      "status": "draft",
+      "name": "信息发布综合屏 · 播放终端关系待确认"
+    },
+    {
+      "id": "527e3e00-a50b-5305-9d4f-43e927d97a12",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "国产服务器 · 每台配置国产操作系统"
+    },
+    {
+      "id": "ec634397-2deb-58cb-8671-2bd4a7124119",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "EG 有线会议单元 · 每两只配一个分线盒"
+    },
+    {
+      "id": "7841ef01-e164-5a9f-9e67-c5dc8f2fdfb5",
+      "revision": 1,
+      "status": "draft",
+      "name": "EG 有线会议单元 · 主机型号及容量待确认"
+    },
+    {
+      "id": "5b1f94a0-63cc-5810-a155-34ef464028cd",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "智能管控客户端授权 · 每套系统配服务端软件"
+    },
+    {
+      "id": "046ea112-ea22-5d73-bbc1-4a31251885f9",
+      "revision": 2,
+      "status": "draft",
+      "name": "华为 AP · AC 控制器容量待确认"
+    },
+    {
+      "id": "519b2f8d-55ea-5bfa-86d8-25aa3b78eee2",
+      "revision": 2,
+      "status": "draft",
+      "name": "分布式无纸化桌面终端 · 配套及数量复核"
+    },
+    {
+      "id": "287e20c8-83b7-5319-b021-5ce9c8b9d446",
+      "revision": 2,
+      "status": "draft",
+      "name": "会议平板 · 充电管理车容量选型待确认"
+    },
+    {
+      "id": "64a8ba67-bfa0-56b7-922c-655a25edbf14",
+      "revision": 2,
+      "status": "confirmed",
+      "name": "华为 AP · 每台配置一个 AC 授权"
+    },
+    {
+      "id": "e2836597-da12-5dbc-b246-375c6723982a",
+      "revision": 2,
+      "status": "draft",
+      "name": "浪潮 AP · AC 控制器档位待确认"
+    },
+    {
+      "id": "13c4f20c-75bf-5522-a897-95400e644b98",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "基础设施 · X86服务器"
+    },
+    {
+      "id": "3c9af3cf-6791-543b-9c9d-92438322b7bb",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "基础设施 · 移动部署服务器"
+    },
+    {
+      "id": "5a20a3b7-de04-558a-afd7-96d8bc2359d5",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "基础设施 · 国产化移动部署服务器"
+    },
+    {
+      "id": "4c89839a-0bd4-5191-9448-b4b67ead98c4",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "基础设施 · 以太网交换机"
+    },
+    {
+      "id": "55746f46-3c41-588d-8e37-583408389942",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "基础设施 · PoE交换机"
+    },
+    {
+      "id": "dc2f1547-3603-51a5-90aa-92b88ce42dac",
+      "revision": 1,
+      "status": "draft",
+      "name": "红盾无纸化会议系统 · X86服务器候选（适配待确认）"
+    },
+    {
+      "id": "34e54b52-549b-59c9-88e2-a1a64f6b79a7",
+      "revision": 1,
+      "status": "draft",
+      "name": "会议预约 · X86服务器候选（适配待确认）"
+    },
+    {
+      "id": "373a8c85-b2da-57db-aba0-2abd0379b99f",
+      "revision": 2,
+      "status": "draft",
+      "name": "红盾无纸化 + 会议预约 · X86服务器共用条件待确认"
+    },
+    {
+      "id": "1fad9ff4-c8f5-4545-9143-37e9785ae6d1",
+      "revision": 2,
+      "status": "draft",
+      "name": "PCS-GL30S · 安全无纸化V3.0 · 服务端软件"
+    },
+    {
+      "id": "360bc58d-429b-513c-83f7-54b5ba42bb37",
+      "revision": 2,
+      "status": "confirmed",
+      "name": "分布式带话筒升降器 · 配套及数量复核"
+    },
+    {
+      "id": "38a1d3fa-6928-5e1b-a215-a152b738c3ab",
+      "revision": 2,
+      "status": "draft",
+      "name": "分布式会务服务终端 · 配套及数量复核"
+    },
+    {
+      "id": "4484ae8d-7225-5d55-a197-0d712b4cbea8",
+      "revision": 2,
+      "status": "draft",
+      "name": "安全无纸化服务端硬件 · 配套及数量复核"
+    },
+    {
+      "id": "65ba08ed-ac36-4a29-9de0-3dd050c48cbe",
+      "revision": 2,
+      "status": "draft",
+      "name": "PCS-GL20S · 分布式无纸化会务系统2.0 · 服务端软件"
+    },
+    {
+      "id": "6c518e61-1cf5-543f-8402-b7bc5f757bd1",
+      "revision": 2,
+      "status": "draft",
+      "name": "分布式无纸化系统 · 配套及数量复核"
+    },
+    {
+      "id": "91a1ff7d-2582-5243-8393-f1059450d6c5",
+      "revision": 2,
+      "status": "confirmed",
+      "name": "人脸识别签到功能 · 每台签到终端配一个授权"
+    },
+    {
+      "id": "91d96c8c-957e-594c-9cc0-7e3e4275ced0",
+      "revision": 2,
+      "status": "draft",
+      "name": "分布式无纸化服务端硬件 · 配套及数量复核"
+    },
+    {
+      "id": "ef315d41-98e6-5eeb-bcc4-3e2870c9fe1d",
+      "revision": 1,
+      "status": "draft",
+      "name": "分布式平板方案 · 外部视频输入配套待确认"
+    },
+    {
+      "id": "a549b298-0a0f-5acd-81c1-5d0184a1d704",
+      "revision": 2,
+      "status": "confirmed",
+      "name": "分布式无纸化管理软件 · 按会议室数配置授权"
+    },
+    {
+      "id": "ac5f5056-c523-538b-b43d-e58d724dc583",
+      "revision": 2,
+      "status": "draft",
+      "name": "安全无纸化投屏终端 · 配套及数量复核"
+    },
+    {
+      "id": "ccc06a80-633b-5db0-bfb9-4738766ff0ca",
+      "revision": 2,
+      "status": "draft",
+      "name": "分布式流媒体服务器 · 配套及数量复核"
+    },
+    {
+      "id": "cf7327a3-5327-5e8c-b6b2-a22b5e4ce3c7",
+      "revision": 2,
+      "status": "draft",
+      "name": "分布式带话筒升降器 · 配套及数量复核"
+    },
+    {
+      "id": "d470c41b-3538-5c4a-a82d-22fef896dc4c",
+      "revision": 2,
+      "status": "draft",
+      "name": "安全无纸化投票终端 · 配套及数量复核"
+    },
+    {
+      "id": "e328e76a-e42a-5f5c-8780-4235ace6502c",
+      "revision": 2,
+      "status": "draft",
+      "name": "分布式会议信息发布终端 · 配套及数量复核"
+    },
+    {
+      "id": "f54b41f0-284b-5f04-89bc-a710a554b79b",
+      "revision": 2,
+      "status": "confirmed",
+      "name": "分布式平板客户端软件 · 配套及数量复核"
+    },
+    {
+      "id": "fda8883a-3d2c-5dd7-b824-cf6dc31ac581",
+      "revision": 2,
+      "status": "draft",
+      "name": "安全无纸化候会终端 · 配套及数量复核"
+    },
+    {
+      "id": "3bad432e-5040-51db-b794-f1fd64bce0ab",
+      "revision": 1,
+      "status": "draft",
+      "name": "分布式无纸化会务系统2.0 · 移动部署宿主候选待核对"
+    },
+    {
+      "id": "53fbedba-e79f-5452-aab9-201dc7cd406e",
+      "revision": 1,
+      "status": "draft",
+      "name": "分布式无纸化会务系统2.0 · 充电设备候选待核对"
+    },
+    {
+      "id": "7b986820-001c-5c59-b1f8-1e04d11be43c",
+      "revision": 1,
+      "status": "draft",
+      "name": "安全无纸化V3.0 · 移动部署宿主候选待核对"
+    },
+    {
+      "id": "0662630a-d903-5931-ae46-559d0276b277",
+      "revision": 1,
+      "status": "draft",
+      "name": "安全无纸化V3.0 · 充电设备候选待核对"
+    },
+    {
+      "id": "3b5dc954-4ba2-536e-9e9c-ed1da321a569",
+      "revision": 1,
+      "status": "draft",
+      "name": "分布式平板方案 · 视频输出到大屏配套待确认"
+    },
+    {
+      "id": "8f787383-d02d-5ae5-be21-545cce8c46e0",
+      "revision": 1,
+      "status": "confirmed",
+      "name": "分布式平板方案 · 推荐交换机型号及数量待确认"
+    },
+    {
+      "id": "f818f64a-ad4e-5b39-b78e-0a85f9504615",
+      "revision": 1,
+      "status": "draft",
+      "name": "安全无纸化平板方案 · 管理软件配套待确认"
+    },
+    {
+      "id": "1032baac-ad78-4c9f-8a4d-ddb0d4aa22d5",
+      "revision": 2,
+      "status": "confirmed",
+      "name": "红盾无纸化会议系统 · 客户端软件 · Windows"
+    },
+    {
+      "id": "668bf69d-581b-4376-b36b-0c7849d7e33a",
+      "revision": 2,
+      "status": "confirmed",
+      "name": "RS-MSC100 · 红盾无纸化会议系统 · 服务端软件"
+    },
+    {
+      "id": "c3a09b0a-8e19-400e-b47a-11d29c5addd6",
+      "revision": 2,
+      "status": "confirmed",
+      "name": "红盾无纸化会议系统 · 桌面终端 · Windows"
+    }
+  ],
+  "knowledge_package": [
+    {
+      "id": "28b513aa-c06b-448d-aedd-afc5090f0733",
+      "revision": 1,
+      "status": "draft",
+      "name": "会议预约与信息发布系统 · 试点资料核对"
+    },
+    {
+      "id": "dd9b13a3-060a-4fec-b53c-a1646b43fb87",
+      "revision": 2,
+      "status": "draft",
+      "name": "红盾无纸化会议系统 · Windows · 试点资料核对"
+    },
+    {
+      "id": "3febf40b-da31-508a-bd92-8cf88819f972",
+      "revision": 1,
+      "status": "draft",
+      "name": "分布式无纸化会务系统2.0 · 历史报价资料核对"
+    },
+    {
+      "id": "7f012387-66e6-5534-b832-261dcca5abf1",
+      "revision": 1,
+      "status": "draft",
+      "name": "安全无纸化V3.0 · 历史报价资料核对"
+    }
+  ]
+}

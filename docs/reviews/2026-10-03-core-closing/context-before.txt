@@ -1,0 +1,78 @@
+FFF                                                                      [100%]
+=================================== FAILURES ===================================
+_ test_candidate_uses_project_environment_without_duplicate_request_fields[python-v3] _
+
+client = <starlette.testclient.TestClient object at 0x1134d7380>
+catalog = {'imported': {'source_kind': 'excel', 'id': '8ed18eee-e82f-496b-9b21-cf42e276e7c8', 'filename': 'test.xlsx', 'created_...3cac-4588-bdf8-00ca494061ef', 'revision': 1, 'updated_at': '2026-10-03T09:25:54.113248+00:00', 'actor': '测试维护者', ...}]}
+config = {'actor': '测试维护者', 'evidence': '隔离测试资料，不是业务确认', 'rooms': [{'id': 'room', 'name': '测试会议室'}], 'systems': [{'id': 'paper'... 'room', 'name': '无纸化系统', 'kind': '无纸化'}, {'id': 'booking', 'room_id': 'room', 'name': '会议预约系统', 'kind': '会议预约'}], ...}
+runtime = 'python-v3'
+
+    @pytest.mark.parametrize("runtime", ["python-v3", "zen-v1"])
+    def test_candidate_uses_project_environment_without_duplicate_request_fields(
+        client, catalog, config, runtime
+    ):
+        knowledge(client, catalog["variants"][0], conditions=[
+            dict(field="project.os", operator="eq", value="Windows")
+        ])
+        data = deepcopy(config)
+        data.update(calculation_version=3, decision_runtime=runtime)
+        data["systems"][0]["inputs"] = [dict(key="os", value="Windows", kind="text", unit="")]
+        checked = post(client, "/check", dict(configuration=data))
+        assert next(c for c in checked["checks"] if c["kind"] == "compatibility")["status"] == "pass"
+        candidates = post(client, "/candidates", dict(
+            configuration=checked["configuration"], requirement_id="r1",
+            system="无纸化", role="服务端", include_all=True,
+        ))
+        candidate = next(c for c in candidates if c["variant"]["id"] == catalog["variants"][0]["id"])
+>       assert candidate["status"] == "pass"
+E       AssertionError: assert 'unknown' == 'pass'
+E         
+E         - pass
+E         + unknown
+
+backend/tests/configuration/test_shared_calculation_context.py:25: AssertionError
+_ test_candidate_uses_project_environment_without_duplicate_request_fields[zen-v1] _
+
+client = <starlette.testclient.TestClient object at 0x113646990>
+catalog = {'imported': {'source_kind': 'excel', 'id': '0aaa41d6-7fd5-4784-85c8-3097b8ddb32d', 'filename': 'test.xlsx', 'created_...fadc-4191-86ec-5563119489e1', 'revision': 1, 'updated_at': '2026-10-03T09:25:54.417150+00:00', 'actor': '测试维护者', ...}]}
+config = {'actor': '测试维护者', 'evidence': '隔离测试资料，不是业务确认', 'rooms': [{'id': 'room', 'name': '测试会议室'}], 'systems': [{'id': 'paper'... 'room', 'name': '无纸化系统', 'kind': '无纸化'}, {'id': 'booking', 'room_id': 'room', 'name': '会议预约系统', 'kind': '会议预约'}], ...}
+runtime = 'zen-v1'
+
+    @pytest.mark.parametrize("runtime", ["python-v3", "zen-v1"])
+    def test_candidate_uses_project_environment_without_duplicate_request_fields(
+        client, catalog, config, runtime
+    ):
+        knowledge(client, catalog["variants"][0], conditions=[
+            dict(field="project.os", operator="eq", value="Windows")
+        ])
+        data = deepcopy(config)
+        data.update(calculation_version=3, decision_runtime=runtime)
+        data["systems"][0]["inputs"] = [dict(key="os", value="Windows", kind="text", unit="")]
+        checked = post(client, "/check", dict(configuration=data))
+        assert next(c for c in checked["checks"] if c["kind"] == "compatibility")["status"] == "pass"
+        candidates = post(client, "/candidates", dict(
+            configuration=checked["configuration"], requirement_id="r1",
+            system="无纸化", role="服务端", include_all=True,
+        ))
+        candidate = next(c for c in candidates if c["variant"]["id"] == catalog["variants"][0]["id"])
+>       assert candidate["status"] == "pass"
+E       AssertionError: assert 'unknown' == 'pass'
+E         
+E         - pass
+E         + unknown
+
+backend/tests/configuration/test_shared_calculation_context.py:25: AssertionError
+_________ test_preparing_another_branch_does_not_mutate_first_context __________
+
+config = {'actor': '测试维护者', 'evidence': '隔离测试资料，不是业务确认', 'rooms': [{'id': 'room', 'name': '测试会议室'}], 'systems': [{'id': 'paper'... 'room', 'name': '无纸化系统', 'kind': '无纸化'}, {'id': 'booking', 'room_id': 'room', 'name': '会议预约系统', 'kind': '会议预约'}], ...}
+
+    def test_preparing_another_branch_does_not_mutate_first_context(config):
+>       from presales.configuration.projects.calculation.context import prepare_roles
+E       ModuleNotFoundError: No module named 'presales.configuration.projects.calculation.context'
+
+backend/tests/configuration/test_shared_calculation_context.py:30: ModuleNotFoundError
+=========================== short test summary info ============================
+FAILED backend/tests/configuration/test_shared_calculation_context.py::test_candidate_uses_project_environment_without_duplicate_request_fields[python-v3]
+FAILED backend/tests/configuration/test_shared_calculation_context.py::test_candidate_uses_project_environment_without_duplicate_request_fields[zen-v1]
+FAILED backend/tests/configuration/test_shared_calculation_context.py::test_preparing_another_branch_does_not_mutate_first_context
+3 failed in 0.93s

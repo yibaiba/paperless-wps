@@ -4,19 +4,16 @@ from copy import deepcopy
 
 from ...knowledge.semantics import role_matches
 from ..calculation.combinations import combination_checks, role_definition
-from ..calculation.demands import accessory_demands_v3
-from ..calculation.inclusions import included_fulfillment
-from ..calculation.inspections import prepare_inspections
+from ..calculation.context import prepare_demands, prepare_roles
 from ..planning.quantities import role_quantity
-from ..role_allocations import project_allocations, restore_requirement_ids
+from ..role_allocations import restore_requirement_ids
 from ..schemas import Deployment
-from .definition_snapshot import project_knowledge, resolve_definitions
+from .evaluation_context import prepare_evaluation
 
 
 class CandidateCombinations:
     def __init__(self, repository, request):
         self.repository = repository
-        self.decisions = repository.decisions if request.decision_runtime == "zen-v1" else None
         configuration = request.configuration
         requirement = next(
             (r for r in configuration.requirements if r.id == request.requirement_id), None
@@ -33,8 +30,27 @@ class CandidateCombinations:
         if not role_matches(identity, request.model_dump(mode="json")):
             raise ValueError("候选查询与项目角色不一致")
         self.data, self.variants, self.catalog = repository.prepare(configuration)
-        self.definitions, _ = resolve_definitions(repository.session, self.data)
-        self.data["knowledge_snapshot"] = project_knowledge(self.data, self.definitions)
+        context = prepare_evaluation(
+            repository, self.data, variants=self.variants, catalog=self.catalog
+        )
+        self.context = context
+        self.data, self.definitions = context.data, context.definitions
+        self.decisions = context.decisions
+        roles = prepare_roles(self.data, definitions=self.definitions)
+        self.role = next(
+            r
+            for r in roles.data["requirements"]
+            if r.get("allocation_parent_id", r["id"]) == requirement.id
+        )
+        self.input_checks = restore_requirement_ids(
+            [
+                c
+                for c in roles.checks
+                if roles.aliases.get(c.get("requirement_id"), c.get("requirement_id"))
+                == requirement.id
+            ],
+            roles.aliases,
+        )
         self.requirement = requirement.model_dump(mode="json")
         self.quantity, self.gap, _ = role_quantity(
             role_definition(system.model_dump(mode="json"), requirement.role_id, self.definitions),
@@ -81,17 +97,16 @@ class CandidateCombinations:
             dict(r, device_id=identity, allocations=[]) if r["id"] == self.requirement["id"] else r
             for r in data["requirements"]
         ]
-        data, aliases = project_allocations(data)
-        data, _, _ = prepare_inspections(data, self.definitions)
+        context = prepare_roles(data, definitions=self.definitions)
+        data, aliases = context.data, context.aliases
         variants = dict(self.variants, **{identity: variant})
-        suggestions = accessory_demands_v3(
-            data,
+        suggestions, _ = prepare_demands(
+            context,
             variants=variants,
-            catalog_variants=self.catalog,
+            catalog=self.catalog,
             engine=self.repository.engine,
             decisions=self.decisions,
         )
-        suggestions, _ = included_fulfillment(data, suggestions)
         checks = combination_checks(
             data,
             variants=variants,

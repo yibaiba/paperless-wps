@@ -162,13 +162,7 @@ class ProjectConfigurations:
         checked = self._check(
             data, refresh=refresh, upgrade=upgrade, upgrade_decisions=upgrade_decisions
         )
-        payload = checked["configuration"]
-        knowledge = payload.get("knowledge_snapshot") or []
-        if payload.get("calculation_version") == 3:
-            from .services.definition_snapshot import project_knowledge, resolve_definitions
-
-            definitions, _ = resolve_definitions(self.session, payload)
-            knowledge = project_knowledge(payload, definitions)
+        knowledge = checked.pop("_calculation_knowledge")
         return with_issue_actions(with_quotation(apply_review_checks(checked, knowledge=knowledge)))
 
     def _check(self, data, *, refresh=False, upgrade=False, upgrade_decisions=False):
@@ -180,26 +174,24 @@ class ProjectConfigurations:
             payload["decision_bundle_id"] = None
         if payload.get("calculation_version") == 3:
             from .calculation.evaluate import evaluate_v3
-            from .services.definition_snapshot import project_knowledge, resolve_definitions
+            from .services.evaluation_context import prepare_evaluation
 
-            definitions, snapshot_id = resolve_definitions(self.session, payload, refresh=refresh)
-            payload["definition_snapshot_id"] = snapshot_id
-            calculation_input = dict(
-                payload, knowledge_snapshot=project_knowledge(payload, definitions)
+            context = prepare_evaluation(
+                self, payload, variants=variants, catalog=catalog_variants, refresh=refresh
             )
-            decisions, metadata = self.resolve_decisions(calculation_input, refresh=refresh)
-            payload["decision_bundle_id"] = calculation_input.get("decision_bundle_id")
+            payload = context.configuration
             return dict(
-                decision=metadata,
+                _calculation_knowledge=context.data["knowledge_snapshot"],
+                decision=context.metadata,
                 configuration=payload,
                 version_changes=self._version_changes(payload),
                 **evaluate_v3(
-                    calculation_input,
+                    context.data,
                     variants=variants,
                     catalog_variants=catalog_variants,
                     engine=self.engine,
-                    definitions=definitions,
-                    decisions=decisions,
+                    definitions=context.definitions,
+                    decisions=context.decisions,
                 ),
             )
         if any(
@@ -210,6 +202,7 @@ class ProjectConfigurations:
         ):
             raise ValueError("所选产品包含新版知识，请先预览并升级至计算语义版本 3")
         return dict(
+            _calculation_knowledge=payload["knowledge_snapshot"],
             configuration=payload,
             version_changes=self._version_changes(payload),
             **evaluate_configuration(

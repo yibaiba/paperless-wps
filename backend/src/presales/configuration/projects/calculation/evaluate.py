@@ -13,35 +13,33 @@ from ..accessory_allocations import accessory_allocation_checks
 from ..device_usages import build_device_usages, capacity_checks, unique_consumers
 from ..output import output_line
 from ..readiness import project_readiness
+from .context import prepare_demands, prepare_roles
 from .coverage import coverage_checks
-from .demands import accessory_demands_v3
 from .feature_choices import feature_checks
-from .inclusions import included_fulfillment
-from .inspections import prepare_inspections
 from .resource_review import resource_policy_checks
 from .supply import supply_projection
 
 
 def evaluate_v3(data, *, variants, catalog_variants, engine, definitions, decisions=None):
-    from ..role_allocations import project_allocations, restore_requirement_ids
+    from ..role_allocations import restore_requirement_ids
     from .role_allocations import allocation_checks
 
     input_data = data
-    data, aliases = project_allocations(data)
-    data, inspection_checks, inspection_policies = prepare_inspections(data, definitions)
+    context = prepare_roles(data, definitions=definitions)
+    data, aliases = context.data, context.aliases
+    inspection_checks, inspection_policies = context.checks, context.policies
     systems = {s["id"]: s for s in data["systems"]}
     checks = compatibility(
         data, systems=systems, variants=variants, definitions=definitions, decisions=decisions
     )
     checks.extend(feature_checks(input_data, definitions))
-    suggestions = accessory_demands_v3(
-        data,
+    suggestions, included_checks = prepare_demands(
+        context,
         variants=variants,
-        catalog_variants=catalog_variants,
+        catalog=catalog_variants,
         engine=engine,
         decisions=decisions,
     )
-    suggestions, included_checks = included_fulfillment(data, suggestions)
     checks.extend(included_checks)
     active = [s for s in suggestions if s["selected"]]
     from .fulfillment import alias_consumers, fulfilled_requirement_ids, fulfillment_aliases

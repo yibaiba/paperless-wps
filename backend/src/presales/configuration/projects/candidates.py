@@ -10,33 +10,50 @@ STATUS_ORDER = {"pass": 0, "unknown": 1, "conflict": 2}
 
 def candidate_results(data, *, session, search=None, catalog=None, decisions=None, engine=None):
     decisions = decisions.request() if decisions else None
-    knowledge = candidate_knowledge(session, data.knowledge_snapshot_id)
-    definitions = (
-        (
-            Entities(session).get(data.definition_snapshot_id, kind="definition_snapshot").payload
-            if data.definition_snapshot_id
-            else Definitions(session).current_snapshot()
-        )
-        if data.calculation_version == 3
-        else {"definitions": [], "packages": []}
-    )
-    requirement = data.model_dump(mode="json")
-    requirement["capability_ids"] = role_capabilities(requirement, definitions)
-    if data.calculation_version == 3 and data.knowledge_package_id:
-        from .services.definition_snapshot import project_knowledge
+    projector = None
+    if data.configuration is not None and data.calculation_version == 3:
+        from .repository import ProjectConfigurations
+        from .services.candidate_combinations import CandidateCombinations
 
-        knowledge = project_knowledge(
-            dict(
-                knowledge_snapshot=knowledge,
-                systems=[
-                    dict(
-                        definition_id=data.system_definition_id,
-                        knowledge_package_id=data.knowledge_package_id,
-                    )
-                ],
-            ),
-            definitions,
+        if engine is None:
+            raise ValueError("项目候选数量计算服务未配置")
+        projector = CandidateCombinations(
+            ProjectConfigurations(session, engine, catalog=catalog), data
         )
+        knowledge, definitions = projector.data["knowledge_snapshot"], projector.definitions
+        decisions = projector.decisions
+        requirement = dict(data.model_dump(mode="json"), environment=projector.role["environment"])
+    else:
+        knowledge = candidate_knowledge(session, data.knowledge_snapshot_id)
+        definitions = (
+            (
+                Entities(session)
+                .get(data.definition_snapshot_id, kind="definition_snapshot")
+                .payload
+                if data.definition_snapshot_id
+                else Definitions(session).current_snapshot()
+            )
+            if data.calculation_version == 3
+            else {"definitions": [], "packages": []}
+        )
+        requirement = data.model_dump(mode="json")
+        requirement["capability_ids"] = role_capabilities(requirement, definitions)
+        if data.calculation_version == 3 and data.knowledge_package_id:
+            from .services.definition_snapshot import project_knowledge
+
+            knowledge = project_knowledge(
+                dict(
+                    knowledge_snapshot=knowledge,
+                    systems=[
+                        dict(
+                            definition_id=data.system_definition_id,
+                            knowledge_package_id=data.knowledge_package_id,
+                        )
+                    ],
+                ),
+                definitions,
+            )
+    requirement["capability_ids"] = role_capabilities(requirement, definitions)
     variants = (catalog if catalog is not None else CatalogService(session)).variants()
     if not data.system.strip() or not data.role.strip():
         # Explicit catalog browsing has no role context to establish suitability.
@@ -58,7 +75,7 @@ def candidate_results(data, *, session, search=None, catalog=None, decisions=Non
     if data.decision_runtime == "zen-v1":
         if data.calculation_version != 3 or decisions is None:
             raise ValueError("ZEN 决策服务未配置或计算语义不匹配")
-        if data.decision_bundle_id:
+        if data.decision_bundle_id and projector is None:
             from .services.candidate_versions import validate_bundle
 
             validate_bundle(data, knowledge=knowledge, session=session, decisions=decisions)
@@ -74,16 +91,14 @@ def candidate_results(data, *, session, search=None, catalog=None, decisions=Non
         }
         for v in variants
     ]
-    if data.configuration is not None and data.calculation_version == 3:
-        from .repository import ProjectConfigurations
-        from .services.candidate_combinations import CandidateCombinations
-
-        if engine is None:
-            raise ValueError("项目候选数量计算服务未配置")
-        projector = CandidateCombinations(
-            ProjectConfigurations(session, engine, catalog=catalog), data
-        )
+    if projector is not None:
         checked = [projector.check(item) for item in checked]
+        for item in checked:
+            item["input_checks"] = projector.input_checks
+            states = {c["status"] for c in projector.input_checks} | {item["status"]}
+            item["status"] = (
+                "conflict" if "conflict" in states else "unknown" if "unknown" in states else "pass"
+            )
     for item in checked:
         variant = item["variant"]
         from presales.catalog_updates.impacts import pending_reviews
