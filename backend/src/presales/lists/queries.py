@@ -123,6 +123,11 @@ def search_catalog(session, request, *, decisions=None, engine=None):
             revision=r["variant"]["revision"],
             status=r["status"],
             evidence=r["evidence"],
+            **{
+                field: r[field]
+                for field in ("combination_notice", "combination_checks", "input_checks")
+                if field in r
+            },
             sources=[
                 dict(id=s["id"], sheet=s.get("sheet"), row=s.get("row"))
                 for s in r["variant"]["source_details"]

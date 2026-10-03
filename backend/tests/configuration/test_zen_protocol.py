@@ -1,6 +1,7 @@
 """Actual stdio transport preserves project combination decisions and evidence."""
 
 import asyncio
+import json
 import sqlite3
 import sys
 
@@ -8,17 +9,37 @@ import pytest
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
-from .conftest import AUTHOR, BASE
+from .conftest import AUTHOR, BASE, knowledge
 from .test_list_mcp import call
 from .test_zen_combinations import add_target, setup
 
 
 @pytest.mark.parametrize("project_inputs", [False, True])
+@pytest.mark.parametrize(
+    "mode,assigned,quantity,status",
+    [
+        ("require_all", False, True, "conflict"),
+        ("require_all", True, True, "pass"),
+        ("require_all", True, False, "unknown"),
+        ("require_any", False, True, "conflict"),
+        ("require_any", True, True, "pass"),
+        ("exclude", False, True, "pass"),
+        ("exclude", True, True, "conflict"),
+    ],
+)
 def test_stdio_combination_candidate_matches_http(
-    client, catalog, config, project, tmp_path, project_inputs
+    client, catalog, config, project, tmp_path, project_inputs, mode, assigned, quantity, status
 ):
-    data, rule = setup(client, catalog, config, mode="exclude")
-    add_target(data, catalog)
+    data, rule = setup(client, catalog, config, mode=mode, quantity=quantity)
+    add_target(data, catalog, assign=assigned)
+    knowledge(
+        client,
+        catalog["variants"][0],
+        schema_version=2,
+        system_definition_id=data["systems"][0]["definition_id"],
+        role_id="main",
+        role="main",
+    )
     if project_inputs:
         from presales.configuration.knowledge.schemas import KnowledgeInput
 
@@ -33,10 +54,11 @@ def test_stdio_combination_candidate_matches_http(
         )
         assert updated.status_code == 200, updated.text
         data["systems"][0]["inputs"] = [dict(key="os", kind="text", value="Windows")]
-        data["requirements"][1].update(
-            device_id=None,
-            allocations=[dict(device_id="addon-device", quantity="1", evidence="明确角色分配")],
-        )
+        if assigned:
+            data["requirements"][1].update(
+                device_id=None,
+                allocations=[dict(device_id="addon-device", quantity="1", evidence="明确角色分配")],
+            )
     saved = client.put(
         BASE + "/projects/" + project["id"], json=dict(expected_revision=0, configuration=data)
     )
@@ -54,19 +76,23 @@ def test_stdio_combination_candidate_matches_http(
     )
     query = dict(draft_id=draft["id"], requirement_id="r1", include_other_products=True)
     expected = call(client, "catalog_search", query)
-    selected = next(
-        i for i in expected["items"] if i["variant_id"] == catalog["variants"][0]["id"]
-    )
-    assert selected["status"] == "conflict"
-    assert any(e["result"] == "conflict" for e in selected["evidence"])
+    selected = next(i for i in expected["items"] if i["variant_id"] == catalog["variants"][0]["id"])
+    assert selected["status"] == status, json.dumps(selected, ensure_ascii=False)
+    if quantity:
+        assert any(e["result"] == status for e in selected["evidence"])
+    else:
+        assert "数量" in selected.get("combination_notice", "")
+    expected_combination = dict(code="combination_" + mode, status=status)
     database = tmp_path / "zen.sqlite"
     with client.app.state.session_factory() as session:
         with sqlite3.connect(database) as destination:
             session.connection().connection.driver_connection.backup(destination)
-    asyncio.run(protocol(database, draft=draft, query=query, expected=expected))
+    asyncio.run(
+        protocol(database, draft=draft, query=query, expected=expected, check=expected_combination)
+    )
 
 
-async def protocol(database, *, draft, query, expected):
+async def protocol(database, *, draft, query, expected, check):
     params = StdioServerParameters(
         command=sys.executable,
         args=["-m", "presales.mcp_server"],
@@ -94,6 +120,6 @@ async def protocol(database, *, draft, query, expected):
             )
             assert not result.is_error, result
             assert any(
-                c["code"] == "combination_exclude" and c["status"] == "conflict"
+                c.get("code") == check["code"] and c["status"] == check["status"]
                 for c in result.structured_content["items"]
             )

@@ -1,0 +1,105 @@
+[
+  {
+    "command": [
+      "/Users/yibaiba/Code/RustProject/pi/presales-platform/.venv/bin/python",
+      "-m",
+      "pytest",
+      "backend/tests/test_rules.py",
+      "backend/tests/configuration/decisions/test_runtime.py",
+      "backend/tests/configuration/test_evolution_sharing.py",
+      "backend/tests/configuration/test_quantity_review_fixes.py",
+      "backend/tests/configuration/test_scoped_quantity_setup.py",
+      "backend/tests/configuration/test_alias_quantity_checks.py",
+      "backend/tests/configuration/test_fulfilled_role_quantity_review.py",
+      "--timeout=60",
+      "-q"
+    ],
+    "result": "79 passed in 14.99s"
+  },
+  {
+    "command": [
+      "/Users/yibaiba/Code/RustProject/pi/presales-platform/.venv/bin/python",
+      "-m",
+      "pytest",
+      "backend/tests/configuration/test_zen_combinations.py",
+      "backend/tests/configuration/test_decision_versions.py",
+      "backend/tests/configuration/test_zen_execution_pipeline.py",
+      "backend/tests/configuration/test_candidate_combination_inputs.py",
+      "backend/tests/configuration/test_shared_calculation_context.py",
+      "backend/tests/configuration/test_package_trials.py",
+      "backend/tests/configuration/test_inspection_profiles.py",
+      "--timeout=60",
+      "-q"
+    ],
+    "result": "70 passed in 26.17s"
+  },
+  {
+    "command": [
+      "/Users/yibaiba/Code/RustProject/pi/presales-platform/.venv/bin/python",
+      "-m",
+      "pytest",
+      "backend/tests/configuration/test_zen_protocol.py::test_stdio_combination_candidate_matches_http[require_all-False-True-conflict-False]",
+      "backend/tests/configuration/test_zen_protocol.py::test_stdio_combination_candidate_matches_http[require_all-False-True-conflict-True]",
+      "backend/tests/configuration/test_zen_protocol.py::test_stdio_combination_candidate_matches_http[require_all-True-True-pass-False]",
+      "backend/tests/configuration/test_zen_protocol.py::test_stdio_combination_candidate_matches_http[require_all-True-True-pass-True]",
+      "--timeout=60",
+      "-q"
+    ],
+    "result": "4 passed in 18.05s"
+  },
+  {
+    "command": [
+      "/Users/yibaiba/Code/RustProject/pi/presales-platform/.venv/bin/python",
+      "-m",
+      "pytest",
+      "backend/tests/configuration/test_zen_protocol.py::test_stdio_combination_candidate_matches_http[require_all-True-False-unknown-False]",
+      "backend/tests/configuration/test_zen_protocol.py::test_stdio_combination_candidate_matches_http[require_all-True-False-unknown-True]",
+      "backend/tests/configuration/test_zen_protocol.py::test_stdio_combination_candidate_matches_http[require_any-False-True-conflict-False]",
+      "backend/tests/configuration/test_zen_protocol.py::test_stdio_combination_candidate_matches_http[require_any-False-True-conflict-True]",
+      "--timeout=60",
+      "-q"
+    ],
+    "result": "4 passed in 15.15s"
+  },
+  {
+    "command": [
+      "/Users/yibaiba/Code/RustProject/pi/presales-platform/.venv/bin/python",
+      "-m",
+      "pytest",
+      "backend/tests/configuration/test_zen_protocol.py::test_stdio_combination_candidate_matches_http[require_any-True-True-pass-False]",
+      "backend/tests/configuration/test_zen_protocol.py::test_stdio_combination_candidate_matches_http[require_any-True-True-pass-True]",
+      "backend/tests/configuration/test_zen_protocol.py::test_stdio_combination_candidate_matches_http[exclude-False-True-pass-False]",
+      "backend/tests/configuration/test_zen_protocol.py::test_stdio_combination_candidate_matches_http[exclude-False-True-pass-True]",
+      "--timeout=60",
+      "-q"
+    ],
+    "result": "4 passed in 15.46s"
+  },
+  {
+    "command": [
+      "/Users/yibaiba/Code/RustProject/pi/presales-platform/.venv/bin/python",
+      "-m",
+      "pytest",
+      "backend/tests/configuration/test_zen_protocol.py::test_stdio_combination_candidate_matches_http[exclude-True-True-conflict-False]",
+      "backend/tests/configuration/test_zen_protocol.py::test_stdio_combination_candidate_matches_http[exclude-True-True-conflict-True]",
+      "--timeout=60",
+      "-q"
+    ],
+    "result": "2 passed in 8.55s"
+  },
+  {
+    "command": [
+      "/Users/yibaiba/Code/RustProject/pi/presales-platform/.venv/bin/python",
+      "-m",
+      "pytest",
+      "backend/tests/configuration/test_list_mcp.py",
+      "backend/tests/configuration/test_mcp_protocol.py",
+      "backend/tests/configuration/test_mcp_error_contract.py",
+      "backend/tests/configuration/test_proposal_protocol.py",
+      "backend/tests/configuration/test_proposal_prices_and_cycles.py",
+      "--timeout=60",
+      "-q"
+    ],
+    "result": "11 passed in 23.41s"
+  }
+]

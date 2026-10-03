@@ -85,6 +85,9 @@ def combination_checks(data, *, variants, suggestions, definitions, engine, deci
                     scope=rule["combination"].get("scope"),
                     system_ids=system_ids,
                     device_ids=list(dict.fromkeys(d for d, _ in triggers_in_scope)),
+                    trigger_requirement_ids=list(
+                        dict.fromkeys(r["id"] for _, r in triggers_in_scope if r.get("id"))
+                    ),
                     groups=groups,
                     missing_fields=missing,
                     message=rule["name"]

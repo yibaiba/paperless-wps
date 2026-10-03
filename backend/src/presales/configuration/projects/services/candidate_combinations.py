@@ -116,6 +116,15 @@ class CandidateCombinations:
             decisions=self.decisions,
         )
         checks = restore_requirement_ids(checks, aliases)
+        # The replaced device may remain unassigned. Its unrelated gaps belong to
+        # full project checks; retain both constraints triggered by and targeting this role.
+        checks = [
+            check
+            for check in checks
+            if identity in check["device_ids"]
+            or self.requirement["id"] in check["trigger_requirement_ids"]
+            or any(self.requirement["id"] in group["requirement_ids"] for group in check["groups"])
+        ]
         statuses = {c["status"] for c in checks} | {candidate["status"]}
         status = (
             "conflict" if "conflict" in statuses else "unknown" if "unknown" in statuses else "pass"

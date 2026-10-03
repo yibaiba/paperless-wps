@@ -1,6 +1,6 @@
 # 清单与公司模板报价 MCP
 
-本机其他 Agent 现在可以查询产品、建立持久草稿、选择搭配和供货、采用报价价格、检查、保存项目版本并导出 Excel。HTTP 和 MCP 调用同一个 `ListApplication`，复用项目配置、知识快照、配套分配、设备使用投影及 ZEN 数量引擎。新增功能不调用模型。
+本机其他 Agent 现在可以查询产品、建立持久草稿、选择搭配和供货、采用报价价格、检查、保存项目版本并导出 Excel。HTTP 和 MCP 调用同一个 `ListApplication`，复用项目配置、知识快照、配套分配、设备使用投影及 ZEN 数量与决策引擎。新增功能不调用模型。
 
 ## 连接本机 Agent
 
@@ -38,7 +38,7 @@
 | 工具 | 输入重点 | 返回内容 |
 | --- | --- | --- |
 | `systems_list` | offset、limit；可选 definition_id、knowledge_package_id、快照 ID、features | 系统、角色、知识包、未映射旧系统；指定系统时增加需求描述 |
-| `catalog_search` | query；可选 draft_id + requirement_id | 分页配置摘要、来源 ID、候选结论与依据 |
+| `catalog_search` | query；可选 draft_id + requirement_id | 分页配置摘要、来源 ID、候选结论与依据；项目候选附组合检查、输入检查和待确认说明 |
 | `catalog_get` | variant_id；可选 draft_id | 指定配置、参数、来源原文、原始价格列和相关知识 |
 | `list_search` | query；或 project_id | 项目当前修订；指定项目后分页读取历史保存版本 |
 | `list_create` | name、actor、evidence、operation_id | 草稿 ID、修订、固定产品与知识版本 |
@@ -133,7 +133,8 @@
 - 新增 `list_draft`、`list_catalog_snapshot`、`list_operation`、`list_artifact` 四种实体，使用现有实体表及修订机制，没有重建数据库。不可变产品目录快照按内容复用，不把整个产品库返回 Agent。
 - 创建草稿固定候选产品版本及知识。普通读取、检查不会更新版本；`list_check.refresh_knowledge=true` 才在草稿中明确更新，并提供修改差异。项目保存版本及已导出文件保持不变。
 - MCP 与网页未保存草稿相互独立。保存后网页可以打开并编辑；网页沿用已有统一撤销、重做和配置保存流程。
-- Python 决定兼容、共享、供货和配套，ZEN 计算数量。金额由 Decimal 逐行四舍五入到分后合计，不额外加税、运费或折扣。
+- Python 固定资料版本、准备角色及用途、分配数量并汇总检查。`zen-v1` 项目由真实 ZEN 执行条件、必选/互斥/至少一项组合及容量比较，数量公式也由 ZEN 执行；旧 `python-v3` 项目保持原语义，需明确升级。金额由 Decimal 逐行四舍五入到分后合计，不额外加税、运费或折扣。
+- 候选仅汇总与当前角色相关的组合，包括该角色配套触发的组合和其他设备对该角色施加的约束；全项目检查继续保留其他设备的缺口。`combination_checks`、`input_checks`、`combination_notice` 为兼容增加字段，缺少数量时通过说明返回原因，不伪造数量或通过结论。
 - 缺价、非数值价格和供货待定保持待确认；完整总额为 `null`，只返回已知金额小计。明确零价有效。
 - 价格来自指定原始来源列，不自动切换其他列。客户已有设备可没有报价价格，不计采购金额。
 - 图形布局改变不新增采购；清单新增或删除设备由已有图纸投影更新引用。
