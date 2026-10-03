@@ -1,11 +1,16 @@
 import type { HostAdapter } from './host';
 import type { WorkbookRowIndex } from './workbookRowIndex';
-import type { ActiveCell, TemplateProfile, WorkbookMetadata } from './types';
+import type { ActiveCell, TemplateProfile, WorkbookLine, WorkbookMetadata } from './types';
 import { bindingForRow, scanWorkbook } from './workbook.ts';
 
-export function businessSyncRequest(metadata: WorkbookMetadata, lines: unknown[]) {
+export function businessSyncRequest(metadata: WorkbookMetadata, lines: WorkbookLine[]) {
   const binding = metadata.binding;
   if (!binding) throw new Error('请先绑定项目');
+  const visible = new Set(lines.map((line) => line.line_id));
+  const missing = metadata.schema_version === 2 ? metadata.line_bindings.filter((b) => !visible.has(b.line_id) && b.confirmed_values) : [];
+  const removed = scanWorkbook(missing.map((b) => ({ sheet: b.sheet, row: b.row,
+    values: b.confirmed_values!, formula_fields: [], merged_fields: [] })), metadata);
+  if (removed.unresolved.length) throw new Error(removed.unresolved.join('；'));
   return {
     schema_version: metadata.schema_version, binding_id: binding.binding_id,
     expected_binding_revision: binding.binding_revision,
@@ -14,6 +19,8 @@ export function businessSyncRequest(metadata: WorkbookMetadata, lines: unknown[]
     template_profile_revision: metadata.profile_revision,
     known_device_ids: binding.managed_device_ids, lines,
     business_operations: metadata.business?.operations ?? [],
+    removed_lines: [...new Map([...(metadata.business?.removed_lines ?? []), ...removed.lines]
+      .filter((line) => !visible.has(line.line_id)).map((line) => [line.line_id, line])).values()],
   };
 }
 
@@ -32,7 +39,7 @@ export function completionRequest(options: {
     ?? metadata.line_bindings.find((b) => b.sheet === cell.sheet && b.row === cell.row);
   const rows = index.read().flatMap((row) => {
     if (row.row !== cell.row) return [row];
-    if (!currentBinding) return [];
+    if (!currentBinding || (!query && !row.values.model?.trim() && !row.values.name?.trim())) return [];
     if (!currentBinding.confirmed_values) return [row];
     return [{ ...row, values: { ...row.values,
       model: currentBinding.confirmed_values.model, name: currentBinding.confirmed_values.name } }];

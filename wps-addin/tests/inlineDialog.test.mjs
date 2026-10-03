@@ -7,12 +7,12 @@ import { LatestRequest } from '../src/latestRequest.ts';
 
 function liveDialog() {
   const storage = new Map();
-  const window = { focus: () => {}, PresalesInlineRefresh: () => {} };
+  const window = { focus: () => {}, PresalesInlineRefresh: () => {}, dispatchEvent: () => true };
   const dialog = {
     ID: 1,
     Resize: () => {},
     Move: () => {},
-    ExecuteJavaScript: (script) => runInNewContext(script, { window }),
+    ExecuteJavaScript: (script) => runInNewContext(script, { window, Event }),
     Visible: false,
   };
   const app = {

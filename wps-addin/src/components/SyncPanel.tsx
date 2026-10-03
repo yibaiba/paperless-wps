@@ -1,9 +1,13 @@
 import { CloudSyncOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
-import { useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import type { WpsApi } from '../api';
+import { ApiError } from '../api';
 import type { HostAdapter } from '../host';
 import { scanWorkbook } from '../workbook';
+import { businessSyncRequest } from '../businessWorkbook';
+import { recoverSyncReceipt } from '../syncRecovery';
+import { businessDiagnostic } from '../businessDiagnostics';
 import type { SyncPreviewResult, TemplateProfile, WorkbookMetadata } from '../types';
 
 export function SyncPanel({ api, host, profile, metadata, onSynced }: {
@@ -17,29 +21,30 @@ export function SyncPanel({ api, host, profile, metadata, onSynced }: {
   const [operationId, setOperationId] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const scan = useMemo(
-    () => scanWorkbook(host.readRows(profile), metadata),
-    [host, metadata, profile],
-  );
+  const [scan, setScan] = useState<ReturnType<typeof scanWorkbook>>({ lines: [], unresolved: [] });
+  const [previewRevision, setPreviewRevision] = useState(-1);
+  useEffect(() => host.onSheetChange(() => { setPreview(undefined); setOperationId(''); }), [host]);
 
   function request() {
     if (!metadata.binding) throw new Error('请先绑定项目');
-    return {
-      binding_id: metadata.binding.binding_id,
-      expected_draft_revision: metadata.binding.draft_revision,
-      expected_project_revision: metadata.binding.base_revision,
-      template_profile_revision: profile.revision,
-      known_device_ids: metadata.binding.managed_device_ids,
-      lines: scan.lines,
-    };
+    if (host.journals().some((j) => ['prepared', 'recovery_required'].includes(j.state))) {
+      throw new Error('有未完成的本地编辑，请先恢复日志再同步');
+    }
+    const current = host.readMetadata();
+    const fresh = scanWorkbook(host.readRows(profile), current);
+    setScan(fresh);
+    if (fresh.unresolved.length) throw new Error(fresh.unresolved.join('；'));
+    return businessSyncRequest(current, fresh.lines);
   }
 
   async function loadPreview() {
     setBusy(true); setError(''); setPreview(undefined); setOperationId('');
     try {
-      if (scan.unresolved.length) throw new Error(scan.unresolved.join('；'));
+      const revision = host.businessRevision();
       const result = await api.preview(request());
+      if (host.businessRevision() !== revision) throw new Error('工作簿在预览期间变化，请重新预览');
       setPreview(result);
+      setPreviewRevision(revision);
       setOperationId(crypto.randomUUID());
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : String(reason));
@@ -47,26 +52,35 @@ export function SyncPanel({ api, host, profile, metadata, onSynced }: {
   }
 
   async function commit() {
-    if (!preview || !operationId) return;
+    if ((!preview || !operationId) && !metadata.pending_sync) return;
     setBusy(true); setError('');
     try {
-      const result = await api.commit({
-        ...request(), preview_fingerprint: preview.preview_fingerprint, operation_id: operationId,
-      });
-      const next: WorkbookMetadata = {
-        ...metadata,
-        binding: result,
-        line_bindings: result.line_bindings.map((item) => {
-          const line = scan.lines.find((value) => value.line_id === item.line_id);
-          return { ...item, anchor_fingerprint: line
-            ? [line.model, line.name].join('\0').toLocaleLowerCase() : undefined };
-        }),
-      };
+      let current = host.readMetadata();
+      if (!current.pending_sync) {
+        if (host.businessRevision() !== previewRevision) throw new Error('预览后有编辑，请重新预览');
+        current = { ...current, pending_sync: {
+          request: { ...request(), preview_fingerprint: preview!.preview_fingerprint, operation_id: operationId },
+          local_revision: previewRevision, operations: current.business?.operations ?? [], line_bindings: current.line_bindings,
+        } };
+        host.writeMetadata(current); onSynced(current);
+      }
+      const result = await api.commit(current.pending_sync!.request);
+      const next = recoverSyncReceipt(host.readMetadata(), result);
       host.writeMetadata(next);
       onSynced(next);
+      for (const journal of host.journals().filter((j) => j.state === 'applied'
+        && j.patches.every((p) => host.readCell(p).value === p.after)
+        && j.after.line_bindings.every((b) => next.line_bindings.some((line) =>
+          line.line_id === b.line_id && line.variant_id === b.variant_id && line.source_id === b.source_id)))) {
+        businessDiagnostic(host, { event_id: `${journal.operation_id}:retained`, event_type: 'completion_retained', outcome: 'success' });
+      }
       setPreview(undefined);
       setOperationId('');
     } catch (reason) {
+      if (reason instanceof ApiError && [409, 422].includes(reason.status)) {
+        const current = { ...host.readMetadata(), pending_sync: undefined };
+        host.writeMetadata(current); onSynced(current);
+      }
       setError(reason instanceof Error ? reason.message : String(reason));
     } finally { setBusy(false); }
   }
@@ -107,8 +121,9 @@ export function SyncPanel({ api, host, profile, metadata, onSynced }: {
     </div> : null}
     {error ? <div className="error" role="alert">{error}</div> : null}
     <div className="button-row">
-      <button onClick={loadPreview} disabled={busy || !metadata.binding}>预览差异</button>
-      <button className="primary" onClick={commit} disabled={busy || !preview?.has_changes}>
+      {metadata.pending_sync && <button onClick={commit} disabled={busy}>重试原操作 / 恢复同步回执</button>}
+      <button onClick={loadPreview} disabled={busy || !metadata.binding || Boolean(metadata.pending_sync)}>预览差异</button>
+      <button className="primary" onClick={commit} disabled={busy || !preview?.has_changes || Boolean(metadata.pending_sync)}>
         <CloudSyncOutlined />{busy ? '处理中' : '确认同步'}
       </button>
     </div>

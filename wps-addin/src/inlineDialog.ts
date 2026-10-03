@@ -14,7 +14,8 @@ const DIALOG_GAP = 2;
 const DIALOG_RESIZE_EDGE = 2;
 const DIALOG_LOADING_TIMEOUT_MS = 0;
 const SYNC_INLINE_CONTEXT_SCRIPT =
-  'window.PresalesInlineRefresh && window.PresalesInlineRefresh()';
+  'window.PresalesInlineRefresh && window.PresalesInlineRefresh();'
+  + 'window.dispatchEvent(new Event("presales-inline-context"))';
 const REFRESH_INLINE_EDITOR_SCRIPT = [
   'window.focus()',
   SYNC_INLINE_CONTEXT_SCRIPT,

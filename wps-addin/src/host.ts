@@ -11,7 +11,7 @@ import { enqueueFeedback, parseFeedbackOutbox, removeFeedback } from './feedback
 import { InlineDialogManager } from './inlineDialog.ts';
 import type { InlineLayoutOptions, InlineLayoutResult } from './inlineLayout.ts';
 import { WpsTabCoordinator } from './tabCoordinator.ts';
-import { assertWritableTargets } from './workbook.ts';
+import { ambiguousStructuralIdentities, assertWritableTargets } from './workbook.ts';
 
 declare global {
   interface Window {
@@ -79,6 +79,7 @@ export interface HostAdapter {
   onSelectionChange(callback: () => void): () => void;
   onSheetActivate(callback: () => void): () => void;
   onWorkbookBeforeClose(callback: () => void): () => void;
+  onWorkbookActivate(callback: () => void): () => void;
 }
 
 function text(value: unknown) { return value == null ? '' : String(value); }
@@ -306,7 +307,8 @@ export class WpsHostAdapter implements HostAdapter {
     if (cell.formula.startsWith('=') || cell.merged) return this.hideInlineEditor();
     const issues = this.inlineCapabilityIssues();
     if (issues.length) throw new Error(`当前 WPS 缺少内联补全能力：${issues.join('、')}`);
-    this.inlineDialog.show({ profile, cell });
+    const workbook = this.requireWorkbook();
+    this.inlineDialog.show({ profile, cell, workbook_key: text(workbook.FullName ?? workbook.Name) });
   }
 
   hideInlineEditor() {
@@ -393,6 +395,15 @@ export class WpsHostAdapter implements HostAdapter {
       const change = sheetChange(sheet, target);
       if (change.sheet === META_SHEET) return;
       this.stateSet(this.editKey(), Number(this.stateGet(this.editKey()) || 0) + 1);
+      if (change.structural) {
+        const metadata = this.readMetadata();
+        if (metadata.business) {
+          const before = metadata.business.unresolved_line_ids ?? [];
+          const ids = [...new Set([...before, ...ambiguousStructuralIdentities(metadata, change.sheet)])];
+          if (ids.length !== before.length) this.writeMetadata({ ...metadata,
+            business: { ...metadata.business, unresolved_line_ids: ids } });
+        }
+      }
       callback(change);
     });
   }
@@ -404,6 +415,8 @@ export class WpsHostAdapter implements HostAdapter {
   onWorkbookBeforeClose(callback: () => void) {
     return this.event('WorkbookBeforeClose', () => { this.recordStores.clear(); callback(); });
   }
+
+  onWorkbookActivate(callback: () => void) { return this.event('WorkbookActivate', callback); }
 
   private event(name: string, callback: (...args: any[]) => void) {
     return subscribeHostEvent(this.app.ApiEvent, name, callback);

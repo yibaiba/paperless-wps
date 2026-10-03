@@ -123,6 +123,11 @@ button, input { font: inherit; letter-spacing: 0; }
 .inline-error { background: #fff1f0; color: #a82218; }
 .inline-status { background: #f7faf8; color: #47534d; }
 .inline-empty { background: #fff; height: 100%; }
+.inline-business-preview { overflow: auto; padding: 8px; }
+.inline-business-preview pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+.inline-business-preview button { min-height: 32px; }
+.next-edit-preview:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }
+.inline-error, .inline-status { overflow: auto; }
 
 .inline-editor.above .inline-candidates { border-bottom: 1px solid var(--border); border-top: 0; order: 1; }
 .inline-editor.above .inline-error, .inline-editor.above .inline-status { order: 2; }

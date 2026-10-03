@@ -51,7 +51,7 @@ p { color: var(--muted); font-size: 12px; }
   background: #f8faf9;
   border-bottom: 1px solid var(--border);
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   min-height: 52px;
 }
 .tabs button {
@@ -82,6 +82,11 @@ input, select {
   width: 100%;
 }
 .two-columns { display: grid; gap: 10px; grid-template-columns: minmax(0, 2fr) minmax(78px, 1fr); }
+.form-row { display: grid; gap: 10px; grid-template-columns: 1fr 1fr; }
+.business-settings, .next-edit-preview { margin: 12px 0; }
+.next-edit-preview pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+.next-edit-preview:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.business-settings input[type="checkbox"] { min-height: auto; width: auto; }
 
 button {
   align-items: center;

@@ -1,4 +1,4 @@
-import type { LineBinding, TemplateField, WorkbookMetadata } from './types';
+import type { LineBinding, TemplateField, WorkbookLine, WorkbookMetadata } from './types';
 
 export type ProductKind = 'hardware' | 'software' | 'license' | 'accessory';
 export type BusinessOperation = Record<string, unknown> & { action: string };
@@ -16,6 +16,8 @@ export interface WorkbookBusinessState {
   operations: BusinessOperation[];
   recent_edits: RecentBusinessEdit[];
   row_requirements?: Array<{ sheet: string; row: number; requirement_id: string }>;
+  removed_lines?: WorkbookLine[];
+  unresolved_line_ids?: string[];
 }
 export interface BusinessAttribute { key: string; kind: string; value: string; unit: string }
 export interface BusinessSystem {
@@ -26,6 +28,7 @@ export interface BusinessSystem {
 export interface BusinessRequirement {
   id: string; system_id: string; role_id: string; role: string; device_id: string | null;
   allocations: Array<{ device_id: string; quantity: string; evidence: string }>;
+  environment?: BusinessAttribute[];
 }
 export interface BusinessDevice {
   id: string; name: string; kind: ProductKind; variant_id: string; source_id: string;
@@ -39,6 +42,8 @@ export interface WorkbookBusinessContext {
     systems: BusinessSystem[]; requirements: BusinessRequirement[]; devices: BusinessDevice[];
     supply_allocations: Array<Record<string, unknown>>;
     generation: Record<string, unknown>;
+    room_inputs?: Record<string, BusinessAttribute[]>;
+    project_inputs?: BusinessAttribute[];
   };
   definitions: {
     packages: Array<{ id: string; name: string; system_definition_id: string;
@@ -55,6 +60,8 @@ export interface NextEditSuggestion {
   line_bindings: LineBinding[]; business_operations: BusinessOperation[];
   inverse_business_operations?: BusinessOperation[];
   row_requirements?: WorkbookBusinessState['row_requirements'];
+  removed_lines?: WorkbookLine[];
+  confirmed_identity_ids?: string[];
   changes: Array<{ kind: string; id: string; before: unknown; after: unknown }>;
   evidence: unknown[]; issues: unknown[]; applicable: boolean;
   acceptance: 'inline' | 'preview'; context_fingerprint: string; local_revision: number;
@@ -73,4 +80,5 @@ export interface WorkbookEditJournal {
   error?: string;
   binding_revision?: number;
   inverse_business_operations?: BusinessOperation[];
+  recovery?: { intent: 'undo' | 'rollback'; before: WorkbookMetadata; after: WorkbookMetadata };
 }

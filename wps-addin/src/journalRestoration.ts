@@ -27,6 +27,9 @@ export function restoredMetadata(metadata: WorkbookMetadata, journal: WorkbookEd
   const added = after.business?.operations.slice(before.business?.operations.length ?? 0) ?? [];
   const synced = (metadata.binding?.binding_revision ?? 0) > (journal.binding_revision ?? 0);
   const operations = [...business.operations];
+  const deletedByGroup = new Set((after.business?.removed_lines ?? [])
+    .filter((line) => !before.business?.removed_lines?.some((b) => b.line_id === line.line_id))
+    .map((line) => line.line_id));
   if (synced) {
     if (!journal.inverse_business_operations) throw new Error('此旧操作缺少同步后的逆向业务记录，无法自动撤销');
     operations.push(...journal.inverse_business_operations);
@@ -51,6 +54,9 @@ export function restoredMetadata(metadata: WorkbookMetadata, journal: WorkbookEd
     line_bindings: [...metadata.line_bindings.filter((l) => !changed.has(l.line_id)),
       ...before.line_bindings.filter((l) => changed.has(l.line_id))],
     business: { ...business, operations, local_revision: business.local_revision + 1,
+      unresolved_line_ids: [...new Set([...(business.unresolved_line_ids ?? []),
+        ...(before.business?.unresolved_line_ids ?? []).filter((id) => !after.business?.unresolved_line_ids?.includes(id))])],
+      removed_lines: (business.removed_lines ?? []).filter((line) => !deletedByGroup.has(line.line_id)),
       row_requirements: [...(business.row_requirements ?? []).filter((r) => !touchedRows.has(rowKey(r))),
         ...previousRows.filter((r) => touchedRows.has(rowKey(r)))],
       recent_edits: [...business.recent_edits, { operation_id: journal.operation_id,

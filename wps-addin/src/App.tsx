@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { WpsApi } from './api';
 import { applyCandidate } from './candidateAcceptance';
 import { BindingPanel } from './components/BindingPanel';
+import { BusinessPanel } from './components/BusinessPanel';
 import { MappingPanel } from './components/MappingPanel';
 import { SuggestionPanel } from './components/SuggestionPanel';
 import { SyncPanel } from './components/SyncPanel';
@@ -20,7 +21,7 @@ import type {
 } from './types';
 import { bindingForRow } from './workbook.ts';
 
-type View = 'account' | 'suggestions' | 'mapping' | 'binding' | 'sync';
+type View = 'account' | 'suggestions' | 'mapping' | 'binding' | 'business' | 'sync';
 const HOST_STATE_POLL_MS = 250;
 
 export function App() {
@@ -67,6 +68,9 @@ export function App() {
     if (!token || !bindingId) return;
     api.binding(bindingId).then((binding) => {
       if (binding.binding_revision <= (metadata.binding?.binding_revision ?? 0)) return;
+      if (metadata.schema_version === 2) {
+        throw new Error('项目绑定已有新版本，请在同步面板恢复本次回执或核对冲突；未覆盖本地业务修改');
+      }
       const lineBindings = binding.line_bindings.map((item) => {
         const local = metadata.line_bindings.find((value) => value.line_id === item.line_id);
         return { ...item, anchor_fingerprint: local?.anchor_fingerprint };
@@ -99,6 +103,7 @@ export function App() {
       && inlineCell.row === current.row
       && inlineCell.column === current.column;
     if (inlineOwnsQuery) return;
+    if (metadata.schema_version === 2) return;
     if (!current.value.trim()) return;
     timer.current = setTimeout(async () => {
       const request = requests.current.begin();
@@ -130,19 +135,26 @@ export function App() {
     }, SUGGESTION_DEBOUNCE_MS);
   }, [api, capabilityIssues, host, metadata, profile]);
 
+  const queryCellRef = useRef(queryCell);
+  queryCellRef.current = queryCell;
+
   useEffect(() => {
     if (!profile || capabilityIssues.length) return undefined;
-    const removeChange = host.onSheetChange(() => queryCell(false));
-    const removeSelection = host.onSelectionChange(() => queryCell(true));
+    const removeChange = host.onSheetChange(() => queryCellRef.current(false));
+    const removeSelection = host.onSelectionChange(() => queryCellRef.current(true));
     const removeSheetActivate = host.onSheetActivate(() => host.hideInlineEditor());
     const removeWorkbookClose = host.onWorkbookBeforeClose(() => host.hideInlineEditor());
-    queryCell(true);
+    const removeWorkbookActivate = host.onWorkbookActivate(() => {
+      host.hideInlineEditor(); setMetadata(host.readMetadata());
+      queryCellRef.current(true);
+    });
+    queryCellRef.current(true);
     return () => {
-      removeChange(); removeSelection(); removeSheetActivate(); removeWorkbookClose();
+      removeChange(); removeSelection(); removeSheetActivate(); removeWorkbookClose(); removeWorkbookActivate();
       requests.current.cancel(); clearTimeout(timer.current);
       host.hideInlineEditor();
     };
-  }, [capabilityIssues, host, profile, queryCell]);
+  }, [capabilityIssues, host, profile]);
 
   const accept = useCallback((candidate: Candidate) => {
     if (!profile || !cell) return;
@@ -257,7 +269,7 @@ export function App() {
 
   function saveBinding(value: BindingState) {
     const productBindings = metadata.line_bindings.map(({ device_id: _, ...item }) => item);
-    const next = { ...metadata, binding: value, line_bindings: productBindings };
+    const next = { ...metadata, binding: value, line_bindings: productBindings, business: undefined };
     host.writeMetadata(next); setMetadata(next); setView('sync');
   }
 
@@ -295,15 +307,19 @@ export function App() {
       <Tab icon={<SearchOutlined />} label="联想" active={view === 'suggestions'} onClick={() => setView('suggestions')} />
       <Tab icon={<TableOutlined />} label="模板" active={view === 'mapping'} onClick={() => setView('mapping')} />
       <Tab icon={<LinkOutlined />} label="项目" active={view === 'binding'} onClick={() => setView('binding')} />
+      <Tab icon={<TableOutlined />} label="业务" active={view === 'business'} onClick={() => setView('business')} />
       <Tab icon={<AppstoreOutlined />} label="同步" active={view === 'sync'} onClick={() => setView('sync')} />
     </nav>
+    {error && metadata.schema_version === 2 ? <div className="error" role="alert">{error}</div> : null}
     {view === 'account' ? <section className="panel-section" aria-labelledby="account-title">
       <div className="section-heading">
         <div><h2 id="account-title">连接账号</h2><p>当前加载项身份</p></div><LoginOutlined />
       </div>
       <div className="account-status"><span>已连接</span><strong>{actor ?? '个人账号'}</strong></div>
     </section> : null}
-    {view === 'suggestions' && profile ? <SuggestionPanel cell={cell} candidates={candidates} busy={busy} error={error} onAccept={accept} /> : null}
+    {view === 'suggestions' && profile && metadata.schema_version !== 2 ? <SuggestionPanel cell={cell} candidates={candidates} busy={busy} error={error} onAccept={accept} /> : null}
+    {((view === 'suggestions' && metadata.schema_version === 2) || view === 'business') && profile
+      ? <BusinessPanel api={api} host={host} profile={profile} metadata={metadata} onChanged={setMetadata} /> : null}
     {view === 'suggestions' && !profile ? <div className="empty">请先完成模板映射，才能识别产品列</div> : null}
     {view === 'mapping' ? <MappingPanel host={host} api={api} profiles={profiles}
       profile={profile} onSelected={selectProfile} onSaved={saveProfile} /> : null}

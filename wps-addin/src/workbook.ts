@@ -42,6 +42,10 @@ export function scanWorkbook(rows: SheetRow[], metadata: WorkbookMetadata) {
       unresolved.push(`${row.sheet} 第 ${row.row} 行尚未确认具体产品配置`);
       continue;
     }
+    if (metadata.business?.unresolved_line_ids?.includes(binding.line_id)) {
+      unresolved.push(`${row.sheet} 第 ${row.row} 行在结构变化后有重复身份，请重新确认`);
+      continue;
+    }
     if (identities.has(binding.line_id)) {
       unresolved.push(`${row.sheet} 第 ${row.row} 行与其他行重复匹配，请明确各行身份`);
       continue;
@@ -85,4 +89,11 @@ export function scanWorkbook(rows: SheetRow[], metadata: WorkbookMetadata) {
     });
   }
   return { lines, unresolved };
+}
+
+export function ambiguousStructuralIdentities(metadata: WorkbookMetadata, sheet: string) {
+  const bindings = metadata.line_bindings.filter((b) => b.sheet === sheet);
+  const counts = new Map<string | undefined, number>();
+  bindings.forEach((b) => counts.set(b.anchor_fingerprint, (counts.get(b.anchor_fingerprint) ?? 0) + 1));
+  return bindings.filter((b) => !b.anchor_fingerprint || counts.get(b.anchor_fingerprint)! > 1).map((b) => b.line_id);
 }

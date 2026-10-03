@@ -128,3 +128,63 @@ test('uncompleted journal prevents a second group from writing', () => {
   assert.throws(() => applyNextEdit({ ...f, operationId: 'next' }), /未完成/);
   assert.equal(f.cells.get(1), 'old');
 });
+
+test('interrupted undo resumes the original undo intent without losing its journal', () => {
+  const f = fixture();
+  applyNextEdit({ ...f, operationId: 'op' });
+  const write = f.host.writeCellValue;
+  f.host.writeCellValue = (cell, value) => {
+    if (cell.column === 1) throw new Error('宿主中断');
+    write(cell, value);
+  };
+  assert.throws(() => restoreJournal(f.host, f.journals.get('op')), /报价 4:1/);
+  assert.equal(f.cells.get(2), 'old name');
+  assert.equal(f.journals.get('op').state, 'recovery_required');
+  f.host.writeCellValue = write;
+  restoreJournal(f.host, f.journals.get('op'), false);
+  assert.equal(f.journals.get('op').state, 'undone');
+  assert.equal(f.cells.get(1), 'old');
+});
+
+test('post-sync undo receipt failure does not duplicate inverse business operations', () => {
+  const f = fixture();
+  f.suggestion.inverse_business_operations = [{ action: 'remove', collection: 'requirements', id: 'own' }];
+  applyNextEdit({ ...f, operationId: 'op' });
+  f.host.writeMetadata({ ...f.host.readMetadata(), binding: { binding_revision: 4 } });
+  const write = f.host.writeJournal;
+  f.host.writeJournal = (value) => {
+    if (value.state === 'undone') throw new Error('回执写入失败');
+    write(value);
+  };
+  assert.throws(() => restoreJournal(f.host, f.journals.get('op')), /回执/);
+  f.host.writeJournal = write;
+  restoreJournal(f.host, f.journals.get('op'), false);
+  assert.deepEqual(f.host.readMetadata().business.operations, f.suggestion.inverse_business_operations);
+});
+
+test('removal undo restores the exact product identity and clears the local tombstone', () => {
+  const f = fixture();
+  const binding = f.suggestion.line_bindings[0];
+  f.host.writeMetadata({ ...f.host.readMetadata(), line_bindings: [binding] });
+  f.suggestion.line_bindings = [];
+  f.suggestion.removed_lines = [{ ...binding, device_id: 'existing', values: { model: 'old' } }];
+  f.suggestion.patches = f.suggestion.patches.map((p) => ({ ...p, after: '' }));
+  applyNextEdit({ ...f, operationId: 'remove' });
+  assert.equal(f.host.readMetadata().line_bindings.length, 0);
+  restoreJournal(f.host, f.journals.get('remove'));
+  assert.deepEqual(f.host.readMetadata().line_bindings, [binding]);
+  assert.deepEqual(f.host.readMetadata().business.removed_lines, []);
+});
+
+test('metadata write failure rolls back every cell and retains explicit outcome', () => {
+  const f = fixture();
+  const write = f.host.writeMetadata;
+  f.host.writeMetadata = (value) => {
+    if (value.line_bindings.length) throw new Error('元数据失败');
+    write(value);
+  };
+  assert.throws(() => applyNextEdit({ ...f, operationId: 'op' }), /已恢复.*元数据失败/);
+  assert.equal(f.cells.get(1), 'old');
+  assert.equal(f.cells.get(2), 'old name');
+  assert.equal(f.journals.get('op').state, 'restored');
+});
