@@ -79,6 +79,7 @@ class CatalogService:
                     "replacements",
                     "review_requirements",
                     "included_items",
+                    "aliases",
                 )
                 if key not in data.model_fields_set and key in previous
             }

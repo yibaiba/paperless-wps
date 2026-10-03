@@ -2,7 +2,7 @@
 
 from typing import Annotated, Literal
 
-from pydantic import Field
+from pydantic import Field, JsonValue
 
 from presales.configuration.common import Input, Text
 from presales.configuration.projects.edit_schemas import (
@@ -61,12 +61,26 @@ class CompletionCell(Input):
     merged_fields: list[str] = Field(default_factory=list)
 
 
+class RecentChange(Input):
+    kind: Text
+    id: Text
+    before: JsonValue = None
+    after: JsonValue = None
+
+
 class RecentEdit(Input):
     operation_id: Text
     kind: Literal["accept", "replace", "quantity", "remove", "undo", "dismiss"]
     suggestion_id: str | None = None
     device_id: str | None = None
     requirement_id: str | None = None
+    line_id: str | None = None
+    sheet: str | None = None
+    row: int | None = Field(default=None, ge=1)
+    sequence: int | None = Field(default=None, ge=0)
+    semantic_action_id: str | None = None
+    business_context_fingerprint: str | None = None
+    changes: list[RecentChange] = Field(default_factory=list)
 
 
 class CompletionLocation(Input):

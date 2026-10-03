@@ -6,12 +6,13 @@ from decimal import Decimal
 
 from ..projections.comparison import configuration_diff
 from ..schemas import Configuration
-from .accessories import accessory_options, apply_included, manual_allocation_gap
+from .accessories import accessory_options, apply_included, demand_gap, manual_allocation_gap
 from .context import PlanningContext
 from .devices import put_device
 from .fulfillment import bind_fulfilled_roles, fulfillment_devices
 from .quantities import role_quantity
 from .roles import locked_role, prepare_roles, role_branches
+from .typed_intent import product_terms, typed_dependency, typed_task
 
 
 def existing_device_ids(configuration):
@@ -39,6 +40,10 @@ class NextEditContext(PlanningContext):
                 for key, value in self.variants.items()
                 if key == self.selected_variant_id
             }
+        if self.query:
+            self.variants = {
+                key: value for key, value in self.variants.items() if self.matches(value)
+            }
 
     def scoped_variant(self, variant):
         allowed = (self.allowed_sources or {}).get(variant["id"], [])
@@ -60,7 +65,7 @@ class NextEditContext(PlanningContext):
             return False
         if not self.scoped_variant(variant)["source_ids"]:
             return False
-        text = " ".join([variant["product"]["name"], variant["product"]["model"], variant["name"]])
+        text = " ".join(product_terms(variant))
         return all(token in text.casefold() for token in self.query.casefold().split())
 
     def preference(self, requirement_id):
@@ -91,62 +96,109 @@ def scoped_roles(context):
     return data, tasks, questions
 
 
-def next_edit_options(context, checked, *, system_id, requirement_id=None):
+def next_edit_options(
+    context, checked, *, system_id, requirement_id=None, recent_requirement_id=None
+):
     data, tasks, questions = scoped_roles(context)
     tasks = [t for t in tasks if t["system"]["id"] == system_id]
-    tasks.sort(key=lambda t: t["requirement"]["id"] != requirement_id)
+    priority = requirement_id or recent_requirement_id
+    tasks.sort(key=lambda t: t["requirement"]["id"] != priority)
     if context.query:
-        selected = next((t for t in tasks if t["requirement"]["id"] == requirement_id), None)
-        if selected is None:
-            return [], [dict(code="role_required", message="请明确当前行的业务角色")]
-        return list(typed_options(context, data, selected)), questions
+        options, issues = typed_step(
+            context, data, tasks=tasks, checked=checked, requirement_id=requirement_id
+        )
+        return options, [*questions, *issues]
+    recent = next((t for t in tasks if t["requirement"]["id"] == priority), None)
+    if recent and (
+        recent["requirement"].get("device_id") or recent["requirement"].get("allocations")
+    ):
+        changes, gaps = role_steps(context, data, recent)
+        if changes or gaps:
+            return changes, [*questions, *gaps]
+    demand = next_demand(checked, tasks=tasks, priority=priority)
+    if demand:
+        options, gaps = demand_step(context, data, demand=demand, checked=checked, tasks=tasks)
+        return options, [*questions, *gaps]
+    for task in tasks:
+        changed, gaps = role_steps(context, data, task)
+        if changed:
+            return changed, questions
+        questions.extend(gaps)
+    return [], questions
+
+
+def typed_step(context, data, *, tasks, checked, requirement_id):
+    selected, issues = typed_task(context, tasks, requirement_id=requirement_id)
+    if selected is None:
+        return [], issues
+    if selected["role"].get("fulfilled_by"):
+        return [
+            make_option(context, result, gaps=gaps, evidence=[evidence])
+            for result, gaps, evidence in typed_dependency(
+                context, data, task=selected, tasks=tasks, checked=checked
+            )
+        ], []
+    return list(typed_options(context, data, selected)), []
+
+
+def next_demand(checked, *, tasks, priority):
     scoped = {t["requirement"]["id"] for t in tasks}
     demands = sorted(
         checked["suggestions"],
-        key=lambda d: requirement_id not in d.get("consumer_requirement_ids", []),
+        key=lambda d: priority not in d.get("consumer_requirement_ids", []),
     )
     for demand in demands:
         if not scoped.intersection(demand.get("consumer_requirement_ids", [])):
             continue
-        if not demand.get("selected") or demand["status"] != "pass":
+        if not demand.get("selected"):
             continue
-        if Decimal(demand["missing"] or "0") <= 0:
-            continue
-        gap = manual_allocation_gap(data, demand)
-        if gap:
-            return [], [*questions, gap]
-        included = apply_included(data, demand)
-        if included != data:
-            return [
-                make_option(context, included, gaps=[], evidence=[demand["explanation"]])
-            ], questions
-        options = [
-            make_option(context, result, gaps=gaps, evidence=[decision])
-            for result, gaps, decision in accessory_options(
-                context, data, demand=demand, checked=checked, tasks=tasks
+        if demand["status"] != "pass" or Decimal(demand["missing"] or "0") > 0:
+            return demand
+    return None
+
+
+def demand_step(context, data, *, demand, checked, tasks):
+    if demand["status"] != "pass":
+        return [], [demand_gap(data, demand, checked["suggestions"])]
+    gap = manual_allocation_gap(data, demand)
+    if gap:
+        return [], [gap]
+    included = apply_included(data, demand)
+    if included != data:
+        return [make_option(context, included, gaps=[], evidence=[demand["explanation"]])], []
+    options = [
+        make_option(context, result, gaps=gaps, evidence=[decision])
+        for result, gaps, decision in accessory_options(
+            context, data, demand=demand, checked=checked, tasks=tasks
+        )
+    ]
+    if options:
+        return options, []
+    return [], [
+        dict(
+            code="accessory_candidate_missing",
+            message="必要配套没有可采用的配置或来源",
+            demand_id=demand["id"],
+        )
+    ]
+
+
+def role_steps(context, data, task):
+    options = list(role_options(context, data, task))
+    changed = [
+        o
+        for o in options
+        if any(
+            c["kind"] in {"devices", "accessory_allocations", "included_allocations"}
+            or (
+                c["kind"] == "requirements"
+                and c["after"]
+                and (c["after"].get("device_id") or c["after"].get("allocations"))
             )
-        ]
-        if options:
-            return options, questions
-    for task in tasks:
-        options = list(role_options(context, data, task))
-        changed = [
-            o
-            for o in options
-            if any(
-                c["kind"] in {"devices", "accessory_allocations", "included_allocations"}
-                or (
-                    c["kind"] == "requirements"
-                    and c["after"]
-                    and (c["after"].get("device_id") or c["after"].get("allocations"))
-                )
-                for c in o["changes"]
-            )
-        ]
-        if changed:
-            return changed, questions
-        questions.extend(gap for option in options for gap in option["questions"])
-    return [], questions
+            for c in o["changes"]
+        )
+    ]
+    return changed, [q for option in options for q in option["questions"]]
 
 
 def role_options(context, data, task):

@@ -44,7 +44,13 @@ class ProductInput(Authored):
     category: str = ""
 
 
+class CatalogAlias(Authored):
+    name: Text
+    status: Literal["draft", "confirmed"] = "draft"
+
+
 class VariantInput(Authored):
+    aliases: list[CatalogAlias] = Field(default_factory=list)
     description: str = ""
     supply_status: Literal["available", "discontinued", "not_for_sale"] = "available"
     replacements: list[str] = Field(default_factory=list)
