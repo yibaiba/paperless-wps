@@ -12,7 +12,7 @@ export function businessPrefetchKey(options: {
     Object.entries(versions).sort(([a], [b]) => a.localeCompare(b))]);
 }
 
-// A single next-row request; failures are delivered to the receiving editor, never hidden.
+// Prefetch the next business decision; its target may be an earlier row or no cell at all.
 export class BusinessPrefetch {
   private pending?: { key: string; controller: AbortController;
     result: Promise<{ value: CompletionPreviewResult } | { error: unknown }> };

@@ -1,5 +1,6 @@
 import type { WorkbookEditJournal } from './businessTypes';
 import type { LineBinding, WorkbookMetadata } from './types';
+import { undoneEdit } from './recentBusinessEdits.ts';
 
 function same(left: unknown, right: unknown) { return JSON.stringify(left) === JSON.stringify(right); }
 function identity(line?: LineBinding) {
@@ -59,7 +60,6 @@ export function restoredMetadata(metadata: WorkbookMetadata, journal: WorkbookEd
       removed_lines: (business.removed_lines ?? []).filter((line) => !deletedByGroup.has(line.line_id)),
       row_requirements: [...(business.row_requirements ?? []).filter((r) => !touchedRows.has(rowKey(r))),
         ...previousRows.filter((r) => touchedRows.has(rowKey(r)))],
-      recent_edits: [...business.recent_edits, { operation_id: journal.operation_id,
-        kind: 'undo' as const, suggestion_id: journal.suggestion_id }] },
+      recent_edits: [...business.recent_edits, undoneEdit(journal, business.recent_edits)] },
   };
 }

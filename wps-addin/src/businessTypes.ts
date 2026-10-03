@@ -9,6 +9,9 @@ export interface BusinessScope {
 export interface RecentBusinessEdit {
   operation_id: string; kind: 'accept' | 'replace' | 'quantity' | 'remove' | 'undo' | 'dismiss';
   suggestion_id?: string; device_id?: string; requirement_id?: string;
+  line_id?: string; sheet?: string; row?: number; sequence?: number;
+  semantic_action_id?: string; business_context_fingerprint?: string;
+  changes?: NextEditSuggestion['changes'];
 }
 export interface WorkbookBusinessState {
   local_revision: number;
@@ -65,11 +68,24 @@ export interface NextEditSuggestion {
   changes: Array<{ kind: string; id: string; before: unknown; after: unknown }>;
   evidence: unknown[]; issues: unknown[]; applicable: boolean;
   acceptance: 'inline' | 'preview'; context_fingerprint: string; local_revision: number;
+  semantic_action_id?: string; business_context_fingerprint?: string;
+}
+export interface NextEditTarget {
+  sheet: string; row: number; column: number; field: TemplateField;
+  line_id: string | null; expected_value: string;
+  local_revision: number; context_fingerprint: string;
+}
+export interface EditDecision {
+  status: 'ready' | 'choice_required' | 'confirmation_required' | 'satisfied' | 'no_match' | 'dismissed';
+  reason_code: string;
 }
 export interface CompletionPreviewResult {
   items: NextEditSuggestion[]; issues: unknown[]; context_fingerprint: string;
   local_revision: number; versions: Record<string, string | null>; line_bindings: LineBinding[];
   configuration: WorkbookBusinessContext['configuration'];
+  primary_suggestion_id?: string | null;
+  decision?: EditDecision;
+  next_target?: NextEditTarget | null;
 }
 export interface WorkbookEditJournal {
   operation_id: string; suggestion_id: string; created_at: string;
@@ -81,5 +97,6 @@ export interface WorkbookEditJournal {
   binding_revision?: number;
   binding_id?: string;
   inverse_business_operations?: BusinessOperation[];
+  semantic_action_id?: string; business_context_fingerprint?: string;
   recovery?: { intent: 'undo' | 'rollback'; before: WorkbookMetadata; after: WorkbookMetadata };
 }

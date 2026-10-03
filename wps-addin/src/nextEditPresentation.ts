@@ -1,4 +1,4 @@
-import type { NextEditSuggestion } from './businessTypes';
+import type { NextEditSuggestion, NextEditTarget } from './businessTypes';
 import type { ActiveCell } from './types';
 import { nextEditText, visiblePrefix } from './nextEditState.ts';
 
@@ -24,11 +24,13 @@ function evidenceText(value: unknown): string | undefined {
 
 export function nextEditNotice(options: {
   suggestion?: NextEditSuggestion; cell: ActiveCell; query: string;
+  target?: NextEditTarget | null;
 }) {
   const { suggestion, cell, query } = options;
   if (!suggestion) return undefined;
-  const target = suggestion.patches[0];
-  const elsewhere = target && (target.sheet !== cell.sheet || target.row !== cell.row);
+  const target = options.target ?? suggestion.patches[0];
+  const elsewhere = target && (target.sheet !== cell.sheet || target.row !== cell.row
+    || (options.target && target.column !== cell.column));
   const prefix = visiblePrefix(suggestion, cell.column, query);
   if (!elsewhere && prefix) return undefined;
   const location = target ? `${target.sheet} · 第 ${target.row} 行 · ${FIELD_NAMES[target.field] ?? target.field}` : '业务关联';

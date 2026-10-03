@@ -9,6 +9,8 @@ import { applyNextEdit, restoreJournal } from '../editJournal';
 import { WpsHostAdapter } from '../host';
 import { LatestRequest } from '../latestRequest';
 import { nextEditAction, nextEditText } from '../nextEditState';
+import { verifiedEditTarget } from '../nextEditTarget';
+import { nextEditSequence, recentHistoryKey } from '../recentBusinessEdits';
 import { nextEditNotice, NEXT_EDIT_NOTICE_ROWS } from '../nextEditPresentation';
 import { handleInlineTab } from '../nativeTab';
 import { assertInlineSession, assertWorkbookSession, captureWorkbookSession, writeInlineInput } from '../workbookSession';
@@ -40,12 +42,13 @@ export function BusinessInlineEditor() {
   const input = useRef<HTMLInputElement>(null);
   const changing = useRef(false);
   const processing = useRef(false);
-  const located = useRef<CompletionPreviewResult | undefined>(undefined);
+  const located = useRef(false);
   const index = useMemo(() => context && new WorkbookRowIndex(host, context.profile),
     [host, context?.workbook_key, context?.profile.id, context?.profile.revision]);
   const item = result?.items[selected];
   const ready = Boolean(item && !busy && !error && !writeError && !composing && !preview);
-  const notice = context && ready ? nextEditNotice({ suggestion: item, cell: context.cell, query }) : undefined;
+  const notice = context && ready ? nextEditNotice({ suggestion: item, cell: context.cell, query,
+    target: result?.primary_suggestion_id === item?.id ? result?.next_target : undefined }) : undefined;
 
   const refresh = useCallback(() => {
     const next = host.inlineContext();
@@ -57,26 +60,21 @@ export function BusinessInlineEditor() {
     return () => { delete window.PresalesInlineRefresh; window.removeEventListener('focus', refresh); };
   }, [refresh]);
   useEffect(() => {
-    requests.current.cancel(); setResult(undefined); setQuery(context?.cell.value ?? '');
+    requests.current.cancel(); setResult(undefined); setQuery(located.current ? '' : context?.cell.value ?? '');
+    located.current = false;
     setError(''); setWriteError(''); setExpanded(false); setPreview(false); setExplicit(false); setSelected(0);
     input.current?.focus();
   }, [context?.nonce]);
   useEffect(() => {
     if (!index) return;
     return host.onSheetChange((event) => {
-      index.changed(event);
+      index.changed(event, { recordEdit: !changing.current, historyKey: recentHistoryKey(host.readMetadata()) });
       if (!changing.current) { requests.current.cancel(); prefetch.current.clear(); setResult(undefined); setEpoch((v) => v + 1); }
     });
   }, [host, index]);
   useEffect(() => {
     if (!context || !index || composing || writeError) { host.restoreNativeTab(); setBusy(false); return; }
     setResult(undefined); setBusy(true); setError(''); setExplicit(false); setSelected(0);
-    const pending = located.current;
-    if (pending && pending.local_revision === host.businessRevision()) {
-      located.current = undefined;
-      setResult(pending);
-      setBusy(false); setExplicit(true); return;
-    }
     return requests.current.schedule(query ? SUGGESTION_DEBOUNCE_MS : 0, async (request) => {
       const started = performance.now();
       businessDiagnostic(host, { event_type: 'query_start', template_profile_id: context.profile.id,
@@ -120,21 +118,18 @@ export function BusinessInlineEditor() {
       applyNextEdit({ host, suggestion, operationId });
       suggestion.patches.forEach((p) => index?.refresh(p.row));
       setPreview(false); setResult(undefined); requests.current.cancel(); host.restoreNativeTab();
-      const cell = { ...context.cell, row: context.cell.row + 1 };
-      host.selectCell(cell);
-      host.showInlineEditor(context.profile, host.readCell(cell));
-      const next = host.inlineContext();
       const metadata = host.readMetadata();
-      if (next && index && metadata.binding && !next.cell.value) {
-        const payload = completionRequest({ host, profile: next.profile, metadata, cell: next.cell, index, query: '' });
-        prefetch.current.start(businessPrefetchKey({ context: next, binding: metadata.binding,
+      if (index && metadata.binding) {
+        const payload = completionRequest({ host, profile: context.profile, metadata, cell: context.cell, index, query: '' });
+        prefetch.current.start(businessPrefetchKey({ context, binding: metadata.binding,
           localRevision: host.businessRevision(), versions: versions.current }),
         (signal) => api.completionPreview(payload, signal));
       }
-      refresh();
+      // Stay at this edit. The next response supplies an actual target; Tab only locates it.
+      setQuery(''); setEpoch((value) => value + 1);
     } catch (reason) { setWriteError(String(reason)); }
     finally { processing.current = false; changing.current = false; }
-  }, [api, context, host, index, refresh]);
+  }, [api, context, host, index]);
   useEffect(() => () => { prefetch.current.clear(); requests.current.cancel(); }, []);
 
   async function choose(suggestion: NextEditSuggestion) {
@@ -159,7 +154,9 @@ export function BusinessInlineEditor() {
   const tab = useCallback(() => {
     if (!context || composing) return;
     const action = nextEditAction({ suggestion: item, cell: context.cell, ready,
-      composing, explicit, count: result?.items.length ?? 0, query });
+      composing, explicit, count: result?.items.length ?? 0, query,
+      primarySuggestionId: result?.primary_suggestion_id, decision: result?.decision,
+      target: result?.primary_suggestion_id === item?.id ? result?.next_target : undefined });
     if (action === 'native') { host.returnNativeTab(false); return; }
     const operationId = host.claimTab(context.session_id);
     if (!operationId || !item) return;
@@ -167,9 +164,12 @@ export function BusinessInlineEditor() {
     if (action === 'expand') { setExpanded(true); setExplicit(false); }
     if (action === 'preview') { setPreview(true); }
     if (action === 'locate') {
-      located.current = result && { ...result, items: [item] };
-      const target = { ...item.patches[0], column: context.cell.column };
-      host.selectCell(target); host.showInlineEditor(context.profile, host.readCell(target)); refresh();
+      try {
+        assertInlineSession(host, context);
+        const target = verifiedEditTarget({ host, result: result!, suggestion: item });
+        located.current = true;
+        host.selectCell(target); host.showInlineEditor(context.profile, target); refresh();
+      } catch (reason) { located.current = false; setError(String(reason)); }
     }
     host.restoreNativeTab(context.session_id);
   }, [apply, composing, context, explicit, host, item, ready, refresh, result, query]);
@@ -214,7 +214,21 @@ export function BusinessInlineEditor() {
           finally { changing.current = false; }
         }} onKeyDown={(e) => {
           if (composing || e.nativeEvent.isComposing) return;
-          if (e.key === 'Escape') { e.preventDefault(); host.hideInlineEditor(); }
+          if (e.key === 'Escape') {
+            e.preventDefault();
+            try {
+              assertInlineSession(host, context);
+              const metadata = host.readMetadata();
+              if (ready && item && metadata.business) host.writeMetadata({ ...metadata,
+                business: { ...metadata.business, recent_edits: [...metadata.business.recent_edits, {
+                  operation_id: crypto.randomUUID(), kind: 'dismiss', suggestion_id: item.id,
+                  sequence: nextEditSequence(metadata.business.recent_edits),
+                  semantic_action_id: item.semantic_action_id,
+                  business_context_fingerprint: item.business_context_fingerprint,
+                }] } });
+              host.hideInlineEditor();
+            } catch (reason) { setError(String(reason)); }
+          }
           if (e.key === 'Tab') {
             e.preventDefault();
             try { handleInlineTab({ ready, shift: e.shiftKey, complete: tab,

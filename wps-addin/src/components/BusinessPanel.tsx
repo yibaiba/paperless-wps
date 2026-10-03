@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { WpsApi } from '../api';
 import type { CompletionPreviewResult, WorkbookBusinessContext } from '../businessTypes';
 import { completionRequest } from '../businessWorkbook';
+import { recentHistoryKey } from '../recentBusinessEdits';
 import { applyNextEdit } from '../editJournal';
 import type { HostAdapter } from '../host';
 import type { TemplateProfile, WorkbookMetadata } from '../types';
@@ -22,7 +23,9 @@ export function BusinessPanel({ api, host, profile, metadata, onChanged }: {
   const [error, setError] = useState('');
   const [session] = useState(() => captureWorkbookSession(host));
   const index = useMemo(() => new WorkbookRowIndex(host, profile), [host, profile]);
-  useEffect(() => host.onSheetChange((event) => { index.changed(event); setResult(undefined); }), [host, index]);
+  useEffect(() => host.onSheetChange((event) => {
+    index.changed(event, { historyKey: recentHistoryKey(host.readMetadata()) }); setResult(undefined);
+  }), [host, index]);
   useEffect(() => { setResult(undefined); }, [metadata]);
   useEffect(() => {
     let current = true;

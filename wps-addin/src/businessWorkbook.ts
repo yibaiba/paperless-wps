@@ -2,6 +2,7 @@ import type { HostAdapter } from './host';
 import type { WorkbookRowIndex } from './workbookRowIndex';
 import type { ActiveCell, TemplateProfile, WorkbookLine, WorkbookMetadata } from './types';
 import { bindingForRow, scanWorkbook } from './workbook.ts';
+import { observedQuantityEdits } from './recentBusinessEdits.ts';
 
 export function businessSyncRequest(metadata: WorkbookMetadata, lines: WorkbookLine[]) {
   const binding = metadata.binding;
@@ -65,6 +66,6 @@ export function completionRequest(options: {
       ?? business?.row_requirements?.find((r) => r.sheet === cell.sheet && r.row === cell.row)?.requirement_id
       ?? scope.requirement_id },
     active_cell: { ...active, column: cell.column }, target_cells, query,
-    recent_edits: business?.recent_edits ?? [],
+    recent_edits: [...business?.recent_edits ?? [], ...observedQuantityEdits(index, metadata)],
   };
 }

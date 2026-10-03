@@ -4,6 +4,7 @@ import { assertWritableTargets } from './workbook.ts';
 import { restoredMetadata } from './journalRestoration.ts';
 import { businessDiagnostic } from './businessDiagnostics.ts';
 import type { DiagnosticEventInput } from './types';
+import { acceptedEdit } from './recentBusinessEdits.ts';
 
 export interface JournalHost {
   readCell(cell: Pick<ActiveCell, 'sheet' | 'row' | 'column'>): ActiveCell;
@@ -59,11 +60,8 @@ export function applyNextEdit(options: {
       row_requirements: suggestion.row_requirements ?? metadata.business.row_requirements,
       removed_lines: [...(metadata.business.removed_lines ?? []), ...(suggestion.removed_lines ?? [])],
       operations: [...metadata.business.operations, ...suggestion.business_operations],
-      recent_edits: [...metadata.business.recent_edits, {
-        operation_id: operationId, kind: 'accept' as const, suggestion_id: suggestion.id,
-        device_id: suggestion.line_bindings[0]?.device_id ?? suggestion.removed_lines?.[0]?.device_id,
-        requirement_id: suggestion.line_bindings[0]?.requirement_id,
-      }] },
+      recent_edits: [...metadata.business.recent_edits, acceptedEdit({ suggestion, operationId,
+        previous: metadata.business.recent_edits })] },
   };
   const journal: WorkbookEditJournal = {
     operation_id: operationId, suggestion_id: suggestion.id, created_at: new Date().toISOString(),
@@ -72,6 +70,8 @@ export function applyNextEdit(options: {
     binding_revision: metadata.binding?.binding_revision ?? 0,
     binding_id: metadata.binding?.binding_id,
     inverse_business_operations: suggestion.inverse_business_operations ?? [],
+    semantic_action_id: suggestion.semantic_action_id,
+    business_context_fingerprint: suggestion.business_context_fingerprint,
   };
   host.writeJournal(journal);
   try {
