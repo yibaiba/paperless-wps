@@ -10,7 +10,7 @@ import { WpsHostAdapter } from '../host';
 import { LatestRequest } from '../latestRequest';
 import { nextEditAction, nextEditText } from '../nextEditState';
 import { verifiedEditTarget } from '../nextEditTarget';
-import { nextEditSequence, recentHistoryKey } from '../recentBusinessEdits';
+import { dismissedMetadata, recentHistoryKey } from '../recentBusinessEdits';
 import { nextEditNotice, NEXT_EDIT_NOTICE_ROWS } from '../nextEditPresentation';
 import { handleInlineTab } from '../nativeTab';
 import { assertInlineSession, assertWorkbookSession, captureWorkbookSession, writeInlineInput } from '../workbookSession';
@@ -219,13 +219,10 @@ export function BusinessInlineEditor() {
             try {
               assertInlineSession(host, context);
               const metadata = host.readMetadata();
-              if (ready && item && metadata.business) host.writeMetadata({ ...metadata,
-                business: { ...metadata.business, recent_edits: [...metadata.business.recent_edits, {
-                  operation_id: crypto.randomUUID(), kind: 'dismiss', suggestion_id: item.id,
-                  sequence: nextEditSequence(metadata.business.recent_edits),
-                  semantic_action_id: item.semantic_action_id,
-                  business_context_fingerprint: item.business_context_fingerprint,
-                }] } });
+              if (ready && item && metadata.business) host.writeMetadata(dismissedMetadata({
+                metadata, suggestion: item, operationId: crypto.randomUUID(),
+              }));
+              requests.current.cancel(); prefetch.current.clear(); host.restoreNativeTab();
               host.hideInlineEditor();
             } catch (reason) { setError(String(reason)); }
           }

@@ -26,6 +26,20 @@ export function recentHistoryKey(metadata: WorkbookMetadata) {
   return edit ? `${edit.kind}:${edit.operation_id}:${edit.sequence ?? ''}` : '';
 }
 
+export function dismissedMetadata(options: {
+  metadata: WorkbookMetadata; suggestion: NextEditSuggestion; operationId: string;
+}): WorkbookMetadata {
+  const { metadata, suggestion, operationId } = options;
+  const business = metadata.business;
+  if (!business) throw new Error('业务元数据缺失，无法记录拒绝');
+  return { ...metadata, business: { ...business, local_revision: business.local_revision + 1,
+    recent_edits: [...business.recent_edits, { operation_id: operationId, kind: 'dismiss',
+      suggestion_id: suggestion.id, sequence: nextEditSequence(business.recent_edits),
+      semantic_action_id: suggestion.semantic_action_id,
+      business_context_fingerprint: suggestion.business_context_fingerprint,
+    }] } };
+}
+
 export function acceptedEdit(options: {
   suggestion: NextEditSuggestion; operationId: string; previous: RecentBusinessEdit[];
 }): RecentBusinessEdit {

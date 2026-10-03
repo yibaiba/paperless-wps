@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { nextEditAction } from '../src/nextEditState.ts';
 import { verifiedEditTarget } from '../src/nextEditTarget.ts';
-import { acceptedEdit, undoneEdit, observedQuantityEdits, recentHistoryKey } from '../src/recentBusinessEdits.ts';
+import { acceptedEdit, undoneEdit, observedQuantityEdits, recentHistoryKey, dismissedMetadata } from '../src/recentBusinessEdits.ts';
 import { WorkbookRowIndex } from '../src/workbookRowIndex.ts';
 import { rowAnchor } from '../src/workbook.ts';
 import { nextEditNotice } from '../src/nextEditPresentation.ts';
@@ -56,6 +56,17 @@ test('accept and undo retain stable action context and ordered structured change
   assert.equal(undo.sequence, 8);
   assert.equal(undo.semantic_action_id, 'action');
   assert.equal(undo.business_context_fingerprint, 'business');
+});
+
+test('explicit dismissal invalidates old previews and cache keys without changing business facts', () => {
+  const metadata = { line_bindings: [], business: { local_revision: 3, operations: [], recent_edits: [] } };
+  const next = dismissedMetadata({ metadata, suggestion, operationId: 'dismiss' });
+  assert.equal(next.business.local_revision, 4);
+  assert.equal(metadata.business.local_revision, 3);
+  assert.equal(next.business.operations, metadata.business.operations);
+  assert.equal(next.business.recent_edits[0].kind, 'dismiss');
+  assert.throws(() => verifiedEditTarget({ suggestion, result: { local_revision: 3 },
+    host: { businessRevision: () => next.business.local_revision } }), /过期/);
 });
 
 test('committed quantities carry row identity; input text and earlier events do not masquerade as edits', () => {

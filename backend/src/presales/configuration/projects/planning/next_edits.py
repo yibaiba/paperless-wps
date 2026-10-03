@@ -238,6 +238,23 @@ def typed_options(context, data, task):
     for choice in choices:
         variant = choice["variant"]
         if choice["status"] != "pass":
+            yield make_option(
+                context,
+                data,
+                gaps=[
+                    dict(
+                        code="typed_conflict"
+                        if choice["status"] == "conflict"
+                        else "typed_evidence_required",
+                        requirement_id=requirement["id"],
+                        variant_id=variant["id"],
+                        status=choice["status"],
+                        evidence=choice["evidence"],
+                        message="匹配产品的适用性检查未通过，请确认部署及兼容依据",
+                    )
+                ],
+                evidence=choice["evidence"],
+            )
             continue
         for source_id in variant["source_ids"]:
             device = dict(

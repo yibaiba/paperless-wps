@@ -6,12 +6,19 @@ from .conftest import AUTHOR, post
 from .test_wps_next_edits import accept, completion_body, preview
 
 
-def independent_roles(client, catalog):
+def independent_roles(client, catalog, *, replacement=False):
     basis = dict(status="confirmed", scope="system", mode="per_group", factor="1", **AUTHOR)
     roles = [
         dict(id=key, name=key, output_kind=kind, required=True, quantity_basis=basis)
         for key, kind in (("software", "software"), ("hardware", "hardware"))
     ]
+    if replacement:
+        roles = roles[:1]
+    assignments = (
+        [(roles[0], variant) for variant in catalog["variants"]]
+        if replacement
+        else list(zip(roles, catalog["variants"]))
+    )
     definition = post(
         client, "/definitions", dict(name="分角色系统", status="confirmed", roles=roles, **AUTHOR)
     )
@@ -26,10 +33,15 @@ def independent_roles(client, catalog):
                 system_definition_id=definition["id"],
                 role_id=role["id"],
                 selector=dict(variant_ids=[variant["id"]]),
+                conditions=(
+                    [dict(field="project.os", operator="eq", value="Windows")]
+                    if replacement and variant == catalog["variants"][1]
+                    else []
+                ),
                 **AUTHOR,
             ),
         )
-        for role, variant in zip(roles, catalog["variants"])
+        for role, variant in assignments
     ]
     package = post(
         client,
@@ -49,7 +61,7 @@ def independent_roles(client, catalog):
                     resources="not_applicable",
                     evidence=AUTHOR["evidence"],
                 )
-                for r, v in zip(roles, catalog["variants"])
+                for r, v in assignments
             ],
             **AUTHOR,
         ),
@@ -61,6 +73,21 @@ def independent_roles(client, catalog):
     )
     setup["role_ids"] = [r["id"] for r in roles]
     return headers, body
+
+
+def test_typed_replacement_without_environment_evidence_is_a_question_http(client, catalog):
+    headers, body = independent_roles(client, catalog, replacement=True)
+    body["query"] = catalog["variants"][0]["name"]
+    item = preview(client, headers, body)["items"][0]
+    body = accept(body, item)
+    body["scope"]["requirement_id"] = item["line_bindings"][0]["requirement_id"]
+    body["query"] = catalog["variants"][1]["name"]
+    result = preview(client, headers, body)
+    assert not result["items"]
+    assert result["decision"]["status"] == "confirmation_required"
+    question = next(i for i in result["issues"] if i.get("code") == "typed_evidence_required")
+    assert question["status"] == "unknown"
+    assert question["variant_id"] == catalog["variants"][1]["id"]
 
 
 def test_typed_hardware_uses_its_role_not_recent_software_http(client, catalog):

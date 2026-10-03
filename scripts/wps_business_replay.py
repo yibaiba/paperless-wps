@@ -24,8 +24,13 @@ DECISION_STATES = {
 
 
 def validate_manifest(manifest, *, root, acceptance):
-    if manifest.get("schema_version") != 1:
-        raise ValueError("业务回放清单须使用 schema_version 1")
+    version = manifest.get("schema_version")
+    if version not in {1, 2}:
+        raise ValueError("业务回放清单须使用 schema_version 1 或 2")
+    if acceptance and version != 2:
+        raise ValueError(
+            "真实验收须升级为 schema_version 2，记录模板类别和独立轨迹依据"
+        )
     cases = manifest.get("cases", [])
     if not cases or len({c["id"] for c in cases}) != len(cases):
         raise ValueError("回放案例不能为空或重复")
@@ -37,28 +42,10 @@ def validate_manifest(manifest, *, root, acceptance):
         if project in splits and splits[project] != split:
             raise ValueError("同一项目不能同时出现在开发集和验收集")
         splits[project] = split
-        if not case.get("reviewed_by") or not case.get("evidence"):
-            raise ValueError(f"案例 {case['id']} 缺少人工核对人或证据")
-        for evidence in case["evidence"]:
-            path = (root / evidence["path"]).resolve()
-            if not path.is_relative_to(root.resolve()):
-                raise ValueError("证据路径必须位于清单目录内")
-            if hashlib.sha256(path.read_bytes()).hexdigest() != evidence["sha256"]:
-                raise ValueError(f"案例 {case['id']} 证据版本已变化")
-        if (
-            not case.get("expected_edits")
-            and not case.get("expected_questions")
-            and not case.get("expected_decision")
-        ):
-            raise ValueError(f"案例 {case['id']} 必须指定期望编辑或明确待确认问题")
-        if not case.get("evidence_confirmed") and case.get("expected_edits"):
-            raise ValueError("未确认业务证据的案例只能期望待确认问题，不能预设采购答案")
-        if (
-            case.get("expected_decision")
-            and case["expected_decision"] not in DECISION_STATES
-        ):
-            raise ValueError("expected_decision 必须使用补全协议定义的决策状态")
+        validate_case(case, root=root, version=version)
         request_location(case.get("request", {}))
+    if version == 2:
+        validate_independence(cases)
     selected = [
         c
         for c in cases
@@ -66,12 +53,84 @@ def validate_manifest(manifest, *, root, acceptance):
     ]
     if acceptance and (
         len(selected) < ACCEPTANCE_CASES
-        or len({c["template_id"] for c in selected}) < ACCEPTANCE_TEMPLATES
+        or len({c["template_type"] for c in selected}) < ACCEPTANCE_TEMPLATES
     ):
         raise ValueError("真实验收至少需要 30 条独立轨迹和三类模板；不可用合成序列补数")
     if not selected:
         raise ValueError("所选集合没有案例")
     return selected
+
+
+def validate_case(case, *, root, version):
+    if not case.get("reviewed_by") or not case.get("evidence"):
+        raise ValueError(f"案例 {case['id']} 缺少人工核对人或证据")
+    if version == 2 and any(
+        not isinstance(case.get(key), str) or not case[key].strip()
+        for key in ("trajectory_ref", "template_type")
+    ):
+        raise ValueError("schema_version 2 需要 trajectory_ref 和 template_type")
+    validate_evidence(case, root=root, version=version)
+    validate_expectations(case)
+
+
+def validate_evidence(case, *, root, version):
+    for evidence in case["evidence"]:
+        path = (root / evidence["path"]).resolve()
+        if not path.is_relative_to(root.resolve()):
+            raise ValueError("证据路径必须位于清单目录内")
+        if version == 2 and (
+            not isinstance(evidence.get("locator"), str)
+            or not evidence["locator"].strip()
+        ):
+            raise ValueError("独立轨迹证据需要 locator（工作表/行或资料段落）")
+        if hashlib.sha256(path.read_bytes()).hexdigest() != evidence["sha256"]:
+            raise ValueError(f"案例 {case['id']} 证据版本已变化")
+
+
+def validate_expectations(case):
+    expected = case.get("expected_decision")
+    if not any(
+        case.get(key)
+        for key in ("expected_edits", "expected_questions", "expected_decision")
+    ):
+        raise ValueError(f"案例 {case['id']} 必须指定期望编辑或明确待确认问题")
+    if not case.get("evidence_confirmed") and (
+        case.get("expected_edits") or expected in {"ready", "satisfied"}
+    ):
+        raise ValueError("未确认业务证据不能预设采购或需求已满足")
+    if expected and expected not in DECISION_STATES:
+        raise ValueError("expected_decision 必须使用补全协议定义的决策状态")
+
+
+def validate_independence(cases):
+    trajectories, fingerprints, templates = set(), set(), {}
+    for case in cases:
+        identity = trajectory_identity(case)
+        if case["trajectory_ref"] in trajectories or identity in fingerprints:
+            raise ValueError("重复轨迹或相同请求/期望/证据不能通过改案例编号补数")
+        trajectories.add(case["trajectory_ref"])
+        fingerprints.add(identity)
+        template, kind = case["template_id"], case["template_type"]
+        if template in templates and templates[template] != kind:
+            raise ValueError("同一模板不能通过变更类别补数")
+        templates[template] = kind
+
+
+def trajectory_identity(case):
+    value = {
+        key: case.get(key)
+        for key in (
+            "project_id",
+            "request",
+            "expected_edits",
+            "expected_questions",
+            "expected_decision",
+        )
+    }
+    value["evidence"] = sorted((e["sha256"], e["locator"]) for e in case["evidence"])
+    return hashlib.sha256(
+        json.dumps(value, sort_keys=True, ensure_ascii=False).encode()
+    ).hexdigest()
 
 
 def edit_signature(item):

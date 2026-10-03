@@ -4,6 +4,7 @@ import { applyNextEdit, restoreJournal } from '../src/editJournal.ts';
 import { MetadataRecords, readMetadataRecords, writeMetadataRecords } from '../src/metadataRecords.ts';
 import { rowBusinessOperations } from '../src/businessRowOperations.ts';
 import { captureWorkbookSession, inWorkbookSession } from '../src/workbookSession.ts';
+import { dismissedMetadata } from '../src/recentBusinessEdits.ts';
 
 function fixture() {
   let metadata = { schema_version: 2, workbook_instance_id: 'book', line_bindings: [],
@@ -37,6 +38,15 @@ test('group apply is idempotent and undo restores cells plus identity', () => {
   assert.equal(f.cells.get(1), 'old');
   assert.deepEqual(f.host.readMetadata().line_bindings, []);
   assert.equal(f.host.readMetadata().business.recent_edits.at(-1).kind, 'undo');
+});
+
+test('a preview held by another consumer cannot apply after explicit dismissal', () => {
+  const f = fixture();
+  f.host.writeMetadata(dismissedMetadata({ metadata: f.host.readMetadata(),
+    suggestion: f.suggestion, operationId: 'dismiss' }));
+  assert.throws(() => applyNextEdit({ ...f, operationId: 'stale-preview' }), /上下文/);
+  assert.equal(f.journals.size, 0);
+  assert.equal(f.cells.get(1), 'old');
 });
 
 test('an old preview or undo callback cannot mutate an identical workbook copy', () => {

@@ -1,4 +1,6 @@
+import hashlib
 import importlib.util
+from copy import deepcopy
 from pathlib import Path
 
 import pytest
@@ -53,7 +55,7 @@ def test_sequence_only_manifest_cannot_claim_real_acceptance(tmp_path):
     with pytest.raises(ValueError, match="核对人"):
         replay.validate_manifest(
             {
-                "schema_version": 1,
+                "schema_version": 2,
                 "cases": [
                     {"id": str(i), "project_id": str(i), "split": "acceptance"}
                     for i in range(40)
@@ -192,3 +194,67 @@ def test_out_of_order_primary_is_not_scored_as_an_invisible_direct_accept():
         "issues": [],
     }
     assert replay.initial_tab_action(request(), result["items"], result) == "expand"
+
+
+def validation_fixture(tmp_path):
+    evidence = tmp_path / "unit-evidence.txt"
+    evidence.write_text("Validator fixture only; not business acceptance.")
+    digest = hashlib.sha256(evidence.read_bytes()).hexdigest()
+    return {
+        "schema_version": 2,
+        "cases": [
+            {
+                "id": str(i),
+                "project_id": "one-project",
+                "template_id": f"template-{i % 3}",
+                "template_type": f"type-{i % 3}",
+                "trajectory_ref": f"trace-{i}",
+                "split": "acceptance",
+                "reviewed_by": "validator-test",
+                "evidence_confirmed": True,
+                "evidence": [
+                    {"path": evidence.name, "sha256": digest, "locator": f"trace-{i}"}
+                ],
+                "request": request(
+                    active_cell={"sheet": "报价表", "row": i + 1, "column": 2}
+                ),
+                "expected_decision": "satisfied",
+            }
+            for i in range(30)
+        ],
+    }
+
+
+def test_acceptance_requires_v2_reviewed_trajectory_contract(tmp_path):
+    manifest = validation_fixture(tmp_path)
+    assert len(replay.validate_manifest(manifest, root=tmp_path, acceptance=True)) == 30
+    manifest["schema_version"] = 1
+    with pytest.raises(ValueError, match="升级"):
+        replay.validate_manifest(manifest, root=tmp_path, acceptance=True)
+
+
+@pytest.mark.parametrize(
+    "duplicate", ["trajectory", "content", "type", "locator", "unconfirmed"]
+)
+def test_ids_do_not_prove_independent_trajectories_or_template_types(
+    tmp_path, duplicate
+):
+    manifest = validation_fixture(tmp_path)
+    first, second = manifest["cases"][:2]
+    if duplicate == "trajectory":
+        second["trajectory_ref"] = first["trajectory_ref"]
+    elif duplicate == "content":
+        manifest["cases"][1] = {
+            **deepcopy(first),
+            "id": "new-id",
+            "trajectory_ref": "new-ref",
+        }
+    elif duplicate == "type":
+        for case in manifest["cases"]:
+            case["template_type"] = "one-real-type"
+    elif duplicate == "locator":
+        first["evidence"][0].pop("locator")
+    else:
+        first["evidence_confirmed"] = False
+    with pytest.raises(ValueError):
+        replay.validate_manifest(manifest, root=tmp_path, acceptance=True)

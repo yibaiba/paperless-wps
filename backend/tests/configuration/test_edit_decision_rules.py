@@ -1,3 +1,6 @@
+from types import SimpleNamespace
+
+from presales.configuration.projects.planning import next_edits
 from presales.configuration.projects.planning.next_edits import next_demand
 from presales.wps.edit_decision import decision_for, primary_choice
 
@@ -58,3 +61,29 @@ def test_unrelated_configuration_choices_do_not_make_exact_input_ambiguous():
     others = [candidate("v1", "HARDWARE-OTHER"), candidate("v2", "HARDWARE-OTHER")]
     assert primary_choice([exact, *others], "HARDWARE") == (exact, "exact_input")
     assert primary_choice([exact, *others], "HARDWARE-OTHER") == (None, "variant_ambiguous")
+
+
+def test_matching_replacement_with_unknown_compatibility_retains_the_question(monkeypatch):
+    context = SimpleNamespace(
+        preference=lambda _: {},
+        candidates=lambda *_: [
+            {
+                "status": "unknown",
+                "variant": {"id": "new", "source_ids": ["source"]},
+                "evidence": [{"message": "部署环境未确认"}],
+            }
+        ],
+    )
+    data = {"devices": [{"id": "existing"}]}
+    task = {"requirement": {"id": "role", "device_id": "existing"}, "system": {}}
+    monkeypatch.setattr(
+        next_edits,
+        "make_option",
+        lambda context, data, *, gaps, evidence: {
+            "questions": gaps,
+            "changes": [],
+            "evidence": evidence,
+        },
+    )
+    options = list(next_edits.typed_options(context, data, task))
+    assert options and options[0]["questions"][0]["code"] == "typed_evidence_required"

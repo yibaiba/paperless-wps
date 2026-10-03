@@ -86,14 +86,16 @@ v1 候选兼容路径同样执行会话校验。切换物理工作簿时取消�
 
 入口 `scripts/wps_business_replay.py` 只请求有鉴权的 completion/preview，不提交项目。私有清单放在本地证据目录，不把客户工作簿或令牌提交仓库。
 
-清单为 `schema_version: 1`，`cases` 每项包含：`id`、`project_id`、`template_id`、`split`（development/acceptance）、`reviewed_by`、`evidence_confirmed`、`evidence`（相对文件 path 与 sha256）、完整 `request`、`expected_edits`、`expected_questions`（问题 code）和/或 `expected_decision`。停止或无匹配案例可以只指定决策状态，但仍须人工核对和证据指纹。期望编辑按 `variant_ids`、`source_ids`、按位置排序的完整 `patches` 和 `business_operations` 比对。同项目不能跨开发/验收集合。未确认资料不能预设采购答案。
+正式验收清单使用 `schema_version: 2`，`cases` 每项包含：`id`、`project_id`、`template_id`、`template_type`（人工确认的模板类别）、全清单唯一的 `trajectory_ref`、`split`（development/acceptance）、`reviewed_by`、`evidence_confirmed`、`evidence`（相对文件 path、sha256、locator 工作表/行或资料段落）、完整 `request`、`expected_edits`、`expected_questions`（问题 code）和/或 `expected_decision`。v1 仍可作开发回放，使用 `--acceptance` 时明确要求升级，不能把旧格式算作验收通过。
+
+停止或无匹配案例可以只指定决策状态，但仍须人工核对和证据指纹；资料未确认时不能预设采购或“需求已满足”。期望编辑按 `variant_ids`、`source_ids`、按位置排序的完整 `patches` 和 `business_operations` 比对。同项目不能跨开发/验收集合。相同项目、请求、期望及证据定位的规范化摘要重复时拒绝执行；不能只改案例编号补数。
 
 ```sh
 # 令牌由当前环境安全提供为 PRESALES_WPS_REPLAY_TOKEN，不写入清单
 env LC_ALL=C perl -e 'alarm 60; exec @ARGV' .venv/bin/python scripts/wps_business_replay.py /absolute/private/evidence/manifest.json --base-url https://intranet.example --acceptance
 ```
 
-验收模式检查至少 30 条轨迹、三类模板、证据指纹及人工核对字段；不能用目录序列或合成 fixture 补数。脚本单测仅验证评分器本身，不是业务得分。没有真实清单时不输出虚构准确率。
+验收模式检查至少 30 个不同轨迹引用、三种 `template_type`、证据指纹及人工核对字段；同一模板不能标为多种类别。模板分类是否正确、轨迹是否真的独立和业务答案是否真实，仍必须人工复核，脚本不能自动鉴真。不能用目录序列或合成 fixture 补数。脚本单测仅验证评分器本身，不是业务得分。没有真实清单时不输出虚构准确率。
 
 回放分别统计排名正确与初始 Tab 动作。空白行灰字覆盖率只计“首选正确、具有可直接接受的主建议、当前位置且允许 inline 应用”的建议；需展开选择、先定位其他行或进入数量/关联预览的建议仍可计入 Top-1/Top-3，但不能冒充一次 Tab 的灰字覆盖。旧响应没有主建议时仍按单候选判断。活动工作表及行列缺失时明确报错。`initial_tab_action` 对齐插件状态机的初始非 IME 状态，不验证真实按键与焦点。
 
