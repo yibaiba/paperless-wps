@@ -46,7 +46,10 @@ class Entities:
 
     def get(self, entity_id, *, kind=None, lock=False):
         query = select(Entity).where(Entity.id == entity_id)
-        record = self.session.scalar(query.with_for_update() if lock else query)
+        if lock:
+            # A prior preview may have cached this entity before another transaction committed.
+            query = query.with_for_update().execution_options(populate_existing=True)
+        record = self.session.scalar(query)
         if record is None or (kind is not None and record.kind != kind):
             raise ValueError("记录不存在或类型不匹配，请重新选择")
         return record

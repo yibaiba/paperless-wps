@@ -40,6 +40,16 @@
 - 完整目录 + 1,000 产品行：预览 p95 ≤500ms，预热目标 ≤300ms；单行灰字写入 p95 ≤100ms，输入结束至灰字 p95 ≤800ms（扣除 IME）。跨行成组确认单独记录耗时。
 - 真实业务验收数据要求与只读回放格式见 [下一步编辑实施证据](wps-next-edit.md)。接受后撤销不计正反馈；统计同步保留率和返工次数，导航不记拒绝。
 
+## 数据库并发回归
+
+先通过安全环境变量提供本机隔离测试 PostgreSQL 的 `TEST_DATABASE_URL`，测试账户需要创建临时 schema 权限；不要把连接密码写进命令示例、仓库或日志。执行：
+
+```sh
+env LC_ALL=C perl -e 'alarm 60; exec @ARGV' .venv/bin/python -m pytest backend/tests/configuration/test_wps_concurrency.py -q
+```
+
+测试复用随机 schema fixture，完成后只清理该次 schema。涵盖两个个人令牌的竞争提交、原操作重试、重新创建应用实例后的回执、唯一项目修订及锁定读取的缓存刷新。2026-10-03 已在本机 PostgreSQL 执行通过；未提供连接时的 skipped 不能算通过。此结果不替代上面的宿主矩阵、真实模板和网络故障验收。
+
 ## 两周试点
 
 - 人数：5 名售前。
