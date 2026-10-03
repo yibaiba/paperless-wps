@@ -1,6 +1,7 @@
 from copy import deepcopy
 
 import pytest
+from presales.configuration.definitions.schemas import RoleDefinition
 from redshield_package_review import (
     ROLE_ROWS,
     definition_payload,
@@ -77,7 +78,9 @@ def test_existing_role_inspection_and_coverage_preserved_on_rebuild():
         **AUTHOR,
     )
     updated = definition_payload(definition)
-    assert updated["roles"][0] == definition["roles"][0]
+    assert updated["roles"][0] == RoleDefinition.model_validate(definition["roles"][0]).model_dump(
+        mode="json"
+    )
     assert definition_payload(updated) == updated
     coverage = dict(
         role_id="server",

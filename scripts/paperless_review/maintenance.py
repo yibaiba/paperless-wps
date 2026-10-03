@@ -2,6 +2,8 @@
 
 from uuid import NAMESPACE_URL, uuid5
 
+from presales.configuration.catalog.schemas import VariantInput
+from presales.configuration.catalog.service import CatalogService
 from presales.configuration.common import Entities
 from presales.configuration.definitions.schemas import (
     KnowledgePackage,
@@ -13,6 +15,7 @@ from presales.configuration.knowledge.schemas import KnowledgeInput
 from presales.configuration.models import Entity
 from presales.rules.calculation import digest
 from presales.rules.repository import RuleConflict
+from presales.storage import ProductRecord
 
 
 def stable_id(key):
@@ -25,6 +28,10 @@ def comparable(kind, payload):
         "knowledge_package": {"definition", "rules"},
         "system_definition": {"inspection_profiles"},
     }.get(kind, set())
+    if kind == "variant":
+        # The catalogue service records affected knowledge after a technical edit.
+        payload = VariantInput.model_validate(payload).model_dump(mode="json")
+        derived = {"review_requirements"}
     return {k: v for k, v in payload.items() if k not in derived}
 
 
@@ -33,7 +40,7 @@ def proposal(current, *, kind, identity, payload):
     if old and old["kind"] != kind:
         raise ValueError("标识已被其他类型占用：" + identity)
     before = old["payload"] if old else None
-    changed = before is None or comparable(kind, before) != payload
+    changed = before is None or comparable(kind, before) != comparable(kind, payload)
     revision = old["revision"] if old else 0
     return dict(
         id=identity,
@@ -49,13 +56,19 @@ def proposal(current, *, kind, identity, payload):
 def apply_plan(session, plan):
     if digest(plan["changes"]) != plan["fingerprint"]:
         raise ValueError("维护预览内容已变化，请重新生成预览")
+    for identity, fingerprint in plan.get("source_guards", {}).items():
+        source = session.get(ProductRecord, identity)
+        if source is None or digest(source.payload) != fingerprint:
+            raise RuleConflict("维护依据已变化，请重新核对来源：" + identity)
     entities = Entities(session)
     pending = []
     for item in sorted(plan["changes"], key=lambda value: value["id"]):
         record = session.get(Entity, item["id"])
         if record:
             record = entities.get(item["id"], kind=item["kind"], lock=True)
-        if record and comparable(item["kind"], record.payload) == item["payload"]:
+        if record and comparable(item["kind"], record.payload) == comparable(
+            item["kind"], item["payload"]
+        ):
             continue
         if (record.revision if record else 0) != item["expected_revision"]:
             raise RuleConflict("维护预览版本过期：" + item["id"])
@@ -72,6 +85,10 @@ def save_change(session, item):
         if item["expected_revision"]
         else dict(create_id=item["id"])
     )
+    if item["kind"] == "variant":
+        return CatalogService(session).save_variant(
+            VariantInput.model_validate(item["payload"]), **options
+        )
     if item["kind"] == "system_definition":
         return Definitions(session).save_definition(
             SystemDefinition.model_validate(item["payload"]), **options
