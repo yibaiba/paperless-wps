@@ -46,7 +46,7 @@ def record_reference(record):
     return {key: record[key] for key in ("id", "revision", "name", "status")}
 
 
-def context_rows(projection, request):
+def context_rows(projection, request, *, allowed_sources):
     configuration = projection["checked"]["configuration"]
     evaluated = set(projection["checked"]["evaluation_scope"]["device"])
     bindings = {b["device_id"]: b for b in projection["line_bindings"]}
@@ -72,7 +72,9 @@ def context_rows(projection, request):
             binding.get("sheet") == request.scope.sheet
             and request.scope.start_row <= binding.get("row", 0) <= request.scope.end_row
         )
-        inventory = any(a["source"] == "existing" for a in supply[device["id"]])
+        inventory = device["source_id"] in allowed_sources.get(device["variant_id"], []) and any(
+            a["source"] == "existing" for a in supply[device["id"]]
+        )
         if not (device["id"] in evaluated or in_area or inventory):
             continue
         rows.append(
@@ -110,7 +112,7 @@ def completion_context_summary(projection, *, request, profile, context, issues)
         versions=projection["versions"],
         local_revision=request.local_revision,
         catalog_scope=profile["catalog_scope"],
-        rows=context_rows(projection, request),
+        rows=context_rows(projection, request, allowed_sources=context.allowed_sources or {}),
         local_changes=[
             {key: change[key] for key in ("kind", "id")}
             for change in configuration_diff(

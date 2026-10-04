@@ -192,14 +192,14 @@ test('full completion request searches a filled 1000-row area without sequential
   const host = { readRow: (_, row) => { reads++; return rows[row - 2] ?? {
     sheet: 'q', row, values: {}, formula_fields: [], merged_fields: [] }; },
     readRows: () => { scans++; return rows; }, businessRevision: () => 0 };
-  const profile = { sheet_selector: 'q' };
+  const profile = { sheet_selector: 'q', managed_fields: ['model', 'name'] };
   const index = new WorkbookRowIndex(host, profile);
   for (let i = 0; i < 20; i++) {
     const request = completionRequest({ host, index, profile, metadata,
       cell: { sheet: 'q', row: i + 2, column: 1 }, query: `m${i}` });
     assert.ok(request.target_cells.some((c) => c.row === 1002));
   }
-  assert.equal(scans, 1); assert.equal(reads, 40);
+  assert.equal(scans, 1); assert.equal(reads, 21);
 });
 
 test('non-ready and Shift Tab restore focus and use the WPS keyboard path, not Offset', () => {

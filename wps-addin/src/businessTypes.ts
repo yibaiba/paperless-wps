@@ -40,6 +40,7 @@ export interface BusinessDevice {
 export interface WorkbookBusinessContext {
   binding_revision: number; draft_revision: number; project_revision: number;
   versions: Record<string, string | null>; fingerprint: string;
+  knowledge_summary?: KnowledgeSummary[];
   configuration: {
     rooms: Array<{ id: string; name: string }>;
     systems: BusinessSystem[]; requirements: BusinessRequirement[]; devices: BusinessDevice[];
@@ -86,6 +87,28 @@ export interface CompletionPreviewResult {
   primary_suggestion_id?: string | null;
   decision?: EditDecision;
   next_target?: NextEditTarget | null;
+  context_summary?: CompletionContextSummary;
+}
+export interface KnowledgeSummary {
+  system_id: string; system_name: string;
+  definition: { id: string; revision: number; name: string; status: string } | null;
+  package: { id: string; revision: number; name: string; status: string } | null;
+  gaps: unknown[];
+}
+export interface CompletionContextSummary {
+  mode: 'business'; project_id: string; scope: BusinessScope;
+  system: { id: string; name: string; kind: string };
+  room: { id: string; name: string } | null;
+  versions: Record<string, string | null>; local_revision: number;
+  catalog_scope: { import_id: string; sheet: string };
+  rows: Array<Pick<BusinessDevice, 'id' | 'name' | 'kind' | 'quantity' | 'variant_id' | 'source_id'> & {
+    line_id: string | null; sheet: string | null; row: number | null;
+    participation: 'dependency' | 'inventory' | 'business_area';
+    supply_allocations: Array<{ source: string; quantity: string }>;
+    uses: Array<{ requirement_id: string; system_id: string; role: string }>;
+  }>;
+  local_changes: Array<{ kind: string; id: string }>;
+  knowledge: KnowledgeSummary[]; issues: unknown[];
 }
 export interface WorkbookEditJournal {
   operation_id: string; suggestion_id: string; created_at: string;

@@ -1,9 +1,14 @@
 import { useEffect, useRef } from 'react';
-import type { NextEditSuggestion } from '../businessTypes';
+import type { CompletionContextSummary, NextEditSuggestion } from '../businessTypes';
+import { issueText } from '../businessContextPresentation';
+import { BusinessContextDetails } from './BusinessContextDetails';
+export { issueText } from '../businessContextPresentation';
 
-export function NextEditPreview({ suggestion, onApply, busy = false, autoFocus = false, onCancel }: {
+export function NextEditPreview({ suggestion, onApply, busy = false, autoFocus = false, onCancel, contextSummary, applyLabel }: {
   suggestion: NextEditSuggestion; onApply: () => void; busy?: boolean;
   autoFocus?: boolean; onCancel?: () => void;
+  contextSummary?: CompletionContextSummary;
+  applyLabel?: string;
 }) {
   const preview = useRef<HTMLElement>(null);
   useEffect(() => { if (autoFocus) preview.current?.focus(); }, [autoFocus, suggestion.id]);
@@ -27,14 +32,9 @@ export function NextEditPreview({ suggestion, onApply, busy = false, autoFocus =
         <pre>{JSON.stringify({ before: change.before, after: change.after }, null, 2)}</pre>
       </details>)}
     <details><summary>业务理由与固定版本证据</summary><pre>{JSON.stringify(suggestion.evidence, null, 2)}</pre></details>
+    <BusinessContextDetails summary={contextSummary} />
     {suggestion.issues.map((issue, i) => <div className="issue" key={i}>{issueText(issue)}</div>)}
-    <button className="primary" disabled={busy || !suggestion.applicable} onClick={onApply}>确认应用本组修改</button>
+    <button className="primary" disabled={busy || !suggestion.applicable} onClick={onApply}>{applyLabel ?? '确认应用本组修改'}</button>
     {onCancel && <button type="button" disabled={busy} onClick={onCancel}>返回补全，不应用</button>}
   </section>;
-}
-
-export function issueText(issue: unknown): string {
-  if (typeof issue === 'string') return issue;
-  if (issue && typeof issue === 'object' && 'message' in issue) return String(issue.message);
-  return JSON.stringify(issue);
 }

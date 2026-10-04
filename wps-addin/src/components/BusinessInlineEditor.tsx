@@ -23,6 +23,7 @@ import { WorkbookRowIndex } from '../workbookRowIndex';
 import { NextEditPreview, issueText } from './NextEditPreview';
 import { NextEditNotice } from './NextEditNotice';
 import { BusinessCandidateList } from './BusinessCandidateList';
+import { decisionText } from '../businessContextPresentation';
 
 const POSITION_POLL_MS = 300;
 
@@ -258,7 +259,8 @@ export function BusinessInlineEditor({ host: suppliedHost, api: suppliedApi }: {
         + Number(Boolean(writeError)) * INLINE_ERROR_STATUS_ROWS
         + Number(!error && Boolean(result?.issues.length));
       try { setPlacement(host.layoutInlineEditor({ candidateCount: preview ? 4 : result?.items.length ?? 0,
-        listVisible: expanded || preview, showStatus: statusRows > 0, statusRows,
+        listVisible: expanded || preview, showStatus: statusRows > 0 || Boolean(result?.decision),
+        statusRows: statusRows + Number(Boolean(result?.decision && !preview)),
         candidateRowHeight: preview ? undefined : BUSINESS_CANDIDATE_ROW_HEIGHT,
       }).placement); } catch (reason) { setError(String(reason)); }
     };
@@ -269,6 +271,9 @@ export function BusinessInlineEditor({ host: suppliedHost, api: suppliedApi }: {
   if (!context) return null;
   const canType = isProductInputCell(context.profile, context.cell);
   const ghost = businessCompletionGhost({ result, index: selected, cell: context.cell, query, ready, explicit });
+  const previewAction = nextEditAction({ suggestion: item, cell: context.cell, query, ready: true,
+    composing, explicit: true, count: 1,
+    target: result?.primary_suggestion_id === item?.id ? result?.next_target : undefined });
   const closePreview = () => setPreview(false);
   return <div className={`inline-editor ${placement}`}>
     <div className="inline-input-row"><div className="inline-query">
@@ -327,11 +332,23 @@ export function BusinessInlineEditor({ host: suppliedHost, api: suppliedApi }: {
     </div>}
     {writeError && <div className="inline-error" role="alert">修改未完成：{writeError}</div>}
     {ready && !expanded && <NextEditNotice notice={notice} />}
+    {result?.decision && !preview && <div className="inline-status" role="status">{decisionText(result.decision)}
+      {item && ready && <button type="button" onClick={() => {
+        const operationId = host.claimTab(context.session_id);
+        if (operationId) dispatch({ action: 'preview', suggestion: item, operationId, result });
+      }}>查看依据</button>}
+    </div>}
     {!error && Boolean(result?.issues.length) && <div className="inline-status" title={result!.issues.map(issueText).join('；')}>{issueText(result!.issues[0])}</div>}
     {expanded && !preview && <BusinessCandidateList items={result?.items ?? []} selected={selected}
       column={context.cell.column} ready={ready}
       onChoose={(candidate, i) => { setSelected(i); void choose(candidate); }} />}
     {preview && item && <div className="inline-business-preview"><NextEditPreview suggestion={item}
-      autoFocus onCancel={closePreview} onApply={() => apply(item, previewOperation.current)} /></div>}
+      contextSummary={result?.context_summary}
+      applyLabel={previewAction === 'locate' ? '定位目标后重新预览' : undefined}
+      autoFocus onCancel={closePreview} onApply={() => {
+        if (previewAction === 'locate' && result) dispatch({ action: 'locate', suggestion: item,
+          operationId: previewOperation.current, result });
+        else apply(item, previewOperation.current);
+      }} /></div>}
   </div>;
 }

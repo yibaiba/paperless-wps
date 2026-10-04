@@ -1,0 +1,6 @@
+.business-context { border-top: 1px solid var(--border); margin-top: 8px; padding-top: 8px; overflow-wrap: anywhere; }
+.business-context summary { cursor: pointer; line-height: 1.6; }
+.business-context summary:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.business-context p { color: inherit; line-height: 1.6; margin: 6px 0; }
+.business-context pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+.business-context .change { padding: 8px 0; border-bottom: 1px solid var(--border); }

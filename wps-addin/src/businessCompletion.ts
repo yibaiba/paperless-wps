@@ -7,6 +7,7 @@ export function businessCompletionSelection(options: {
 }) {
   const { result, cell, query } = options;
   const primary = result.items.findIndex((item) => item.id === result.primary_suggestion_id);
+  if (result.primary_suggestion_id && primary < 0) throw new Error('补全响应的主建议 ID 不存在，请重新查询');
   const index = Math.max(0, primary);
   const action = nextEditAction({ suggestion: result.items[index], cell, query,
     ready: true, composing: false, explicit: false, count: result.items.length,

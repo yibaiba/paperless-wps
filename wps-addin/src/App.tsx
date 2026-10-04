@@ -16,6 +16,7 @@ import { LatestRequest } from './latestRequest';
 import { matchingProfile } from './template';
 import { suggestionContext } from './suggestionContext';
 import { isProductInputCell } from './productInput';
+import { completionMode } from './businessContextPresentation';
 import type {
   ActiveCell, Candidate, TemplateProfile,
   WorkbookMetadata,
@@ -348,6 +349,7 @@ export function App() {
       </span>
     </header>
     <section className="completion-mode" aria-label="补全方式">
+      <p><strong>{completionMode(metadata.schema_version)}</strong>{metadata.schema_version !== 2 && <button onClick={() => setView('business')}>确认业务设置，启用上下文推荐</button>}</p>
       <p>浮层补全 · 在单元格旁输入，Tab 接受；业务联动需预览确认。不是原生单元格灰字。</p>
       {profile ? <button onClick={reopenCompletion}>打开当前单元格补全</button> : null}
     </section>

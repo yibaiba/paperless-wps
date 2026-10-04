@@ -73,11 +73,78 @@ def test_preview_explains_actual_rows_versions_and_local_changes_without_saving(
     assert entity_versions(client) == versions
 
 
-def test_binding_context_exposes_pinned_knowledge_not_latest_package(client, catalog):
+def test_binding_context_does_not_claim_unsynced_setup_is_the_baseline(client, catalog):
     headers, body = completion_body(client, catalog)
     result = client.get(f"/api/wps/bindings/{body['binding_id']}/context", headers=headers)
     assert result.status_code == 200
     assert result.json()["knowledge_summary"] == []  # Unsynced setup is not the baseline.
+
+
+def test_summary_reads_pinned_package_revision_after_live_maintenance(client, catalog):
+    from .test_wps_dependency_scope import seed_unrelated_systems
+
+    headers, body = completion_body(client, catalog)
+    seed_unrelated_systems(client, headers, body, 0)
+    url = f"/api/wps/bindings/{body['binding_id']}/context"
+    initial = client.get(url, headers=headers).json()
+    pin = initial["knowledge_summary"][0]["package"]
+    package = next(
+        p
+        for p in client.get("/api/configuration/knowledge-packages").json()
+        if p["id"] == pin["id"]
+    )
+    payload = {
+        k: v
+        for k, v in package.items()
+        if k not in {"id", "revision", "updated_at", "definition", "rules"}
+    }
+    changed = client.put(
+        "/api/configuration/knowledge-packages/" + pin["id"],
+        json=dict(
+            expected_revision=pin["revision"],
+            payload=dict(payload, name="绑定后的新包名"),
+        ),
+    )
+    assert changed.status_code == 200, changed.text
+    assert changed.json()["revision"] > pin["revision"]
+    baseline = client.get(url, headers=headers).json()
+    assert baseline["knowledge_summary"] == initial["knowledge_summary"]
+    result = preview(client, headers, body)
+    assert result["context_summary"]["knowledge"][0]["package"] == pin
+
+
+def test_context_inventory_excludes_other_catalog_sources():
+    from presales.wps.context_summary import context_rows
+
+    device = dict(
+        id="outside",
+        name="库存",
+        kind="hardware",
+        quantity="1",
+        variant_id="v",
+        source_id="outside-source",
+    )
+    projection = dict(
+        checked=dict(
+            evaluation_scope=dict(device=[]),
+            configuration=dict(
+                devices=[device],
+                requirements=[],
+                supply_allocations=[
+                    dict(
+                        device_id="outside",
+                        source="existing",
+                        quantity="1",
+                    )
+                ],
+            ),
+        ),
+        line_bindings=[],
+    )
+    request = SimpleNamespace(scope=SimpleNamespace(sheet="q", start_row=3, end_row=8))
+    assert context_rows(projection, request, allowed_sources={"v": ["inside"]}) == []
+    rows = context_rows(projection, request, allowed_sources={"v": ["outside-source"]})
+    assert rows[0]["participation"] == "inventory"
 
 
 def test_exact_configuration_filters_prefix_alternatives_before_ranking_http(client, catalog):

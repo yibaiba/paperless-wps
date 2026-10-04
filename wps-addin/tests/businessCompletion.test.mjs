@@ -16,6 +16,11 @@ test('overlay selects the actual primary, not the first lower-ranked alternative
   assert.deepEqual(businessCompletionSelection({ result, cell, query: '服' }), { index: 1, expanded: false });
 });
 
+test('a malformed primary ID is surfaced instead of accepting the first alternative', () => {
+  assert.throws(() => businessCompletionSelection({ result: { ...result, primary_suggestion_id: 'missing' },
+    cell, query: '服' }), /主建议 ID 不存在/);
+});
+
 test('ambiguous or non-prefix candidates are visible choices, not hidden gray-text accepts', () => {
   const options = { result, cell, query: '服' };
   assert.equal(businessCompletionSelection({ ...options,

@@ -3,6 +3,7 @@ import type { WorkbookRowIndex } from './workbookRowIndex';
 import type { ActiveCell, TemplateProfile, WorkbookLine, WorkbookMetadata } from './types';
 import { bindingForRow, scanWorkbook } from './workbook.ts';
 import { observedQuantityEdits } from './recentBusinessEdits.ts';
+import { availableProductTarget } from './businessTargets.ts';
 
 export function businessSyncRequest(metadata: WorkbookMetadata, lines: WorkbookLine[]) {
   const binding = metadata.binding;
@@ -50,13 +51,9 @@ export function completionRequest(options: {
   const targetRows = new Set(scanned.lines.filter((b) => b.sheet === scope.sheet
     && b.row >= scope.start_row && b.row <= scope.end_row).map((b) => b.row));
   const cached = new Map(index.read().map((row) => [row.row, row]));
-  // Only seek the next free product row; never scan the entire used sheet after each Tab.
-  for (let row = cell.row + 1; row <= scope.end_row; row += 1) {
-    if (cached.has(row)) continue;
-    const next = index.refresh(row);
-    cached.set(row, next);
-    if (!next.values.model?.trim() && !next.values.name?.trim()) { targetRows.add(row); break; }
-  }
+  const free = availableProductTarget({ scope, activeRow: cell.row, profile,
+    occupied: new Set(cached.keys()), readRow: (row) => index.peek(row) });
+  if (free) { cached.set(free.row, free); targetRows.add(free.row); }
   const target_cells = [...targetRows].filter((row) => row !== cell.row).map((row) => ({
     ...(cached.get(row) ?? index.refresh(row)), column: cell.column,
   }));

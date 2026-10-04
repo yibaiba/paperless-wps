@@ -112,8 +112,17 @@ export function businessInlineFixture(scenario: Scenario, notify: () => void) {
       : (scenario === 'same-name' ? ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'] : ['A', 'B']).map((id) => candidate(id, false));
     return { items, issues: undone ? ['测试轨迹已撤销，等待新的明确输入'] : [], context_fingerprint: 'fixture-context', versions: {},
       local_revision: metadata.business.local_revision, line_bindings: [], configuration: {} as never,
+      context_summary: { mode: 'business', project_id: 'test-only-project', scope: metadata.business.scopes[0],
+        system: { id: 'system', name: '隔离测试系统', kind: 'test-only' }, room: { id: 'room', name: '隔离测试房间' },
+        versions: { catalog_snapshot_id: 'test-only-snapshot' }, local_revision: metadata.business.local_revision,
+        catalog_scope: { import_id: 'test-only-import', sheet: '隔离目录' },
+        rows: body.lines.map((line: any) => ({ ...line, id: line.device_id ?? line.line_id,
+          participation: 'dependency', supply_allocations: [], uses: [] })),
+        local_changes: metadata.line_bindings.map((line: any) => ({ kind: 'devices', id: line.device_id })),
+        knowledge: [], issues: [] },
       primary_suggestion_id: items.length === 1 ? items[0].id : null,
-      decision: { status: done ? 'satisfied' : items.length === 1 ? 'ready' : 'choice_required', reason_code: 'test-only' } };
+      decision: { status: done ? 'satisfied' : items.length === 1 ? 'ready' : 'choice_required',
+        reason_code: done ? 'requirements_satisfied' : items.length === 1 ? 'unique_candidate' : 'variant_ambiguous' } };
   } };
   return { host, api, stats, journals, values,
     release: () => release?.(), repairRead: () => { failRead = false; failUndoRead = false; notify(); } };
