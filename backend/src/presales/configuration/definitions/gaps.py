@@ -65,9 +65,7 @@ def role_rules(role, *, definition, package):
     return [
         r
         for r in (package or {}).get("rules", [])
-        if r["kind"] == "suitability"
-        and r["status"] != "disabled"
-        and role_matches(r, requirement)
+        if r["kind"] == "suitability" and r["status"] != "disabled" and role_matches(r, requirement)
     ]
 
 
@@ -138,6 +136,31 @@ def role_generation_fields(role, *, definition, package):
     return fields
 
 
+def relation_mapping_gaps(definition, package):
+    bound = {
+        rule["id"]
+        for role in definition["roles"]
+        for rule in role_rules(role, definition=definition, package=package)
+    }
+    return [
+        dict(
+            gap(
+                "relation_role_unmapped",
+                "system_role_mapping",
+                "尚未匹配本包系统与角色",
+                record=rule,
+                kind="knowledge",
+                package=package,
+            ),
+            missing_fields=["system_definition_id", "role_id"],
+        )
+        for rule in (package or {}).get("rules", [])
+        if rule["kind"] == "suitability"
+        and rule["status"] != "disabled"
+        and rule["id"] not in bound
+    ]
+
+
 def knowledge_gaps(definition, package):
     result = []
     if not package or package.get("status") != "published":
@@ -181,6 +204,7 @@ def knowledge_gaps(definition, package):
             continue
         for code, field, message in relation_gaps(rule):
             result.append(gap(code, field, message, record=rule, kind="knowledge", package=package))
+    result.extend(relation_mapping_gaps(definition, package))
     if package and not any(
         r["kind"] == "sharing" and r["status"] == "confirmed" for r in package.get("rules", [])
     ):

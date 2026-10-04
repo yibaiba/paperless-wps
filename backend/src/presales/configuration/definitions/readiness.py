@@ -54,14 +54,15 @@ def package_readiness(package, *, latest):
     definition = package["definition"]
     rules = [rule_readiness(r) for r in package["rules"]]
     roles = [role_inventory(r, definition=definition, package=package) for r in definition["roles"]]
-    bound = {identity for role in roles for identity in role["rule_ids"]}
-    unmapped = [
-        r["id"]
-        for r in rules
-        if r["kind"] == "suitability" and r["status"] != "disabled" and r["id"] not in bound
-    ]
+    gaps = knowledge_gaps(definition, package)
+    mapping_messages = {
+        item["object_id"]: item["message"]
+        for item in gaps
+        if item["code"] == "relation_role_unmapped"
+    }
+    unmapped = list(mapping_messages)
     rules = [
-        dict(r, missing=[*r["missing"], "尚未匹配本包系统与角色"]) if r["id"] in unmapped else r
+        dict(r, missing=[*r["missing"], mapping_messages[r["id"]]]) if r["id"] in unmapped else r
         for r in rules
     ]
     refs = [("system_definition", definition), *[("knowledge", r) for r in package["rules"]]]
@@ -84,7 +85,7 @@ def package_readiness(package, *, latest):
         unmapped_rule_ids=unmapped,
         version_changes=changes,
         sharing_rule_ids=sharing,
-        gaps=knowledge_gaps(definition, package),
+        gaps=gaps,
         summary=dict(
             roles=len(roles),
             rules=len(rules),

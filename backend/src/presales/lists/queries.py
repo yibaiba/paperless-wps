@@ -7,6 +7,7 @@ from presales.configuration.knowledge.evaluator import scope_matches
 from presales.configuration.models import Entity, Revision
 from presales.configuration.projects.calculation.inspections import effective_environment
 from presales.configuration.projects.candidates import candidate_results
+from presales.configuration.projects.knowledge_snapshot import candidate_knowledge
 from presales.configuration.projects.schemas import CandidateRequest
 from presales.storage import ProductRecord, Project
 
@@ -185,11 +186,14 @@ def systems(session, request):
     snapshot = definitions_for(session, request.definition_snapshot_id)
     definitions = snapshot["definitions"]
     known = {d["name"] for d in definitions}
+    known_ids = {d["id"] for d in definitions}
     legacy = sorted(
         {
             k["system"]
-            for k in Entities(session).list("knowledge")
-            if k.get("system") and k["system"] not in known
+            for k in candidate_knowledge(session, request.knowledge_snapshot_id)
+            if k.get("system")
+            and k["system"] not in known
+            and k.get("system_definition_id") not in known_ids
         }
     )
     result = dict(
