@@ -10,7 +10,12 @@ from ...knowledge.semantics import (
     scope_is_reviewed,
 )
 from ..accessory_allocations import accessory_allocation_checks
-from ..device_usages import build_device_usages, capacity_checks, unique_consumers
+from ..device_usages import (
+    build_device_usages,
+    capacity_checks,
+    requires_shared_instance,
+    unique_consumers,
+)
 from ..output import output_line
 from ..readiness import project_readiness
 from .context import prepare_demands, prepare_roles
@@ -202,6 +207,11 @@ def resource_usages(data, suggestions, policies, *, inspection_policies=None):
                 bool(consumer["resources"]) or policy != "not_applicable"
             )
             consumer["resource_policy"] = policy
+            consumer["allocation_mode"] = (
+                rules[consumer["demand_id"]].get("allocation_mode", "consumable")
+                if consumer["via"] == "accessory"
+                else None
+            )
             consumer["resource_rule_revision"] = (
                 rules[consumer["demand_id"]]["revision"] if consumer["via"] == "accessory" else None
             )
@@ -252,7 +262,7 @@ def usage_checks(data, usages, *, variants, decisions=None):
                 partitioned=partitioned,
             )
         )
-        if len(consumers) > 1 and not partitioned:
+        if len(consumers) > 1 and not partitioned and requires_shared_instance(usage):
             checks.append(
                 sharing(
                     data, device, consumers, variant=variants[device["id"]], decisions=decisions

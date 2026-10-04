@@ -135,6 +135,15 @@ def unique_consumers(consumers):
     return list(result.values())
 
 
+def requires_shared_instance(usage):
+    # A consumable allocation divides a quantity pool; it does not reuse one instance.
+    # Inspect every use before role deduplication so mixed direct/shared uses are retained.
+    return any(
+        c["via"] != "accessory" or c.get("allocation_mode") != "consumable"
+        for c in usage["consumers"]
+    )
+
+
 def sharing_check(device, consumers, *, variant, knowledge):
     roles = {item["system"] + "/" + item["role"] for item in consumers}
     rules = [

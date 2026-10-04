@@ -2,6 +2,8 @@
 
 from decimal import Decimal, InvalidOperation
 
+from .input_values import same_input_value
+
 
 def find_input(inputs, key):
     return next((item for item in inputs if item["key"] == key), None)
@@ -27,17 +29,13 @@ def resolve_input(data, *, rule, requirement, system):
         return attribute, scope, identity, False
     system_input = find_input(system.get("inputs", []), key)
     if system_input is not None:
-        conflict = role_input is not None and input_value(system_input) != input_value(role_input)
+        conflict = role_input is not None and not same_input_value(system_input, role_input)
         return system_input, "system", system["id"], conflict
     if role_input is None and rule.get("calculation_scope") != "device":
         return None, scope, identity, False
     # Retain historical role-level contributions when no scoped value has been provided.
     role_id = requirement.get("allocation_parent_id", requirement.get("id"))
     return role_input, "role", role_id, False
-
-
-def input_value(attribute):
-    return attribute.get("value"), attribute.get("unit", "")
 
 
 def numeric_quantity(attribute, *, rule):

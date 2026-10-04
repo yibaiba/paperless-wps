@@ -2,6 +2,8 @@
 
 from decimal import Decimal, InvalidOperation
 
+from .input_values import same_input_value
+
 
 def role_profile(system, requirement, definitions):
     package = next(
@@ -38,10 +40,7 @@ def effective_environment(system, requirement):
     conflicts = []
     for parameter in requirement.get("environment", []):
         previous = inputs.get(parameter["key"])
-        if previous and (previous["value"], previous["unit"]) != (
-            parameter["value"],
-            parameter["unit"],
-        ):
+        if previous and not same_input_value(previous, parameter):
             conflicts.append(parameter["key"])
         inputs[parameter["key"]] = parameter
     return list(inputs.values()), conflicts

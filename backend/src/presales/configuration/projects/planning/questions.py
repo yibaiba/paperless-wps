@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from presales.rules.calculation import digest
 
 
@@ -60,7 +62,11 @@ def check_questions(checked):
         item.update(status=check.get("status", "unknown"), check=check)
         results.append(item)
     for demand in checked["suggestions"]:
-        if not demand["selected"] or (demand["status"] == "pass" and demand.get("missing") == "0"):
+        if not demand["selected"] or (
+            demand["status"] == "pass"
+            and demand.get("missing") is not None
+            and Decimal(demand["missing"]) == 0
+        ):
             continue
         if demand.get("input_issues"):
             results.append(quantity_input_question(demand))
