@@ -3,6 +3,8 @@
 from collections import defaultdict
 from decimal import Decimal
 
+from .included_occupancy import IncludedOccupancy
+
 
 class IncludedCapacity:
     def __init__(self, data, demands):
@@ -10,12 +12,9 @@ class IncludedCapacity:
         self.demands = {d["id"]: d for d in demands}
         self.reserved = defaultdict(Decimal)
         self.scoped = defaultdict(lambda: defaultdict(Decimal))
-        self.host_limits = defaultdict(dict)
-        for demand in demands:
-            for device_id in {i["device_id"] for i in demand.get("quantity_inputs", [])}:
-                scope, quantity = self.host_scope(demand, device_id)
-                if scope is not None:
-                    self.host_limits[device_id][scope] = quantity
+        self.occupancy = {}
+        self.groups = {}
+        self.role_scopes = defaultdict(lambda: defaultdict(set))
         for allocation in data.get("included_allocations", []):
             pool = allocation["device_id"], allocation["included_item_id"]
             amount = Decimal(allocation["quantity"])
@@ -23,6 +22,8 @@ class IncludedCapacity:
             demand = self.demands.get(allocation["demand_id"])
             scope, _ = self.host_scope(demand, allocation["device_id"])
             self.scoped[pool][scope] += amount
+            for role in scope or []:
+                self.role_scopes[pool][role].add(scope)
 
     def host_scope(self, demand, device_id):
         entries = {
@@ -52,12 +53,9 @@ class IncludedCapacity:
             scoped_total = (
                 min(quantity, host_quantity) * per_unit if quantity is not None else total
             )
-            # A smaller role scope also consumes its containing system/room scope.
-            remaining = [total - used, scoped_total - scoped_used]
-            remaining.extend(
-                c["total"] - c["allocated"] for c in self.constraints(device, fact, scope)
+            available = self.pool_occupancy(device, fact, scope=scope).available(
+                scope, upper_bound=max(min(total - used, scoped_total - scoped_used), Decimal(0))
             )
-            available = max(min(remaining), Decimal(0))
         return dict(
             total=total,
             allocated=used,
@@ -76,29 +74,55 @@ class IncludedCapacity:
             Decimal(0),
         )
 
-    def constraints(self, device, fact, scope):
-        if scope is None or fact.get("quantity") is None:
-            return []
-        limits = self.host_limits.get(device["id"], {})
-        containing = sorted((s for s in limits if scope <= s), key=lambda s: (len(s), sorted(s)))
-        return [
-            dict(
-                total=min(limits[s], Decimal(device["quantity"])) * Decimal(fact["quantity"]),
-                allocated=self.scope_usage((device["id"], fact["id"]), s),
-            )
-            for s in containing
-        ]
-
     def conflict(self, device, fact, *, demand):
-        counts = self.quantities(device, fact, demand=demand)
-        if counts["total"] is not None and counts["allocated"] > counts["total"]:
+        if fact.get("quantity") is None:
+            return None
+        total = Decimal(device["quantity"]) * Decimal(fact["quantity"])
+        if self.reserved[device["id"], fact["id"]] > total:
             return "已含数量被重复占用或超出宿主数量，相关抵扣均不计入"
         scope, _ = self.host_scope(demand, device["id"])
-        for limit in self.constraints(device, fact, scope):
-            if limit["allocated"] > limit["total"]:
-                return (
-                    f"本需求及其重叠范围已含数量 {limit['total']}，"
-                    f"关联抵扣 {limit['allocated']}；"
-                    "不能重复抵扣或转用其他房间、未分配设备的已含内容，相关抵扣不计入"
-                )
+        occupancy = self.pool_occupancy(device, fact, scope=scope)
+        if scope in occupancy.conflicting:
+            return (
+                f"本需求及重叠范围已含数量 {occupancy.conflict_capacity}，"
+                f"关联抵扣 {occupancy.conflict_quantity}；"
+                "不能重复抵扣或转用其他房间、未分配设备的已含内容，相关抵扣不计入"
+            )
         return None
+
+    def connected_scope(self, pool, scope):
+        if scope is None or None in self.scoped[pool]:
+            return None
+        if (pool, scope) not in self.groups:
+            roles, pending = set(scope), list(scope)
+            while pending:
+                for other in self.role_scopes[pool].get(pending.pop(), []):
+                    added = other - roles
+                    roles.update(added)
+                    pending.extend(added)
+            group = frozenset(roles)
+            self.groups[pool, scope] = group
+        return self.groups[pool, scope]
+
+    def pool_occupancy(self, device, fact, *, scope):
+        pool = device["id"], fact["id"]
+        group = self.connected_scope(pool, scope)
+        key = pool, group
+        if key not in self.occupancy:
+            per_unit = Decimal(fact["quantity"])
+            capacities = {
+                r["id"]: Decimal(r["allocated_quantity"]) * per_unit
+                for r in self.requirements.values()
+                if r.get("device_id") == device["id"]
+                and r.get("allocated_quantity") is not None
+                and (group is None or r["id"] in group)
+            }
+            total = Decimal(device["quantity"]) * per_unit
+            self.occupancy[key] = IncludedOccupancy(
+                capacities=capacities,
+                total=total if group is None else min(total, sum(capacities.values(), Decimal(0))),
+                reservations={
+                    s: q for s, q in self.scoped[pool].items() if group is None or s <= group
+                },
+            )
+        return self.occupancy[key]
