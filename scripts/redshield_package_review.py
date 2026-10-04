@@ -37,6 +37,9 @@ ROLE_ROWS = {
 }
 # Only these source rows explicitly identify this Windows branch.
 WINDOWS_BINDINGS = {8: "server-software", 15: "terminal", 16: "client-software"}
+# Explicit source classification for maintenance preview, never a runtime recommendation rule.
+SOFTWARE_ROLE_ROWS = {"server-software": 8, "client-software": 16}
+KIND_MARKER = "【产品类型核对 2026-10-05】"
 
 
 def unique(items, label):
@@ -72,8 +75,17 @@ def definition_payload(current):
             if key not in existing
         ],
     ]
+    roles = [
+        dict(role, output_kind="software") if role["id"] in SOFTWARE_ROLE_ROWS else role
+        for role in roles
+    ]
     note = MARKER + "仅整理目录角色与出处；角色必要性待确认，false不表示已确认可省略。"
     evidence = data["evidence"] if MARKER in data["evidence"] else data["evidence"] + "\n" + note
+    if KIND_MARKER not in evidence:
+        evidence += (
+            "\n" + KIND_MARKER + SHEET + " 第8行服务端软件、第16行客户端软件明确为软件；"
+            "仅修正输出类型，不确认部署、授权数量、必要性或整套兼容。"
+        )
     return SystemDefinition.model_validate(dict(data, roles=roles, evidence=evidence)).model_dump(
         mode="json"
     )

@@ -119,3 +119,36 @@ def test_duplicate_sources_cannot_merge_by_model():
     variants.append(deepcopy(variants[0]))
     with pytest.raises(ValueError, match="应唯一"):
         reviewed_sources(variants)
+
+
+def test_software_kind_preview_does_not_confirm_rules_or_change_other_roles():
+    original = dict(
+        name="Windows",
+        status="draft",
+        roles=[
+            dict(
+                id="server-software",
+                name="服务端软件",
+                output_kind="hardware",
+                required=False,
+            ),
+            dict(
+                id="client-software",
+                name="客户端软件",
+                output_kind="hardware",
+                required=False,
+            ),
+            dict(id="server", name="服务器", output_kind="hardware", required=False),
+        ],
+        **AUTHOR,
+    )
+    before = deepcopy(original)
+    result = definition_payload(original)
+    roles = {role["id"]: role for role in result["roles"]}
+    assert roles["server-software"]["output_kind"] == "software"
+    assert roles["client-software"]["output_kind"] == "software"
+    assert roles["server"]["output_kind"] == "hardware"
+    assert result["status"] == "draft"
+    assert not any(role["required"] or role["quantity_basis"] for role in roles.values())
+    assert original == before
+    assert definition_payload(result) == result
