@@ -8,6 +8,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 from paperless_review.maintenance import apply_plan
+from paperless_review.minutes import build_minutes_plan
 from paperless_review.reconciliation import build_reconciliation
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
@@ -19,15 +20,15 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--plan", type=Path, required=True)
     parser.add_argument("--apply", action="store_true")
+    parser.add_argument("--scope", choices=("imported", "minutes"), default="imported")
     args = parser.parse_args()
     signal.alarm(60)
     load_dotenv(ROOT / ".env")
     engine = create_engine(os.environ["DATABASE_URL"])
+    builder = build_minutes_plan if args.scope == "minutes" else build_reconciliation
     try:
         with Session(engine) as session:
-            plan = (
-                json.loads(args.plan.read_text()) if args.apply else build_reconciliation(session)
-            )
+            plan = json.loads(args.plan.read_text()) if args.apply else builder(session)
             applied = apply_plan(session, plan)
             if args.apply:
                 session.commit()
