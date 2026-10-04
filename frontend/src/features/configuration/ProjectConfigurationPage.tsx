@@ -118,7 +118,10 @@ function ConfigurationEditor({
     return_requirement: context?.requirementId ?? requirement?.id ?? '' }));
   return (
     <DraftPreviewContext.Provider value={editor.persistence.preview}><div className="configuration-page">
-      {editor.persistence.error ? <Alert type="error" title={editor.persistence.error} action={<Button onClick={editor.persistence.retry}>重试同步</Button>} /> : <Typography.Text type="secondary" role="status">
+      {editor.persistence.error ? <Alert type="error" title={editor.persistence.error} action={<Space>
+        {editor.persistence.canDiscardRejected ? <Button onClick={editor.persistence.discardRejected}>撤回未通过校验的修改</Button> : null}
+        <Button onClick={editor.persistence.retry}>重试同步</Button>
+      </Space>} /> : <Typography.Text type="secondary" role="status">
         {editor.persistence.syncing || editor.persistence.unsynced ? "草稿同步中…" : editor.persistence.id ? "工作草稿已同步；保存版本后可导出" : "修改会自动保存为工作草稿"}
       </Typography.Text>}
       {returnParams.get('from_knowledge') ? <Alert type="info" title="已返回原项目草稿，维护后的资料尚未应用" action={<Button onClick={() => setChangeRequest({ refresh: true, cleanup: false })}>预览资料升级差异</Button>} /> : null}

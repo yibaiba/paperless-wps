@@ -23,6 +23,7 @@ export function usePersistentDraft(options: Options) {
   const pending = useRef<(() => Promise<Workspace>) | undefined>(undefined);
   const operationPending = useRef(false);
   const pendingKey = useRef<string | undefined>(undefined);
+  const rejectedProjection = useRef<string | undefined>(undefined);
   const creating = useRef<Promise<Workspace> | undefined>(undefined);
   const running = useRef(false), alive = useRef(true);
   const [error, setError] = useState(''), [syncing, setSyncing] = useState(false);
@@ -54,7 +55,7 @@ export function usePersistentDraft(options: Options) {
   };
   const synchronize = async () => {
     if (running.current) return;
-    running.current = true; setSyncing(true); setError('');
+    running.current = true; rejectedProjection.current = undefined; setSyncing(true); setError('');
     const target = live.current.configuration, targetKey = key(target);
     try {
       const workspace = await ensure();
@@ -87,6 +88,7 @@ export function usePersistentDraft(options: Options) {
         if (wasOperation) live.current.acceptOperation(result.checked); else live.current.accept(result.checked);
       }
     } catch (cause) {
+      if (cause instanceof ApiError && cause.status === 422 && !operationPending.current) rejectedProjection.current = pendingKey.current;
       if (cause instanceof ApiError && (cause.status === 422 || cause.status === 409)) { pending.current = undefined; pendingKey.current = undefined; operationPending.current = false; }
       if (alive.current) setError(cause instanceof Error ? cause.message : String(cause));
     }
@@ -126,7 +128,7 @@ export function usePersistentDraft(options: Options) {
   const execute = async (operations: Operation[]) => {
     if (running.current || pending.current || key(live.current.configuration) !== synced.current) throw new Error('草稿尚未同步，请完成同步后编辑。');
     // Reserve the draft before ensure() yields to another event handler.
-    running.current = true; setSyncing(true); setError('');
+    running.current = true; rejectedProjection.current = undefined; setSyncing(true); setError('');
     const beforeKey = key(live.current.configuration);
     pendingKey.current = beforeKey; operationPending.current = true;
     let workspace: Workspace | undefined;
@@ -150,5 +152,19 @@ export function usePersistentDraft(options: Options) {
       setError(cause instanceof Error ? cause.message : String(cause)); throw cause;
     } finally { running.current = false; setSyncing(false); render(v => v + 1); }
   };
-  return { syncing, unsynced, error, retry: synchronize, preview, save, readyWorkspace, execute, id: remote.current?.id };
+  const canDiscardRejected = Boolean(remote.current && !running.current && !pending.current &&
+    rejectedProjection.current === currentKey && currentKey !== synced.current);
+  const discardRejected = () => {
+    const workspace = remote.current;
+    if (!workspace || running.current || pending.current || rejectedProjection.current !== key(live.current.configuration)) {
+      throw new Error('仅可撤回服务端明确未通过校验、且之后没有继续修改的本地内容。');
+    }
+    // The server rejected this exact projection; an uncertain response must keep its retry.
+    rejectedProjection.current = undefined;
+    synced.current = key(workspace.configuration);
+    live.current.accept(workspace.checked);
+    setError('');
+  };
+  return { syncing, unsynced, error, retry: synchronize, canDiscardRejected, discardRejected,
+    preview, save, readyWorkspace, execute, id: remote.current?.id };
 }

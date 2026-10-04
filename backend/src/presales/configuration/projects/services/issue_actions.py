@@ -26,6 +26,7 @@ def with_issue_actions(checked, *, annotate_only=False):
     }
     checks = []
     usages = {u["device_id"]: u for u in checked["device_usages"]}
+    demands = {s["id"]: s for s in checked["suggestions"]}
     for check in checked["checks"]:
         if check["kind"] == "assignment":
             if annotate_only:
@@ -47,12 +48,7 @@ def with_issue_actions(checked, *, annotate_only=False):
             profile_id=check.get("profile_id"),
             input_key=check.get("input_key"),
             variant_id=device.get("variant_id"),
-            requirement_ids=list(
-                dict.fromkeys(
-                    c["requirement_id"]
-                    for c in usages.get(check.get("device_id"), {}).get("consumers", [])
-                )
-            ),
+            requirement_ids=affected_requirements(check, usages=usages, demands=demands),
             missing_fields=[check["input_key"]]
             if check.get("input_key")
             else [check["resource"]]
@@ -154,3 +150,17 @@ def with_issue_actions(checked, *, annotate_only=False):
             ready_for_confirmation=result["readiness"]["ready_for_confirmation"],
         )
     return result
+
+
+def affected_requirements(check, *, usages, demands):
+    if check.get("requirement_id"):
+        return [check["requirement_id"]]
+    if "requirement_ids" in check:
+        return list(dict.fromkeys(check["requirement_ids"]))
+    if check.get("demand_id") in demands:
+        return list(dict.fromkeys(demands[check["demand_id"]]["consumer_requirement_ids"]))
+    return list(
+        dict.fromkeys(
+            c["requirement_id"] for c in usages.get(check.get("device_id"), {}).get("consumers", [])
+        )
+    )

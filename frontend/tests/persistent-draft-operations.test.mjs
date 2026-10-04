@@ -59,6 +59,7 @@ function scenario(failure) {
     assert.ok(path.endsWith('/edit'), path);
     attempt++;
     if (failure === 'offline' && attempt === 1) throw new Error('offline');
+    if (['rejected', 'conflict'].includes(failure) && attempt === 1) throw new ApiError(failure === 'rejected' ? 422 : 409);
     if (request.expected_revision !== workspace.revision) throw new ApiError(409);
     const configuration = { note: request.operations[0].note };
     workspace = { ...workspace, revision: workspace.revision + 1, configuration, checked: { configuration } };
@@ -73,7 +74,7 @@ function scenario(failure) {
     },
     antd: { App: { useApp: () => ({ modal: {} }) } },
     '../../../../shared/api': { api: async () => { throw new Error('Unexpected read'); }, ApiError },
-    './operations': { configurationOperations: () => { throw new Error('Unexpected diff'); } },
+    './operations': { configurationOperations: (_, after) => [{ action: 'device_patch', note: after.note }] },
     './transport': { post, mergeDelta: (_, delta) => delta,
       writeRequest: (state, operations) => ({ draft_id: state.id, expected_revision: state.revision, operation_id: crypto.randomUUID(), operations }) },
     './saveTransaction': load('saveTransaction', {}, window),
@@ -94,6 +95,8 @@ for (const failure of ['offline', 'ack-lost']) {
     assert.equal(failed.unsynced, true, 'unacknowledged operation is unsynced even before local projection changes');
     assert.equal(s.leaving(), true);
     assert.equal(s.closing(), true);
+    assert.equal(failed.canDiscardRejected, false, 'an uncertain write must retain its original retry');
+    assert.throws(() => failed.discardRejected(), /未通过校验/);
     await failed.retry();
     const restored = s.render();
     assert.equal(restored.unsynced, false);
@@ -105,6 +108,41 @@ for (const failure of ['offline', 'ack-lost']) {
     assert.equal(s.options.configuration.note, 'new');
   });
 }
+
+test('explicitly discard a rejected local projection without another write, then continue editing', async () => {
+  const s = scenario('rejected');
+  const initial = s.render();
+  s.options.configuration = { note: 'invalid local edit' };
+  await initial.retry();
+  const failed = s.render();
+  assert.equal(failed.canDiscardRejected, true);
+  assert.equal(s.options.configuration.note, 'invalid local edit', 'failure alone must not discard input');
+  failed.discardRejected();
+  const recovered = s.render();
+  assert.equal(recovered.unsynced, false);
+  assert.equal(recovered.error, '');
+  assert.equal(s.options.configuration.note, 'old');
+  assert.equal(s.sent.length, 1);
+  assert.equal(s.revision(), 1);
+  assert.equal(s.closing(), false);
+  const checked = await recovered.execute([{ action: 'device_patch', note: 'valid correction' }]);
+  assert.equal(checked.configuration.note, 'valid correction');
+  assert.equal(s.revision(), 2);
+});
+
+test('a version conflict or later local edit cannot be discarded as the rejected projection', async () => {
+  for (const failure of ['conflict', 'rejected']) {
+    const s = scenario(failure);
+    const initial = s.render();
+    s.options.configuration = { note: 'first edit' };
+    await initial.retry();
+    if (failure === 'rejected') s.options.configuration = { note: 'later edit' };
+    const failed = s.render();
+    assert.equal(failed.canDiscardRejected, false);
+    assert.throws(() => failed.discardRejected(), /未通过校验/);
+    assert.equal(s.revision(), 1);
+  }
+});
 
 test('two simultaneous business edits cannot both reserve the same draft revision', async () => {
   const s = scenario();
