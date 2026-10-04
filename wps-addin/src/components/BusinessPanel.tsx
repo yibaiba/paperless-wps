@@ -26,7 +26,9 @@ export function BusinessPanel({ api, host, profile, metadata, onChanged }: {
   const [session] = useState(() => captureWorkbookSession(host));
   const index = useMemo(() => new WorkbookRowIndex(host, profile), [host, profile]);
   useEffect(() => host.onSheetChange((event) => {
-    index.changed(event, { historyKey: recentHistoryKey(host.readMetadata()) }); setResult(undefined);
+    setResult(undefined);
+    try { index.changed(event, { historyKey: recentHistoryKey(host.readMetadata()) }); }
+    catch (reason) { setError(`读取变更行失败：${reason}`); }
   }), [host, index]);
   useEffect(() => { setResult(undefined); }, [metadata]);
   useEffect(() => {

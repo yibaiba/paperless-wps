@@ -39,3 +39,17 @@ test('failed group refresh stays stale until a query retries every unread row', 
   assert.deepEqual(index.read(), []);
   assert.deepEqual(reads, [3, 3, 3, 4]);
 });
+
+test('a failed pasted range cannot leave later rows looking fresh on retry', () => {
+  let fail = true;
+  const row = (number, quantity) => ({ sheet: 'quote', row: number, values: { model: `M${number}`, quantity } });
+  const index = new WorkbookRowIndex({ readRows: () => [row(3, '1'), row(4, '1')],
+    readRow: (_, number) => { if (fail && number === 3) throw new Error('host read failed'); return row(number, '2'); } },
+  { sheet_selector: 'quote' });
+  index.read();
+  assert.throws(() => index.changed({ sheet: 'quote', row: 3, rowCount: 2 }, { historyKey: 'current' }), /host read failed/);
+  fail = false;
+  assert.deepEqual(index.read().map((r) => r.values.quantity), ['2', '2']);
+  assert.deepEqual(index.recentChanges().map((e) => [e.before.values.quantity, e.after.values.quantity, e.historyKey]),
+    [['1', '2', 'current'], ['1', '2', 'current']]);
+});

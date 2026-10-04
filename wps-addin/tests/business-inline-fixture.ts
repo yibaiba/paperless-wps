@@ -4,7 +4,7 @@ import { inlineDialogSize } from '../src/inlineLayout';
 import type { CompletionPreviewResult, NextEditSuggestion } from '../src/businessTypes';
 
 export type Scenario = 'choice' | 'preview' | 'off-row' | 'off-row-preview' | 'refresh-error'
-  | 'slow-choice' | 'same-name' | 'continuation' | 'undo-refresh-error' | 'slow-prefetch';
+  | 'slow-choice' | 'same-name' | 'continuation' | 'undo-refresh-error' | 'slow-prefetch' | 'slow-query';
 
 export function businessInlineFixture(scenario: Scenario, notify: () => void) {
   const sheet = '隔离测试表';
@@ -110,7 +110,7 @@ export function businessInlineFixture(scenario: Scenario, notify: () => void) {
       : selected ? [candidate(selected, true)]
       : scenario === 'refresh-error' ? [candidate('A', true)]
       : (scenario === 'same-name' ? ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'] : ['A', 'B']).map((id) => candidate(id, false));
-    return { items, issues: undone ? ['测试轨迹已撤销，等待新的明确输入'] : [], context_fingerprint: 'fixture-context', versions: {},
+    const response: CompletionPreviewResult = { items, issues: undone ? ['测试轨迹已撤销，等待新的明确输入'] : [], context_fingerprint: 'fixture-context', versions: {},
       local_revision: metadata.business.local_revision, line_bindings: [], configuration: {} as never,
       context_summary: { mode: 'business', project_id: 'test-only-project', scope: metadata.business.scopes[0],
         system: { id: 'system', name: '隔离测试系统', kind: 'test-only' }, room: { id: 'room', name: '隔离测试房间' },
@@ -123,7 +123,19 @@ export function businessInlineFixture(scenario: Scenario, notify: () => void) {
       primary_suggestion_id: items.length === 1 ? items[0].id : null,
       decision: { status: done ? 'satisfied' : items.length === 1 ? 'ready' : 'choice_required',
         reason_code: done ? 'requirements_satisfied' : items.length === 1 ? 'unique_candidate' : 'variant_ambiguous' } };
+    if (scenario === 'slow-query' && stats.requests === 1) {
+      stats.pending = true; notify();
+      await new Promise<void>((resolve) => { release = resolve; });
+      stats.pending = false; notify();
+    }
+    return response;
   } };
   return { host, api, stats, journals, values,
+    switchBeforeReply: () => {
+      // Reproduce a host session change before React receives its refresh event.
+      const cell = host.readCell({ sheet, row: 4, column: 2 });
+      host.selectCell(cell); host.showInlineEditor(profile, cell); release?.();
+    },
+    refreshContext: () => window.PresalesInlineRefresh?.(),
     release: () => release?.(), repairRead: () => { failRead = false; failUndoRead = false; notify(); } };
 }

@@ -46,11 +46,13 @@ test('header, quantity, notes, unmanaged columns and protected cells cannot be p
   const profile = { sheet_selector: '报价表', header_row: 1, field_columns: { model: 1, name: 2, quantity: 3, note: 4 },
     managed_fields: ['model', 'name'] };
   let writes = 0;
-  const host = { workbookKey: () => 'quote.xlsx', readMetadata: () => ({}), writeCellValue: () => { writes++; } };
+  const host = { workbookKey: () => 'quote.xlsx', readMetadata: () => ({}),
+    inlineContext: () => ({ session_id: 'protected-input' }), writeCellValue: () => { writes++; } };
   for (const target of [{ ...cell, row: 1 }, { ...cell, column: 3 }, { ...cell, column: 4 },
     { ...cell, column: 9 }, { ...cell, formula: '=SUM(A1:A3)' }, { ...cell, merged: true }, { ...cell, sheet: '其他表' }]) {
     assert.equal(isProductInputCell(profile, target), false);
-    assert.throws(() => writeInlineInput({ host, context: { workbook_key: 'quote.xlsx', profile, cell: target }, value: '不可写' }), /插件管理/);
+    assert.throws(() => writeInlineInput({ host,
+      context: { workbook_key: 'quote.xlsx', session_id: 'protected-input', profile, cell: target }, value: '不可写' }), /插件管理/);
   }
   assert.equal(writes, 0);
   assert.equal(isProductInputCell({ ...profile, managed_fields: ['model'] }, cell), false);

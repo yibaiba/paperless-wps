@@ -6,6 +6,10 @@ interface SessionHost {
   readMetadata(): WorkbookMetadata;
 }
 
+interface InlineSessionHost extends SessionHost {
+  inlineContext(): Pick<InlineEditorContext, 'session_id'> | null;
+}
+
 export function captureWorkbookSession(host: SessionHost) {
   return { workbookKey: host.workbookKey(), bindingId: host.readMetadata().binding?.binding_id };
 }
@@ -21,13 +25,16 @@ export function assertWorkbookSession(host: SessionHost, session: ReturnType<typ
   }
 }
 
-export function assertInlineSession(host: SessionHost, context: InlineEditorContext) {
+export function assertInlineSession(host: InlineSessionHost, context: InlineEditorContext) {
   if (!context.workbook_key) throw new Error('单元格上下文缺少文件身份，请重新选择单元格');
   assertWorkbookSession(host, { workbookKey: context.workbook_key, bindingId: context.binding_id });
+  if (!context.session_id || host.inlineContext()?.session_id !== context.session_id) {
+    throw new Error('补全单元格已切换，未采用旧结果或写入旧输入；请在当前单元格重新查询');
+  }
 }
 
 export function writeInlineInput(options: {
-  host: SessionHost & { writeCellValue(cell: ActiveCell, value: string): void };
+  host: InlineSessionHost & { writeCellValue(cell: ActiveCell, value: string): void };
   context: InlineEditorContext; value: string;
 }) {
   assertInlineSession(options.host, options.context);

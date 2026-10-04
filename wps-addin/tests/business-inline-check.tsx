@@ -14,6 +14,10 @@ function ScenarioCheck({ scenario }: { scenario: Scenario }) {
       <BusinessInlineEditor host={fixture.host as unknown as WpsHostAdapter} api={fixture.api} />
     </div>
     <button onClick={fixture.release}>返回待处理选择</button>
+    {scenario === 'slow-query' && <>
+      <button onClick={fixture.switchBeforeReply}>先切换单元格，再返回旧响应</button>
+      <button onClick={fixture.refreshContext}>刷新当前单元格会话</button>
+    </>}
     <button onClick={fixture.repairRead}>恢复测试读取</button>
     <pre role="status" aria-label="隔离测试结果">{JSON.stringify({ ...fixture.stats,
       journals: [...fixture.journals.values()].map((j) => j.state), cells: [...fixture.values],
@@ -28,7 +32,7 @@ function Check() {
     <h2>业务浮层隔离验收 · 非 WPS</h2>
     <p>真实组件与事务代码；测试内存宿主、固定候选。无真实工作簿、服务端或账号请求。</p>
     {(['choice', 'preview', 'off-row', 'off-row-preview', 'refresh-error', 'slow-choice', 'same-name',
-      'continuation', 'undo-refresh-error', 'slow-prefetch'] as const).map((value) =>
+      'continuation', 'undo-refresh-error', 'slow-prefetch', 'slow-query'] as const).map((value) =>
       <button key={value} onClick={() => { setScenario(value); setGeneration((n) => n + 1); }}>{value}</button>)}
     <ScenarioCheck key={generation} scenario={scenario} />
   </main>;

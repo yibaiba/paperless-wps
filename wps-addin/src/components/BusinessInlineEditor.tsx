@@ -18,7 +18,7 @@ import { verifiedEditTarget } from '../nextEditTarget';
 import { dismissedMetadata, recentHistoryKey } from '../recentBusinessEdits';
 import { nextEditNotice, NEXT_EDIT_NOTICE_ROWS } from '../nextEditPresentation';
 import { handleInlineTab } from '../nativeTab';
-import { assertInlineSession, assertWorkbookSession, captureWorkbookSession, writeInlineInput } from '../workbookSession';
+import { assertInlineSession, writeInlineInput } from '../workbookSession';
 import { WorkbookRowIndex } from '../workbookRowIndex';
 import { NextEditPreview, issueText } from './NextEditPreview';
 import { NextEditNotice } from './NextEditNotice';
@@ -82,9 +82,13 @@ export function BusinessInlineEditor({ host: suppliedHost, api: suppliedApi }: {
     return host.onSheetChange((event) => {
       // Plugin transactions refresh their affected rows once after completion.
       if (changing.current) return;
-      index.changed(event, { historyKey: recentHistoryKey(host.readMetadata()) });
       locatedChoice.current = undefined; requests.current.cancel(); prefetch.current.clear();
-      setResult(undefined); setEpoch((v) => v + 1);
+      setResult(undefined); setPreview(false);
+      try {
+        host.restoreNativeTab();
+        index.changed(event, { historyKey: recentHistoryKey(host.readMetadata()) });
+        setError(''); setEpoch((v) => v + 1);
+      } catch (reason) { setError(`刷新工作簿变更失败：${reason}`); }
     });
   }, [host, index]);
   useEffect(() => {
@@ -96,7 +100,6 @@ export function BusinessInlineEditor({ host: suppliedHost, api: suppliedApi }: {
         template_profile_revision: context.profile.revision });
       try {
         assertInlineSession(host, context);
-        const session = captureWorkbookSession(host);
         const metadata = host.readMetadata();
         if (!metadata.binding) throw new Error('请先绑定项目');
         const choice = locatedChoiceRequest({ choice: locatedChoice.current, context,
@@ -110,7 +113,7 @@ export function BusinessInlineEditor({ host: suppliedHost, api: suppliedApi }: {
         const value = cached ? cached.value : await api.completionPreview({ ...completionRequest({ host,
           profile: context.profile, metadata, cell: context.cell, index, query }), ...choice }, request.signal);
         if (!request.isCurrent()) return;
-        assertWorkbookSession(host, session);
+        assertInlineSession(host, context);
         if (value.local_revision !== host.businessRevision()) { setEpoch((v) => v + 1); return; }
         setResult(value);
         const selection = businessCompletionSelection({ result: value, cell: context.cell, query });

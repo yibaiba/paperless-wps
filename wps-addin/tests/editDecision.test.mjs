@@ -88,3 +88,23 @@ test('committed quantities carry row identity; input text and earlier events do 
   index.changed({ ...event, structural: true });
   assert.deepEqual(index.recentChanges(), []);
 });
+
+test('a later note edit preserves the real quantity change without changing its business order', () => {
+  const rows = new Map([8, 9].map((row) => [row, { sheet: 'quote', row, values: { name: `硬件${row}`, quantity: '1' } }]));
+  const metadata = { line_bindings: [...rows.values()].map((row) => ({ line_id: `line-${row.row}`,
+    device_id: `device-${row.row}`, sheet: row.sheet, row: row.row,
+    anchor_fingerprint: rowAnchor(row), confirmed_values: row.values })), business: { recent_edits: [] } };
+  const index = new WorkbookRowIndex({ readRows: () => [...rows.values()], readRow: (_, row) => rows.get(row) }, { sheet_selector: 'quote' });
+  index.read();
+  const edit = (row, fields) => {
+    rows.set(row, { ...rows.get(row), values: { ...rows.get(row).values, ...fields } });
+    index.changed({ sheet: 'quote', row, rowCount: 1 }, { historyKey: recentHistoryKey(metadata) });
+  };
+  edit(8, { quantity: '2' }); edit(9, { quantity: '3' }); edit(8, { note: '客户新增说明' });
+  assert.deepEqual(observedQuantityEdits(index, metadata).map((e) => [e.row, e.changes[0].before.quantity, e.changes[0].after.quantity]),
+    [[8, '1', '2'], [9, '1', '3']]);
+  edit(8, { quantity: '4' });
+  assert.deepEqual(observedQuantityEdits(index, metadata).map((e) => e.row), [9, 8]);
+  edit(8, { quantity: '1' });
+  assert.deepEqual(observedQuantityEdits(index, metadata).map((e) => e.row), [9]);
+});

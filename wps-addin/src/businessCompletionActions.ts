@@ -3,7 +3,7 @@ import type { HostAdapter } from './host';
 import type { InlineEditorContext, WorkbookMetadata } from './types';
 import type { RequestAttempt } from './latestRequest';
 import { applyNextEdit, restoreJournal, type JournalHost } from './editJournal.ts';
-import { assertInlineSession, assertWorkbookSession, captureWorkbookSession } from './workbookSession.ts';
+import { assertInlineSession } from './workbookSession.ts';
 
 export class AppliedCompletionRefreshError extends Error {
   constructor(cause: unknown) {
@@ -42,11 +42,9 @@ export async function resolveBusinessChoice(options: {
 }) {
   const { host, context, request, load } = options;
   assertInlineSession(host, context);
-  const session = captureWorkbookSession(host);
   const result = await load(request.signal);
   if (!request.isCurrent()) return undefined;
-  assertWorkbookSession(host, session);
-  if (host.inlineContext()?.session_id !== context.session_id) throw new Error('补全单元格已切换，未应用旧选择');
+  assertInlineSession(host, context);
   if (result.local_revision !== host.businessRevision()) throw new Error('选择期间工作簿已变化，请重新查询');
   return result;
 }

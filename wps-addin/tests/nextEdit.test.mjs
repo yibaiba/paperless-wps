@@ -57,8 +57,9 @@ test('inline input handler rejects a stale file or project binding before writin
   let filename = 'A.xlsx', bindingId = 'binding-A'; const writes = [];
   const host = { workbookKey: () => filename,
     readMetadata: () => ({ binding: { binding_id: bindingId } }),
+    inlineContext: () => ({ session_id: 'input-session' }),
     writeCellValue: (cell, value) => writes.push([cell, value]) };
-  const context = { workbook_key: filename, binding_id: bindingId,
+  const context = { workbook_key: filename, binding_id: bindingId, session_id: 'input-session',
     profile: { sheet_selector: 'quote', header_row: 1, managed_fields: ['name'], field_columns: { name: 2 } },
     cell: { sheet: 'quote', row: 4, column: 2, formula: '', merged: false } };
   filename = 'B.xlsx';
