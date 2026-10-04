@@ -12,6 +12,7 @@ from ..accessory_demands import (
     rule_missing,
 )
 from .demand_identity import DemandIdentities
+from .input_issues import with_input_issues
 from .quantity_inputs import quantity_input
 
 
@@ -71,6 +72,7 @@ def collect_demands(data, *, rules, owners, variants, engine, cycles, identities
         for scope_id, entries in groups.items():
             identity = identities.identity(rule, scope_id)
             missing = quantity_missing(rule)
+            cyclic = demand_has_cycle(data, rule, entries, cycles=cycles)
             if missing:
                 demand = incomplete_demand(rule, scope_id, entries, missing, identity=identity)
             else:
@@ -80,10 +82,13 @@ def collect_demands(data, *, rules, owners, variants, engine, cycles, identities
                     scope_id,
                     entries,
                     engine,
-                    demand_has_cycle(data, rule, entries, cycles=cycles),
+                    cyclic,
                     demand_id=identity,
                 )
             demand["quantity_inputs"] = [input_evidence(rule, entry) for entry in entries]
+            demand = with_input_issues(
+                demand, entries=entries, knowledge_missing=missing, cyclic=cyclic
+            )
             results.append(with_selection(data, demand))
     return results
 
@@ -189,6 +194,7 @@ def contributions(data, *, rule, owners, variants, decisions=None):
 
 
 def prepare_contribution(data, *, rule, device, requirement, system, scope_id, evaluation, counted):
+    rule_status = evaluation["status"]
     allocated = (
         requirement.get("allocated_quantity")
         if requirement.get("device_id") == device["id"]
@@ -215,6 +221,7 @@ def prepare_contribution(data, *, rule, device, requirement, system, scope_id, e
         evaluation=evaluation,
         quantity=quantity,
         input_origin=dict(origin, reused=reused),
+        rule_status=rule_status,
     ), key
 
 

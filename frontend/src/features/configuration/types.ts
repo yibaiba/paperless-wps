@@ -209,6 +209,7 @@ export interface Configuration extends Authored {
   knowledge_snapshot_id?: string | null;
 }
 export interface IssueAction {
+  quantity_inputs?: QuantityInputIssue[];
   role_id?: string; role_name?: string; feature?: string;
   system_ids?: string[];
   profile_id?: string; input_key?: string;
@@ -245,7 +246,14 @@ export interface Check {
   capacity?: string;
   evidence?: Record<string, unknown>[];
 }
+export interface QuantityInputIssue {
+  code: string; scope: "role" | "system" | "room" | "project"; scope_id: string;
+  key: string; label: string; kind: "number" | "quantity"; unit: string; message: string;
+  requirement_ids: string[]; device_ids: string[];
+}
 export interface Suggestion {
+  input_issues?: QuantityInputIssue[];
+  input_issues_only?: boolean;
   included_allocation_checks?: IncludedAllocationCheck[];
   included_offers?: IncludedOffer[];
   included_quantity?: string;

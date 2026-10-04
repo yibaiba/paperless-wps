@@ -62,6 +62,10 @@ def check_questions(checked):
     for demand in checked["suggestions"]:
         if not demand["selected"] or (demand["status"] == "pass" and demand.get("missing") == "0"):
             continue
+        if demand.get("input_issues"):
+            results.append(quantity_input_question(demand))
+        if demand.get("input_issues_only"):
+            continue
         results.append(
             question(
                 "accessory_incomplete",
@@ -72,6 +76,32 @@ def check_questions(checked):
             )
         )
     return results
+
+
+def quantity_input_question(demand):
+    issues = demand["input_issues"]
+    fields = list(dict.fromkeys(i["key"] for i in issues))
+    item = question(
+        "accessory_quantity_input",
+        demand["id"],
+        ",".join(fields),
+        "；".join(dict.fromkeys(i["label"] + "：" + i["message"] for i in issues)),
+        recipient="customer",
+        evidence=[demand.get("explanation", {})],
+    )
+    return dict(
+        item,
+        status=demand["status"],
+        missing_fields=fields,
+        objects=[dict(kind=i["scope"], id=i["scope_id"]) for i in issues],
+        action=dict(
+            type="edit_quantity_inputs",
+            demand_id=demand["id"],
+            rule_id=demand["rule"]["id"],
+            missing_fields=fields,
+            quantity_inputs=issues,
+        ),
+    )
 
 
 def unique_questions(items):

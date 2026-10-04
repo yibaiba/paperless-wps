@@ -1,4 +1,6 @@
 import { ReferenceCasePanel } from "./referenceCases/ReferenceCasePanel";
+import { QuantityInputsForm } from "./projects/forms/QuantityInputsForm";
+import type { QuantityInputIssue } from "./types";
 import { DeviceInspector } from "./projects/DeviceInspector";
 import { requirementDeviceIds } from "./projects/roleAllocations";
 import { ProposalPanel } from "./projects/ProposalPanel";
@@ -67,6 +69,7 @@ function ConfigurationEditor({
 }) {
   const [inputSystemChoices, setInputSystemChoices] = useState<string[]>([]);
   const [inputsSystemId, setInputsSystemId] = useState<string>();
+  const [quantityInputs, setQuantityInputs] = useState<QuantityInputIssue[]>();
   const [customInputsSystemId, setCustomInputsSystemId] = useState<string>();
   const [resourceRoles, setResourceRoles] = useState<string[]>([]);
   const [assignDevice, setAssignDevice] = useState<string>();
@@ -316,6 +319,7 @@ function ConfigurationEditor({
         onAction={(action) => {
         if (action.type === 'edit_accessory') { setReviewTab('accessories'); return; }
         setReviewOpen(false);
+        if (action.type === 'edit_quantity_inputs' && action.quantity_inputs?.length) { setQuantityInputs(action.quantity_inputs); return; }
         if (action.type === 'edit_resources' && action.requirement_ids?.length) { setResourceRoles(action.requirement_ids); return; }
         if (action.type === 'assign_device' && action.device_id) { setAssignDevice(action.device_id); return; }
         if (action.type === 'add_system') { setSystemModal(true); return; }
@@ -342,6 +346,7 @@ function ConfigurationEditor({
           onClose={() => setSystemModal(false)}
         />
       ) : null}
+      {quantityInputs ? <QuantityInputsForm configuration={config} inputs={quantityInputs} onClose={() => setQuantityInputs(undefined)} onApply={draft.commit} /> : null}
       {author ? (
         <ProjectAuthor
           configuration={config}

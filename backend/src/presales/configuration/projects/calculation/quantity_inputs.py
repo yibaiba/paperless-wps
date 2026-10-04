@@ -42,16 +42,20 @@ def input_value(attribute):
 
 def numeric_quantity(attribute, *, rule):
     if attribute is None or attribute.get("value") is None:
-        return None, "缺少需求参数：" + rule.get("quantity_key", "")
+        return None, "缺少需求参数：" + rule.get("quantity_key", ""), "quantity_input_missing"
     try:
         value = Decimal(str(attribute["value"]))
     except InvalidOperation:
-        return None, "需求参数不是有效数值：" + rule.get("quantity_key", "")
+        return (
+            None,
+            "需求参数不是有效数值：" + rule.get("quantity_key", ""),
+            "quantity_input_invalid",
+        )
     if not value.is_finite() or value < 0:
-        return None, "数量输入必须是有限非负数"
+        return None, "数量输入必须是有限非负数", "quantity_input_invalid"
     if attribute.get("unit", "") != rule.get("quantity_unit", ""):
-        return None, "需求数量单位与公式口径不一致，请核对数量依据"
-    return value, None
+        return None, "需求数量单位与公式口径不一致，请核对数量依据", "quantity_input_unit"
+    return value, None, None
 
 
 def quantity_input(data, *, rule, device, requirement, system):
@@ -65,8 +69,13 @@ def quantity_input(data, *, rule, device, requirement, system):
         data, rule=rule, requirement=requirement, system=system
     )
     quantity = (
-        (None, "系统输入与角色输入不一致，请明确本次采用值")
+        (None, "系统输入与角色输入不一致，请明确本次采用值", "quantity_input_conflict")
         if conflict
         else numeric_quantity(attribute, rule=rule)
     )
-    return quantity, dict(input_scope=scope, input_scope_id=identity, input_conflict=conflict)
+    return quantity[:2], dict(
+        input_scope=scope,
+        input_scope_id=identity,
+        input_conflict=conflict,
+        input_error_code=quantity[2],
+    )

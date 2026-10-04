@@ -85,7 +85,7 @@ function pendingSummary(readiness: ProjectReadiness) {
   const parts = Object.entries(readiness.pending_by_kind ?? {})
     .map(([kind, count]) => `${checkLabels[kind] ?? kind} ${count} 项待确认`);
   if (!readiness.pending_by_kind && counts.unknowns) parts.push(`检查 ${counts.unknowns} 项待确认`);
-  if (counts.accessory_unknowns) parts.push(`配套依据 ${counts.accessory_unknowns} 项待确认`);
+  if (counts.accessory_unknowns) parts.push(`配套需求或依据 ${counts.accessory_unknowns} 项待确认`);
   if (counts.open_accessories) parts.push(`配套缺量 ${counts.open_accessories} 项`);
   const conflicts = counts.conflicts + (counts.accessory_conflicts ?? 0);
   if (conflicts) parts.unshift(`明确冲突 ${conflicts} 项`);

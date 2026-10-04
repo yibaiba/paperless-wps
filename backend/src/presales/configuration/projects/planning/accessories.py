@@ -10,7 +10,7 @@ from .context import ordered_candidates
 from .cycles import dependency_cycle
 from .devices import stable_id
 from .fulfillment import bind_fulfilled_roles
-from .questions import question
+from .questions import quantity_input_question, question
 
 
 def accessory_branches(context, data, *, tasks, processed=frozenset(), path=()):
@@ -170,6 +170,8 @@ def apply_included(data, demand):
 
 
 def demand_gap(data, demand, demands):
+    if demand.get("input_issues_only"):
+        return quantity_input_question(demand)
     gap = question(
         "accessory_basis_missing",
         demand["id"],

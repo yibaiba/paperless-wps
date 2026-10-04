@@ -1,5 +1,6 @@
 import { Button, Card, Empty, Space, Table, Tag } from "antd";
 import type { Checked, Configuration, IssueAction } from "../types";
+import { accessoryOpenItems } from './accessoryOpenItems';
 
 interface OpenItem {
   id: string;
@@ -92,17 +93,7 @@ function openItems(checked: Checked | undefined, configuration: Configuration) {
         variant: configuration.devices.find((d) => d.id === item.device_id)?.variant_id ?? "",
       }),
     }));
-  const suggestions: OpenItem[] = checked.suggestions
-    .filter((item) => item.selected !== false && (item.status !== "pass" || Number(item.missing ?? 0) > 0))
-    .map((item) => ({
-      id: `suggestion:${item.id}`,
-      category: item.missing_information?.length ? "公共知识" : "选型配套",
-      action: { type: item.missing_information?.length ? "edit_knowledge" : "edit_accessory", demand_id: item.id, rule_id: item.rule.id, variant_id: configuration.devices.find((d) => d.id === item.scope_id)?.variant_id },
-      object: item.need_name || item.rule.name,
-      href: "/knowledge?" + new URLSearchParams({ rule: item.rule.id }),
-      message: item.status === "pass" ? `需要 ${item.required}，已分配 ${item.existing}，还缺 ${item.missing}` : item.missing_information?.join("；") || "配套条件尚未确认",
-      status: item.status === "conflict" ? "conflict" : "unknown",
-    }));
+  const suggestions: OpenItem[] = checked.suggestions.flatMap(item => accessoryOpenItems(item, configuration));
   const prices: OpenItem[] = (checked.quotation_output?.issues ?? []).map((item, index) => ({
     id: `price:${item.device_id}:${index}`, category: '供货价格', object: deviceNames.get(item.device_id) ?? '报价',
     message: item.message, status: 'unknown', href: '', action: { type: 'edit_price', device_id: item.device_id },
@@ -111,6 +102,6 @@ function openItems(checked: Checked | undefined, configuration: Configuration) {
 }
 
 function actionLabel(type?: string) {
-  return ({ select_candidate: '选择产品', edit_supply: '分配供货', edit_resources: '补充需求',
+  return ({ edit_quantity_inputs: '补填数量需求', select_candidate: '选择产品', edit_supply: '分配供货', edit_resources: '补充需求',
     edit_price: '处理报价', add_system: '建立系统', add_requirement: '添加角色需求', edit_requirement: '关联系统角色', assign_device: '关联用途', edit_accessory: '处理配套', edit_definition: '维护系统知识', edit_system_inputs: '填写项目需求', edit_inspection: '维护用途检查' } as Record<string, string>)[type ?? ''] ?? '补充知识依据';
 }
