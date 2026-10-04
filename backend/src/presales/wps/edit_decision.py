@@ -54,13 +54,13 @@ def primary_choice(items, query):
         return None, "evidence_required"
     if len(valid) == 1:
         return valid[0], "unique_candidate"
+    exact = exact_choice(valid, query)
+    if exact:
+        return exact, "exact_input"
     minimum = min(added_purchase(i) for i in valid)
     reuse = [i for i in valid if added_purchase(i) == minimum]
     if len(reuse) == 1 and minimum == 0 and len(reuse) < len(valid):
         return reuse[0], "existing_reuse"
-    exact = exact_choice(valid, query)
-    if exact:
-        return exact, "exact_input"
     blocked = ambiguity(valid)
     if blocked:
         return None, blocked

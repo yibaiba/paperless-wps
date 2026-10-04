@@ -1,7 +1,7 @@
 """Plan one local business step, not a Cartesian product of complete solutions."""
 
 from copy import deepcopy
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from decimal import Decimal
 
 from ..projections.comparison import configuration_diff
@@ -30,6 +30,7 @@ class NextEditContext(PlanningContext):
     selected_variant_id: str = ""
     selected_source_id: str = ""
     system_id: str = ""
+    exact_variant_ids: frozenset[str] = field(init=False, default=frozenset())
 
     def __post_init__(self):
         super().__post_init__()
@@ -44,6 +45,17 @@ class NextEditContext(PlanningContext):
             self.variants = {
                 key: value for key, value in self.variants.items() if self.matches(value)
             }
+            self.exact_variant_ids = frozenset(
+                key
+                for key, value in self.variants.items()
+                if self.query.strip().casefold() in {t.casefold() for t in product_terms(value)}
+            )
+            if self.exact_variant_ids:
+                self.variants = {
+                    key: value
+                    for key, value in self.variants.items()
+                    if key in self.exact_variant_ids
+                }
 
     def scoped_variant(self, variant):
         allowed = (self.allowed_sources or {}).get(variant["id"], [])
@@ -61,6 +73,8 @@ class NextEditContext(PlanningContext):
         ]
 
     def matches(self, variant):
+        if self.exact_variant_ids and variant["id"] not in self.exact_variant_ids:
+            return False
         if self.selected_variant_id and variant["id"] != self.selected_variant_id:
             return False
         if not self.scoped_variant(variant)["source_ids"]:

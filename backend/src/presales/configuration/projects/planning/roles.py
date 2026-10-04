@@ -35,6 +35,15 @@ def prepare_roles(context, *, system_ids=None):
         if package["system_definition_id"] != system["definition_id"]:
             raise ValueError("知识包与系统版本不一致")
         definition = package["definition"]
+        if definition.get("status") == "draft":
+            questions.append(
+                question(
+                    "role_definition_unconfirmed",
+                    system["id"],
+                    "definition_id",
+                    "系统角色必要性及功能分支未确认，不能将未勾选的角色视为可省略",
+                )
+            )
         required_ids = {r["id"] for r in active_required_roles(definition, system["features"])}
         explicit_ids = {
             r["role_id"] for r in data["requirements"] if r["system_id"] == system["id"]

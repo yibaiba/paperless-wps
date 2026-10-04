@@ -5,6 +5,7 @@ from presales.configuration.projects.planning.next_edits import (
 )
 
 from .business import workbook_projection
+from .context_summary import completion_context_summary
 from .edit_decision import added_purchase, decision_for, next_target
 from .edit_identity import action_context, is_dismissed, with_identity
 from .next_edit_projection import project_next_edit
@@ -112,6 +113,13 @@ def completion_preview(sync, request):
         line_bindings=projection["line_bindings"],
         configuration=checked["configuration"],
         evaluation_scope=checked["evaluation_scope"],
+        context_summary=completion_context_summary(
+            projection,
+            request=request,
+            profile=profile,
+            context=context,
+            issues=issues,
+        ),
     )
 
 

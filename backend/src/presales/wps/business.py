@@ -29,6 +29,8 @@ def context_versions(draft):
 
 
 def binding_context(sync, binding_id):
+    from .context_summary import knowledge_summary
+
     binding = sync.entities.get(binding_id, kind="wps_workbook_binding")
     draft = sync.entities.get(binding.payload["draft_id"], kind="list_draft")
     configuration = draft.payload["configuration"]
@@ -40,6 +42,7 @@ def binding_context(sync, binding_id):
         "versions": context_versions(draft),
         "configuration": configuration,
         "definitions": definitions,
+        "knowledge_summary": knowledge_summary(configuration, definitions),
         "fingerprint": digest([binding.revision, draft.revision, configuration]),
     }
 

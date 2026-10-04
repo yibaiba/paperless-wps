@@ -17,12 +17,14 @@ class PlanningContext:
     deployment: str
     variants: dict = field(init=False)
     packages: dict = field(init=False)
+    definitions: dict = field(init=False)
     candidate_cache: dict = field(default_factory=dict)
     decisions: list = field(default_factory=list)
 
     def __post_init__(self):
         self.variants = {v["id"]: v for v in self.repository.catalog.variants()}
         definitions, _ = resolve_definitions(self.repository.session, self.configuration)
+        self.definitions = definitions
         self.packages = {p["id"]: p for p in definitions["packages"]}
 
     def candidates(self, requirement, system):
