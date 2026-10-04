@@ -149,6 +149,8 @@ export interface System {
   kind: string;
 }
 export interface Resource {
+  aggregation?: "sum" | "max";
+  capacity_basis?: "deployment" | "unit";
   key: string;
   amount: string;
   unit: string;

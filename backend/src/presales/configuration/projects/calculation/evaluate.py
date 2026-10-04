@@ -21,6 +21,7 @@ from ..readiness import project_readiness
 from .context import prepare_demands, prepare_roles
 from .coverage import coverage_checks
 from .feature_choices import feature_checks
+from .resource_allocations import allocation_quantities, capacity_consumers
 from .resource_review import resource_policy_checks
 from .supply import supply_projection
 
@@ -223,6 +224,7 @@ def resource_usages(data, suggestions, policies, *, inspection_policies=None):
 
 def usage_checks(data, usages, *, variants, decisions=None):
     devices = {d["id"]: d for d in data["devices"]}
+    quantities = allocation_quantities(data)
     checks = []
     for usage in usages:
         device = devices[usage["device_id"]]
@@ -241,21 +243,15 @@ def usage_checks(data, usages, *, variants, decisions=None):
             if c.get("inspection_policy_conflict")
         )
         # Unknown applicability is a knowledge task, not a missing project value.
-        consumers = unique_consumers(
-            [
-                dict(
-                    c, capacity_expected=bool(c["resources"]) or c["resource_policy"] == "required"
-                )
-                for c in usage["consumers"]
-            ]
-        )
+        capacity_uses = capacity_consumers(usage, quantities=quantities)
+        consumers = unique_consumers(capacity_uses)
         partitioned = Decimal(device["quantity"]) > 1 and all(
             c.get("allocated_quantity") is not None and c["via"] == "direct" for c in consumers
         )
         checks.extend(
             capacity_checks(
                 allocated_device(device, consumers),
-                consumers,
+                capacity_uses,
                 variant=variants[device["id"]],
                 usage=usage,
                 decisions=decisions,

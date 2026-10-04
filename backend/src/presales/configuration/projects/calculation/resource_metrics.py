@@ -13,6 +13,7 @@ def metric_checks(device, consumers, *, variant, decisions=None, partitioned=Fal
                     resource,
                     requirement_id=consumer["requirement_id"],
                     allocated_quantity=consumer.get("allocated_quantity"),
+                    capacity_partition=consumer.get("capacity_partition"),
                 )
             )
     attributes = {a["key"]: a for a in variant["attributes"]}
@@ -38,23 +39,36 @@ def resource_bases(items):
 
 def group_results(device, items, *, attribute, decisions, partitioned):
     bases = resource_bases(items)
-    if not partitioned or len(bases) != 1 or items[0].get("capacity_basis") != "unit":
+    accessory_partitions = all(i.get("capacity_partition") for i in items)
+    if (
+        not (partitioned or accessory_partitions)
+        or len(bases) != 1
+        or items[0].get("capacity_basis") != "unit"
+    ):
         return [metric_result(device, items, attribute=attribute, decisions=decisions)]
-    # Independently allocated units cannot borrow another role's spare capacity.
-    by_requirement = defaultdict(list)
+    # Independently allocated units cannot borrow another role or need's spare capacity.
+    groups = defaultdict(list)
     for item in items:
-        by_requirement[item["requirement_id"]].append(item)
-    checks = []
-    for resources in by_requirement.values():
-        quantity = min(Decimal(resources[0]["allocated_quantity"]), Decimal(device["quantity"]))
-        checks.append(
-            metric_result(
-                dict(device, quantity=str(quantity)),
-                resources,
-                attribute=attribute,
-                decisions=decisions,
-            )
+        key = (
+            item["capacity_partition"]["demand_id"]
+            if accessory_partitions
+            else item["requirement_id"]
         )
+        groups[key].append(item)
+    checks = []
+    for resources in groups.values():
+        partition = resources[0].get("capacity_partition")
+        assigned = partition["quantity"] if partition else resources[0]["allocated_quantity"]
+        quantity = min(Decimal(assigned), Decimal(device["quantity"]))
+        result = metric_result(
+            dict(device, quantity=str(quantity)),
+            resources,
+            attribute=attribute,
+            decisions=decisions,
+        )
+        if partition:
+            result.update(demand_id=partition["demand_id"], allocated_quantity=assigned)
+        checks.append(result)
     return checks
 
 

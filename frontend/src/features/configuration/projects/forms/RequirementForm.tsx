@@ -46,7 +46,9 @@ export function RequirementForm({
         form={form}
         layout="vertical"
         initialValues={initial ?? { role: requestedRole?.name ?? "服务端", role_id: requestedRole?.id, environment: [], resources: [] }}
-        onFinish={(values) => {
+        onFinish={() => {
+          // Form.List submissions omit unregistered fields; keep the current row values intact.
+          const values = form.getFieldsValue(true);
           onApply({
             ...initial,
             ...values,
@@ -102,6 +104,18 @@ function ResourceFields({ form }: { form: FormInstance }) {
               </Form.Item>
               <Form.Item name={[field.name, "unit"]} label="单位" rules={required}>
                 <Select options={units.map((value) => ({ value, label: value }))} />
+              </Form.Item>
+              <Form.Item name={[field.name, "aggregation"]} label="多个需求如何合计" rules={required}>
+                <Select options={[
+                  { value: "sum", label: "需求相加" },
+                  { value: "max", label: "取最大需求" },
+                ]} />
+              </Form.Item>
+              <Form.Item name={[field.name, "capacity_basis"]} label="产品容量口径" rules={required}>
+                <Select options={[
+                  { value: "deployment", label: "本部署的整体容量" },
+                  { value: "unit", label: "单台容量 × 实际分配数量" },
+                ]} />
               </Form.Item>
               <Form.Item
                 name={[field.name, "applies_to"]}
@@ -164,5 +178,7 @@ function defaultResource() {
     unit: "GB",
     applies_to: "selected_device",
     target_need_key: "",
+    aggregation: "sum",
+    capacity_basis: "deployment",
   };
 }
