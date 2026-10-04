@@ -4,6 +4,8 @@
 
 后续补充见 [参数、Android 环境及条件配套补齐](source-followup.md)、[升降话筒、主机容量与已含功能](accessory-followup.md)和[集中充电需求、候选与容量检查](charging-followup.md)。以下保留首次验收当时的数据与结果。
 
+持续测试及分房间容量修复见 [37 项与多房间回归](regression-followup.md)。
+
 ## 本次补齐什么
 
 原 37 项协议验收按 `software/server/...` 短 ID 筛选角色，遗漏了分布式定义中的 UUID 角色。现在显式按既有定义映射 12 个业务角色，再使用它们的稳定 ID；增加失败回归防止再次漏测。EG 和 AI 纪要的结果不能代替分布式验收。

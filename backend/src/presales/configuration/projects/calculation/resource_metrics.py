@@ -4,18 +4,58 @@ from collections import defaultdict
 from decimal import Decimal, InvalidOperation
 
 
-def metric_checks(device, consumers, *, variant, decisions=None):
+def metric_checks(device, consumers, *, variant, decisions=None, partitioned=False):
     groups = defaultdict(list)
     for consumer in consumers:
         for resource in consumer["resources"]:
             groups[resource["key"]].append(
-                dict(resource, requirement_id=consumer["requirement_id"])
+                dict(
+                    resource,
+                    requirement_id=consumer["requirement_id"],
+                    allocated_quantity=consumer.get("allocated_quantity"),
+                )
             )
     attributes = {a["key"]: a for a in variant["attributes"]}
     return [
-        metric_result(device, items, attribute=attributes.get(key), decisions=decisions)
+        check
         for key, items in groups.items()
+        for check in group_results(
+            device,
+            items,
+            attribute=attributes.get(key),
+            decisions=decisions,
+            partitioned=partitioned,
+        )
     ]
+
+
+def resource_bases(items):
+    return {
+        (i["unit"], i.get("aggregation", "sum"), i.get("capacity_basis", "deployment"))
+        for i in items
+    }
+
+
+def group_results(device, items, *, attribute, decisions, partitioned):
+    bases = resource_bases(items)
+    if not partitioned or len(bases) != 1 or items[0].get("capacity_basis") != "unit":
+        return [metric_result(device, items, attribute=attribute, decisions=decisions)]
+    # Independently allocated units cannot borrow another role's spare capacity.
+    by_requirement = defaultdict(list)
+    for item in items:
+        by_requirement[item["requirement_id"]].append(item)
+    checks = []
+    for resources in by_requirement.values():
+        quantity = min(Decimal(resources[0]["allocated_quantity"]), Decimal(device["quantity"]))
+        checks.append(
+            metric_result(
+                dict(device, quantity=str(quantity)),
+                resources,
+                attribute=attribute,
+                decisions=decisions,
+            )
+        )
+    return checks
 
 
 def metric_result(device, items, *, attribute, decisions=None):
@@ -28,10 +68,7 @@ def metric_result(device, items, *, attribute, decisions=None):
         requirement_ids=list(dict.fromkeys(i["requirement_id"] for i in items)),
         evidence=[i["inspection_evidence"] for i in items if i.get("inspection_evidence")],
     )
-    bases = {
-        (i["unit"], i.get("aggregation", "sum"), i.get("capacity_basis", "deployment"))
-        for i in items
-    }
+    bases = resource_bases(items)
     if len(bases) != 1:
         return dict(
             check,

@@ -239,6 +239,9 @@ def usage_checks(data, usages, *, variants, decisions=None):
                 for c in usage["consumers"]
             ]
         )
+        partitioned = Decimal(device["quantity"]) > 1 and all(
+            c.get("allocated_quantity") is not None and c["via"] == "direct" for c in consumers
+        )
         checks.extend(
             capacity_checks(
                 allocated_device(device, consumers),
@@ -246,10 +249,8 @@ def usage_checks(data, usages, *, variants, decisions=None):
                 variant=variants[device["id"]],
                 usage=usage,
                 decisions=decisions,
+                partitioned=partitioned,
             )
-        )
-        partitioned = Decimal(device["quantity"]) > 1 and all(
-            c.get("allocated_quantity") is not None and c["via"] == "direct" for c in consumers
         )
         if len(consumers) > 1 and not partitioned:
             checks.append(

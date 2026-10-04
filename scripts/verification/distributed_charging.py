@@ -180,7 +180,7 @@ async def exercise(mcp, args):
     )
 
 
-async def run(args):
+async def run(args, *, exercise_case=exercise):
     if not args.database.is_file():
         raise ValueError("必须提供已准备的隔离数据库副本")
     params = StdioServerParameters(
@@ -195,7 +195,7 @@ async def run(args):
     async with stdio_client(params) as (reader, writer):
         async with ClientSession(reader, writer, read_timeout_seconds=25) as mcp:
             await mcp.initialize()
-            report = await exercise(mcp, args)
+            report = await exercise_case(mcp, args)
     args.output.write_text(json.dumps(report, ensure_ascii=False, indent=2))
     print(
         json.dumps(
