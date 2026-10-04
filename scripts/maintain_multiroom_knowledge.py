@@ -17,6 +17,9 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("workbook", type=Path)
     parser.add_argument("--apply", action="store_true")
+    parser.add_argument(
+        "--reference-case", action="store_true", help="一并建立版本化 37 行参考案例（不是规则）"
+    )
     parser.add_argument("--report", type=Path, required=True)
     args = parser.parse_args()
     signal.alarm(60)
@@ -36,11 +39,17 @@ def main():
                     for d in result["definitions"]
                 ],
                 packages=[
-                    dict(id=p["id"], name=p["name"], status=p["status"])
-                    for p in result["packages"]
+                    dict(id=p["id"], name=p["name"], status=p["status"]) for p in result["packages"]
                 ],
                 sharing_id=result["sharing"]["id"],
             )
+            if args.reference_case:
+                from paperless_review.multiroom_case import create_case
+
+                case = create_case(session, result["material"])
+                report["reference_case"] = dict(
+                    id=case["id"], revision=case["revision"], row_count=len(case["rows"])
+                )
             if args.apply:
                 session.commit()
             else:

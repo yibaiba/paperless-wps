@@ -1,3 +1,4 @@
+import { ReferenceCasePanel } from "./referenceCases/ReferenceCasePanel";
 import { DeviceInspector } from "./projects/DeviceInspector";
 import { requirementDeviceIds } from "./projects/roleAllocations";
 import { ProposalPanel } from "./projects/ProposalPanel";
@@ -126,6 +127,10 @@ function ConfigurationEditor({
       <Modal open={resourceRoles.length > 0} title="选择需要补充资源需求的角色" footer={null} onCancel={() => setResourceRoles([])}>
         <Space orientation="vertical">{config.requirements.filter((r) => resourceRoles.includes(r.id)).map((r) => <Button key={r.id} onClick={() => { setRequirementModal({ systemId: r.system_id, initial: r }); setResourceRoles([]); }}>{config.systems.find((s) => s.id === r.system_id)?.name} / {r.role}</Button>)}</Space>
       </Modal>
+      <ReferenceCasePanel configuration={config} checked={checked} busy={busy} onChange={draft.commit}
+        onDevice={id => { setDeviceModal(id); setSelectedRequirement(undefined); setTab("list"); }}
+        onRole={id => { setDeviceModal(undefined); setSelectedRequirement(id); setTab("list"); }}
+        onReview={() => setReviewOpen(true)} />
       <ProjectToolbar
         projectId={projectId}
         name={initial.name}

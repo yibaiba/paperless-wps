@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { visibleSegments } from "./segments";
+import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Button, Input, InputNumber, Select, Space, Table, Typography } from 'antd';
 import { api } from '../../../shared/api';
@@ -10,11 +11,13 @@ export type MaterialSegment = { id: string; location: string; text: string; anch
 export type WorkbookMaterial = { id: string; revision: number; name: string; format: string; digest: string; ranges: { sheet: string; range: string }[]; segments: MaterialSegment[] };
 export function WorkbookEvidence({ onReference }: { onReference: (reference: EvidenceReference) => void }) {
   const client = useQueryClient(); const [id, setId] = useState<string>(), [revision, setRevision] = useState(1);
+  const [query, setQuery] = useState('');
   const [segment, setSegment] = useState<MaterialSegment>(), [quote, setQuote] = useState('');
   const materials = useQuery({ queryKey: configurationKeys.materials, queryFn: () => api<WorkbookMaterial[]>(ROOT + '/extraction/materials') });
   const document = useQuery({ queryKey: configurationKeys.materialRevision(id, revision), enabled: !!id,
     queryFn: () => api<WorkbookMaterial>(`${ROOT}/extraction/materials/${id}/revisions/${revision}`) });
   function select(value: string, version: number) { setId(value); setRevision(version); setSegment(undefined); setQuote(''); }
+  const segments = useMemo(() => visibleSegments(document.data?.segments ?? [], query), [document.data?.segments, query]);
   const error = materials.error || document.error;
   const current = materials.data?.find(m => m.id === id);
   return <Space orientation="vertical" style={{ width: '100%' }}>
@@ -24,7 +27,8 @@ export function WorkbookEvidence({ onReference }: { onReference: (reference: Evi
     <Select placeholder="选择已保存的工作簿说明" value={id} style={{ width: '100%' }} options={materials.data?.filter(m => m.format === 'xlsx').map(m => ({ value: m.id, label: m.name }))}
       onChange={value => select(value, materials.data!.find(m => m.id === value)!.revision)} />
     {id && <Space>固定修订<InputNumber min={1} precision={0} value={revision} onChange={value => value && select(id, value)} /><Typography.Text type="secondary">最新 v{current?.revision}；修改引用需明确选择修订</Typography.Text></Space>}
-    <Table size="small" rowKey="id" loading={document.isFetching} dataSource={document.data?.segments.filter(s => s.text !== '')} pagination={{ pageSize: 6 }} columns={[
+    <Input.Search placeholder="搜索单元格位置或原文，例如 J141、服务器共用" value={query} onChange={event => setQuery(event.target.value)} />
+    <Table size="small" rowKey="id" loading={document.isFetching} dataSource={segments} pagination={{ pageSize: 6 }} columns={[
       { title: '位置', render: (_, s) => <>{s.location}{s.merge_range && <div>合并 {s.merge_range}，归属 {s.anchor}</div>}</> },
       { title: '原文', render: (_, s) => <Typography.Paragraph ellipsis={{ rows: 3, expandable: true }}>{s.text}</Typography.Paragraph> },
       { title: '引用', render: (_, s) => <Button onClick={() => { setSegment(s); setQuote(s.text); }}>选择原文</Button> },

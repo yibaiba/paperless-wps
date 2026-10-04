@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Alert, App, Button, Drawer, Form, Input, Select, Space, Table, Upload } from 'antd';
 import { api } from '../../../shared/api';
 import { AuthorFields, ROOT, required } from '../shared';
@@ -9,20 +9,26 @@ type Preview = { digest: string; name: string; sheets: Sheet[] };
 export function WorkbookUpload({ previous, onSaved }: { previous?: WorkbookMaterial; onSaved: (material: WorkbookMaterial) => void }) {
   const [open, setOpen] = useState(false), [preview, setPreview] = useState<Preview>(), [file, setFile] = useState<File>();
   const [sheetName, setSheet] = useState(''), [busy, setBusy] = useState(false), [error, setError] = useState('');
+  const request = useRef<{ payload: string; id: string } | undefined>(undefined);
+  const selection = useRef(0);
   const [form] = Form.useForm(); const { message } = App.useApp();
   const sheet = preview?.sheets.find(s => s.name === sheetName);
   async function read(value: File) {
+    const sequence = ++selection.current;
     setBusy(true); setError(''); setPreview(undefined); setFile(undefined);
     try { const body = new FormData(); body.append('file', value); const result = await api<Preview>(ROOT + '/extraction/materials/xlsx/preview', { method: 'POST', body });
+      if (sequence !== selection.current) return;
       setPreview(result); setFile(value); setSheet(result.sheets[0]?.name ?? '');
-      form.setFieldsValue({ name: previous?.name ?? value.name, ranges: previous?.ranges ?? [{ sheet: result.sheets[0]?.name, range: 'A1:J10' }] });
-    } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
+      form.setFieldsValue({ name: previous?.name ?? value.name, ranges: previous?.ranges ?? [{ sheet: result.sheets[0]?.name, range: '' }] });
+    } catch (e) { if (sequence === selection.current) setError((e as Error).message); } finally { if (sequence === selection.current) setBusy(false); }
   }
   async function save(values: Record<string, unknown>) {
     if (!file || !preview) return;
     setBusy(true); setError('');
-    try { const body = new FormData(); body.append('file', file); body.append('options', JSON.stringify({ ...values, digest: preview.digest,
-      operation_id: crypto.randomUUID(), ...(previous ? { material_id: previous.id, expected_revision: previous.revision } : {}) }));
+    try { const payload = JSON.stringify({ ...values, digest: preview.digest, material_id: previous?.id, revision: previous?.revision });
+      if (request.current?.payload !== payload) request.current = { payload, id: crypto.randomUUID() };
+      const body = new FormData(); body.append('file', file); body.append('options', JSON.stringify({ ...values, digest: preview.digest,
+      operation_id: request.current.id, ...(previous ? { material_id: previous.id, expected_revision: previous.revision } : {}) }));
       const result = await api<WorkbookMaterial>(ROOT + '/extraction/materials/xlsx', { method: 'POST', body });
       onSaved(result); setOpen(false); message.success('资料范围已保存，未调用模型');
     } catch (e) { setError((e as Error).message); } finally { setBusy(false); }

@@ -16,6 +16,7 @@ from presales.configuration.projects.schemas import (
 )
 from presales.quotation.schemas import Quotation, QuotedPrice
 
+from ..reference_cases.schemas import CaseSet
 from .inclusion_schemas import IncludedAllocation
 from .planning.schemas import ProposalApply, RequirementsPatch
 from .services.setup import SystemSetup
@@ -201,7 +202,8 @@ class SystemSetupOperation(SystemSetup):
 
 
 Operation = Annotated[
-    RequirementsPatch
+    CaseSet
+    | RequirementsPatch
     | ProposalApply
     | PriceAdoptOperation
     | SystemSetupOperation

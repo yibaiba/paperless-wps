@@ -85,14 +85,28 @@ def describe_requirements(definition, *, rules, features, variants=()):
                 inputs=fields,
             )
         )
+    shared, shared_gaps = merged_inputs(
+        [
+            dict(
+                field,
+                consumer_role_ids=[role["id"]],
+                conditional=not role["active"] or field.get("conditional", False),
+            )
+            for role in roles
+            for field in role["inputs"]
+            if field["scope"] != "role"
+        ],
+        "",
+    )
     return dict(
+        shared_inputs=shared,
         definition_id=definition["id"],
         definition_revision=definition["revision"],
         definition_status=definition["status"],
         name=definition["name"],
         roles=roles,
         features=sorted({r["feature"] for r in definition["roles"] if r["feature"]}),
-        input_gaps=gaps,
+        input_gaps=[*gaps, *shared_gaps],
     )
 
 

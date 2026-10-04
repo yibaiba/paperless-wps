@@ -1,3 +1,4 @@
+import type { CaseReference } from "./referenceCases/types";
 export type EvidenceReference = { source_id?: string; material_id?: string; material_revision?: number; segment_id?: string; locator: string; quote: string };
 import type { InspectionProfile } from "./knowledge/inspectionTypes";
 export interface Attribute {
@@ -137,6 +138,7 @@ export interface Room {
   name: string;
 }
 export interface System {
+  served_room_ids?: string[];
   inputs?: Attribute[];
   definition_id?: string;
   knowledge_package_id?: string;
@@ -184,6 +186,7 @@ export interface AccessoryAllocation {
   evidence: string;
 }
 export interface Configuration extends Authored {
+  reference_case?: CaseReference | null;
   room_inputs?: Record<string, Attribute[]>;
   project_inputs?: Attribute[];
   generation?: { features_confirmed: string[]; [key: string]: unknown };

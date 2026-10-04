@@ -12,6 +12,8 @@ class AttributeDefinition:
 
 
 ATTRIBUTE_DEFINITIONS = (
+    AttributeDefinition("eg_floor_box_count", "会议地插安装数量", "number"),
+    AttributeDefinition("eg_extension_cable_count", "会议延长线条数", "number"),
     AttributeDefinition("audio_capture_room_count", "需要音频采集的会议室数量", "number"),
     AttributeDefinition("subtitle_room_count", "启用字幕投屏的会议室数量", "number"),
     AttributeDefinition("extra_audio_concurrency_count", "需额外购买的音频并发路数", "number"),

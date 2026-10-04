@@ -31,6 +31,7 @@ def configuration_diff(before, after):
             )
         )
     for key in (
+        "reference_case",
         "knowledge_snapshot_id",
         "definition_snapshot_id",
         "calculation_version",

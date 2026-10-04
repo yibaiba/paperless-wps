@@ -85,3 +85,31 @@ def test_different_role_inputs_are_not_shared():
     output = describe_requirements(definition, rules=rules, features=[])
     assert output["roles"][0]["inputs"][0]["scope"] == "role"
     assert output["roles"][1]["inputs"] == []
+
+
+def test_shared_inputs_keep_consumers_and_report_cross_role_units():
+    definition, rules = records()
+    definition["roles"][1]["feature"] = ""
+    rules += [
+        dict(
+            rules[0],
+            id="other-role",
+            role_id="screen",
+            selector=dict(rules[0]["selector"], variant_ids=["display"]),
+        ),
+        dict(
+            rules[1],
+            id="other-unit",
+            selector=dict(rules[1]["selector"], variant_ids=["display"]),
+            quantity_unit="间",
+        ),
+    ]
+    output = describe_requirements(definition, rules=rules, features=[])
+    assert any(
+        g["code"] == "input_definition_conflict" and g["role_id"] == ""
+        for g in output["input_gaps"]
+    )
+    assert {r for f in output["shared_inputs"] for r in f["consumer_role_ids"]} == {
+        "screen",
+        "software",
+    }

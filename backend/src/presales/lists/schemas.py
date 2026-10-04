@@ -76,6 +76,7 @@ class GetList(Page):
     revision: int | None = Field(default=None, ge=1)
     price_adoption_date: date | None = None
     view: Literal[
+        "case_comparison",
         "proposals",
         "proposal_lines",
         "proposal_questions",

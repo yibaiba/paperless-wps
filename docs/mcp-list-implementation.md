@@ -211,3 +211,45 @@
 - 预期业务错误以 MCP `is_error` 和具体原因返回；冲突时按原幂等键读回或重新比较，不能当作成功。未知运行错误继续记录失败。
 - 导出产物与事务回执关联。回滚清理本次未提交文件；提交确认丢失时读取回执后保留已提交产物。
 - 软件验证、现有业务资料缺口及复现命令见 [验收记录](reviews/2026-10-03-core-closing/acceptance.md)。
+
+## 工作簿依据与参考案例对账（2026-10-04）
+
+`systems_list` 可增加 `catalog_snapshot_id`。需求描述在未选型时沿候选配套链返回 `inputs`，包含业务名称、作用范围、`project_input` 用途、消费者、候选、条件和固定依据；`shared_inputs` 合并同口径的非角色输入，`input_gaps` 明确返回类型/单位/用途冲突和循环路径。条件性输入不是已确认的必填项；关闭功能不产生采购。
+
+系统兼容增加 `served_room_ids`，用于明确跨房间服务范围。`room_id` 仍表示部署/展示房间；服务范围不自动推定采集、字幕或授权数量。网页和 MCP 复用同一系统 DTO。
+
+`list_get.view="case_comparison"` 按原案例行分页，返回固定案例、每行映射、部署/采购/已有/已含数量、`mapped_quantity`（用于此行的数量）、数量差、问题及动作。无关联案例时返回可选择的案例摘要。多行可引用同一设备，采购仍按设备 ID 计一次；不要汇总对账表的重复用途行充当采购清单。
+
+`list_update` 支持下列操作，预期草稿修订、幂等键和撤销机制不变：
+
+```json
+{
+  "action": "reference_case_set",
+  "value": {
+    "id": "参考案例ID",
+    "revision": 1,
+    "bindings": [{
+      "row_id": "row-141",
+      "device_ids": ["实际设备ID"],
+      "requirement_ids": [],
+      "demand_ids": [],
+      "included_allocation_ids": [],
+      "disposition": "compare",
+      "evidence": "明确核对的配置及本项目采用理由"
+    }]
+  }
+}
+```
+
+`value=null` 解除案例关联，不删除设备。`disposition` 为 `compare`、`unresolved` 或 `not_enabled`；后者须填写 `feature_system_id`、`feature`，并且属于固定系统定义、功能选择已确认且当前未启用。后续功能或设备变化会重新形成差异，原映射保留以便定位。
+
+资料接口（均在 `/api/configuration` 下）：
+
+- `POST /extraction/materials/xlsx/preview`：上传 XLSX，返回校验值、工作表和范围原文预览。
+- `POST /extraction/materials/xlsx`：上传同一文件，`options` 包含名称、digest、ranges（sheet/range）、actor、evidence、operation_id；新修订另需 material_id、expected_revision。
+- `GET /extraction/materials/{id}/revisions/{revision}`：读取固定资料片段。
+- `POST /reference-cases`：保存案例原文与显式配置映射；更新需 case_id、expected_revision、operation_id。
+- `GET /reference-cases`、`GET /reference-cases/{id}/revisions/{revision}`：摘要和固定修订。
+- `POST /reference-cases/compare`：接收 Configuration，只读对账，不保存项目。
+
+依据兼容产品 `source_id` 引用；工作簿说明使用 `material_id + material_revision + segment_id + locator + quote`。原文必须存在于指定修订片段，公式只作原文。材料、参考案例不增加产品来源，也不是采购规则。

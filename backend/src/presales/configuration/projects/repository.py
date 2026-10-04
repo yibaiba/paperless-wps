@@ -156,6 +156,9 @@ class ProjectConfigurations:
         return adopt_prices(result), variants, current
 
     def check(self, data, *, refresh=False, upgrade=False, upgrade_decisions=False):
+        from ..reference_cases.service import validate_reference
+
+        validate_reference(self.session, data.reference_case)
         from presales.catalog_updates.impacts import apply_review_checks
 
         from .services.issue_actions import with_issue_actions

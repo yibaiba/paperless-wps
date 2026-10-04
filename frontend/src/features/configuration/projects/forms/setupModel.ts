@@ -2,7 +2,7 @@ import type { Attribute, Configuration, System } from '../../types';
 export type SetupInput = { key: string; label: string; kind: Attribute['kind']; unit: string; scope: 'system' | 'role' | 'room' | 'project'; purpose: 'project_input' | 'product_requirement'; evidence: unknown[]; conditional?: boolean; candidate_variant_ids?: string[]; consumer_role_ids?: string[]; need_keys?: string[] };
 export type SetupRole = { id: string; name: string; active: boolean; necessary: boolean; feature: string; inputs: SetupInput[] };
 export type SetupDescription = { definition_id: string; definition_revision: number; definition_status: string; name: string; input_gaps?: { code: string; key?: string; message: string }[]; package_revision?: number; roles: SetupRole[]; features: string[]; notice: string; readiness?: { roles: { id: string; name: string; missing: string[] }[]; rules: { id: string; name: string; missing: string[] }[] } | null };
-export type SetupValues = { name: string; definition_id: string; knowledge_package_id?: string; room_mode: "new" | "existing"; room_id: string; room_name: string; features?: string[]; features_confirmed?: boolean; role_ids?: string[]; inputs?: Record<string, Attribute["value"]>; actor?: string; evidence?: string };
+export type SetupValues = { name: string; definition_id: string; knowledge_package_id?: string; room_mode: "new" | "existing"; room_id: string; room_name: string; served_room_ids?: string[]; features?: string[]; features_confirmed?: boolean; role_ids?: string[]; inputs?: Record<string, Attribute["value"]>; actor?: string; evidence?: string };
 export type SetupField = SetupInput & { roleId?: string; formKey: string };
 type ScopeLocation = { systemId?: string; roomId?: string };
 function scopedParameters(field: SetupField, configuration: Configuration, { systemId, roomId }: ScopeLocation) {
@@ -59,6 +59,6 @@ export function setupPayload(options: { configuration: Configuration; systemId: 
     environments[field.roleId!] = replaceParameter(existing, environment);
   }
   const system: System = { ...previous, id: systemId, name: values.name, room_id: roomId, kind: description.name,
-    definition_id: values.definition_id, knowledge_package_id: values.knowledge_package_id ?? '', features: values.features ?? [], inputs: scoped.system };
+    served_room_ids: values.served_room_ids ?? previous?.served_room_ids ?? [], definition_id: values.definition_id, knowledge_package_id: values.knowledge_package_id ?? '', features: values.features ?? [], inputs: scoped.system };
   return { system, ...(fields.some(f => f.scope === 'room') ? { room_inputs: scoped.room } : {}), ...(fields.some(f => f.scope === 'project') ? { project_inputs: scoped.project } : {}), features_confirmed: values.features_confirmed ?? false, new_room: newRoom ?? null, role_ids: values.role_ids ?? [], role_environment: environments };
 }

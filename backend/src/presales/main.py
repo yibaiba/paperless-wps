@@ -21,6 +21,7 @@ from .configuration.extraction.workbook_routes import router as workbook_materia
 from .configuration.knowledge.routes import router as knowledge_router
 from .configuration.projects.evolution_routes import router as evolution_router
 from .configuration.projects.routes import router as configuration_projects_router
+from .configuration.reference_cases.routes import router as reference_cases_router
 from .configuration.search.provider import SearchModelClient
 from .configuration.search.routes import router as search_router
 from .configuration.search.settings import PrivateSearchSettings
@@ -110,6 +111,7 @@ def create_app(
     application.include_router(configuration_projects_router)
     application.include_router(evolution_router)
     application.include_router(search_router)
+    application.include_router(reference_cases_router)
     application.include_router(list_router)
     application.include_router(web_drafts_router)
     application.include_router(quotation_router)

@@ -91,5 +91,6 @@ export function configurationOperations(before: Configuration, after: Configurat
     if (!after.decision_bundle_id) throw new Error("请先预览决策升级");
     operations.push({ action: "decision_upgrade", expected_bundle_id: after.decision_bundle_id });
   }
+  if (!equal(before.reference_case ?? null, after.reference_case ?? null)) operations.push({ action: "reference_case_set", value: after.reference_case ?? null });
   return operations;
 }

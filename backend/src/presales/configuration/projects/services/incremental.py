@@ -13,6 +13,7 @@ from .definition_snapshot import project_knowledge, resolve_definitions
 from .editing import edit_configuration
 
 PROJECTION_ACTIONS = {
+    "reference_case_set",
     "price_versions_adopt",
     "description_set",
     "section_set",

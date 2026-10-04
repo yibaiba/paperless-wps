@@ -53,3 +53,12 @@ test('decision upgrade is explicit and keeps product and price refresh separate'
  assert.deepEqual(configurationOperations(before, after), [{action:'decision_upgrade', expected_bundle_id:'compiled-version'}]);
  assert.throws(() => configurationOperations(before, {...after, decision_bundle_id:null}), /预览决策升级/);
 });
+
+test('case mapping follows object creation and participates in undo without snapshots', () => {
+ const ref={id:'case',revision:1,bindings:[{row_id:'row',device_ids:['new'],evidence:'明确对应'}]};
+ const device={id:'new',name:'设备',variant_id:'v',source_id:'s',quantity:'1',kind:'hardware'};
+ const next={...base,devices:[...base.devices,device],reference_case:ref};
+ assert.deepEqual(configurationOperations(base,next),[{action:'device_put',value:device},{action:'reference_case_set',value:ref}]);
+ assert.deepEqual(configurationOperations(next,base),[{action:'remove',collection:'devices',id:'new'},{action:'reference_case_set',value:null}]);
+ assert.deepEqual(configurationOperations(next,next),[]);
+});

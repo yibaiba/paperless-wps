@@ -45,6 +45,15 @@ def replace_item(items, value, *, key="id"):
 
 def apply_operation(data, *, operation, repository):
     action = operation.action
+    if action == "reference_case_set":
+        from ...reference_cases.service import link_case
+
+        if operation.value and any(b.demand_ids for b in operation.value.bindings):
+            checked = repository.check(Configuration.model_validate(data))
+            demands = {s["id"] for s in checked["suggestions"]}
+            if any(set(b.demand_ids) - demands for b in operation.value.bindings):
+                raise ValueError("案例映射的配套需求不属于当前检查")
+        return link_case(repository.session, data, operation.value)
     if action == "requirements_patch":
         from ..planning.requirements import patch_requirements
 
@@ -181,7 +190,12 @@ def remove(data, operation, *, repository):
     if collection == "rooms":
         data["room_inputs"] = {k: v for k, v in data["room_inputs"].items() if k != identity}
         data["systems"] = [
-            dict(s, room_id=None) if s["room_id"] == identity else s for s in data["systems"]
+            dict(
+                s,
+                room_id=None if s["room_id"] == identity else s["room_id"],
+                served_room_ids=[r for r in s.get("served_room_ids", []) if r != identity],
+            )
+            for s in data["systems"]
         ]
     if collection == "systems":
         data["requirements"] = [r for r in data["requirements"] if r["system_id"] != identity]

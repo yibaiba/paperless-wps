@@ -1,4 +1,6 @@
 export const configurationKeys = {
+  referenceCases: ["configuration", "reference-cases"] as const,
+  caseComparison: (configuration: unknown) => ["configuration", "case-comparison", configuration] as const,
   materials: ["configuration", "materials"] as const,
   materialRevision: (id: string | undefined, revision: number) => ["configuration", "material", id, revision] as const,
   packageReadiness: (scope: { id: string; revision: number; knowledgeRevision: string; definitionRevision: number }) =>

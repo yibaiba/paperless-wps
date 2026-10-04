@@ -9,6 +9,7 @@ from presales.quotation.schemas import Quotation
 from ..catalog.schemas import Attribute
 from ..common import Authored, Input, Text
 from ..knowledge.schemas import Resource
+from ..reference_cases.schemas import CaseReference
 from .evolution_schemas import AccessoryChoice, SupplyAllocation
 from .inclusion_schemas import IncludedAllocation
 from .manual_edit_schemas import ManualEdits
@@ -22,6 +23,7 @@ class Room(Input):
 
 
 class System(Input):
+    served_room_ids: list[Text] = Field(default_factory=list)
     inputs: list[Attribute] = Field(default_factory=list)
     definition_id: str = ""
     knowledge_package_id: str = ""
@@ -76,6 +78,7 @@ class AccessoryAllocation(Input):
 
 
 class Configuration(Authored):
+    reference_case: CaseReference | None = None
     manual_edits: ManualEdits = Field(default_factory=ManualEdits)
     generation: GenerationState = Field(default_factory=GenerationState)
     room_inputs: dict[str, list[Attribute]] = Field(default_factory=dict)
@@ -121,6 +124,10 @@ class Configuration(Authored):
             if len({a.key for a in inputs}) != len(inputs):
                 raise ValueError("范围输入不能包含重复参数")
         devices = {d.id: d for d in self.devices}
+        if any(set(s.served_room_ids) - rooms for s in self.systems):
+            raise ValueError("系统服务范围引用的房间不存在")
+        if any(len(set(s.served_room_ids)) != len(s.served_room_ids) for s in self.systems):
+            raise ValueError("系统服务房间不能重复")
         if any(s.room_id and s.room_id not in rooms for s in self.systems):
             raise ValueError("系统引用的房间不存在")
         if any(r.system_id not in systems for r in self.requirements):

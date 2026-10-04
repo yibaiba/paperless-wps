@@ -62,6 +62,17 @@ class ListService:
                 self.repository, project_id=request.project_id, revision=request.revision
             )
         )
+        if request.view == "case_comparison":
+            from presales.configuration.reference_cases.comparison import compare_case
+
+            from .queries import page
+
+            compared = compare_case(self.session, record.get("checked") or record)
+            return dict(
+                summary(record),
+                **{k: v for k, v in compared.items() if k != "rows"},
+                **page(compared["rows"], request),
+            )
         if request.view.startswith("proposal"):
             from presales.configuration.projects.planning.service import ProposalService
 
