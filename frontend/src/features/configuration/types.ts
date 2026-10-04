@@ -250,7 +250,12 @@ export interface Suggestion {
   included_offers?: IncludedOffer[];
   included_quantity?: string;
   separately_allocated?: string;
-  quantity_inputs?: { device_id: string; requirement_id?: string; source_id: string; variant_revision?: number; parameter: string; value: string | null; unit: string; error?: string | null }[];
+  quantity_inputs?: {
+    device_id: string; requirement_id?: string; source_id: string; variant_revision?: number;
+    parameter: string; value: string | null; unit: string; error?: string | null;
+    input_value?: string | null; input_scope?: "device" | "role" | "system" | "room" | "project";
+    input_scope_id?: string | null; reused?: boolean; input_conflict?: boolean;
+  }[];
   selected?: boolean;
   selection_conflict?: boolean;
   explanation?: Record<string, unknown>;

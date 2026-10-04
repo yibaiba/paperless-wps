@@ -6,13 +6,13 @@ from ...knowledge.package_scope import package_allows
 from ...knowledge.semantics import condition_result, evaluate_rules_v3, scope_is_reviewed
 from ..accessory_demands import (
     calculated_demand,
-    contribution_quantity,
     cyclic_rule_ids,
     demand_base,
     denial_rules,
     rule_missing,
 )
 from .demand_identity import DemandIdentities
+from .quantity_inputs import quantity_input
 
 
 def accessory_demands_v3(data, *, variants, catalog_variants, engine, decisions=None):
@@ -173,38 +173,49 @@ def contributions(data, *, rule, owners, variants, decisions=None):
                 evaluation = dict(evaluation, status="unknown")
             if not scope_is_reviewed(rule, variant):
                 evaluation = dict(evaluation, status="unknown")
-            allocated = (
-                requirement.get("allocated_quantity")
-                if requirement.get("device_id") == device["id"]
-                else None
+            entry, key = prepare_contribution(
+                data,
+                rule=rule,
+                device=device,
+                requirement=requirement,
+                system=systems.get(requirement.get("system_id"), {}),
+                scope_id=scope_id,
+                evaluation=evaluation,
+                counted=counted,
             )
-            contributing = dict(device, quantity=allocated) if allocated is not None else device
-            quantity = quantity_input(rule, contributing, requirement)
-            key = contribution_key(rule, scope_id, device, requirement)
-            if key in counted:
-                quantity = (Decimal(0), None)
             counted.add(key)
-            if not rule.get("calculation_scope") or scope_id.startswith("unknown:"):
-                quantity = (None, "设备缺少已确认的计算范围或归属")
-            grouped[scope_id].append(
-                dict(
-                    device=device, requirement=requirement, evaluation=evaluation, quantity=quantity
-                )
-            )
+            grouped[scope_id].append(entry)
     return grouped
 
 
-def quantity_input(rule, device, requirement):
-    value, error = contribution_quantity(rule, device, requirement)
-    if error:
-        return value, error
-    if not value.is_finite() or value < 0:
-        return None, "数量输入必须是有限非负数"
-    if rule.get("quantity_source") == "environment":
-        attribute = next(a for a in requirement["environment"] if a["key"] == rule["quantity_key"])
-        if attribute.get("unit", "") != rule.get("quantity_unit", ""):
-            return None, "需求数量单位与公式口径不一致，请核对数量依据"
-    return value, None
+def prepare_contribution(data, *, rule, device, requirement, system, scope_id, evaluation, counted):
+    allocated = (
+        requirement.get("allocated_quantity")
+        if requirement.get("device_id") == device["id"]
+        else None
+    )
+    contributing = dict(device, quantity=allocated) if allocated is not None else device
+    quantity, origin = quantity_input(
+        data, rule=rule, device=contributing, requirement=requirement, system=system
+    )
+    origin = dict(origin, input_value=str(quantity[0]) if quantity[0] is not None else None)
+    if origin["input_conflict"]:
+        evaluation = dict(evaluation, status="conflict")
+    key = contribution_key(
+        rule, scope_id=scope_id, device=device, requirement=requirement, origin=origin
+    )
+    reused = key in counted
+    if reused and quantity[1] is None:
+        quantity = (Decimal(0), None)
+    if not rule.get("calculation_scope") or scope_id.startswith("unknown:"):
+        quantity = (None, "设备缺少已确认的计算范围或归属")
+    return dict(
+        device=device,
+        requirement=requirement,
+        evaluation=evaluation,
+        quantity=quantity,
+        input_origin=dict(origin, reused=reused),
+    ), key
 
 
 def input_evidence(rule, entry):
@@ -223,6 +234,7 @@ def input_evidence(rule, entry):
         if rule.get("quantity_source") == "environment"
         else "台/项",
         error=entry["quantity"][1],
+        **entry["input_origin"],
     )
 
 
@@ -258,14 +270,9 @@ def scope_identity(rule, device, requirement, systems):
     return system.get("id" if scope == "system" else "room_id")
 
 
-def contribution_key(rule, scope_id, device, requirement):
+def contribution_key(rule, *, scope_id, device, requirement, origin):
     if rule.get("quantity_source") == "environment":
-        # Split physical batches must not repeat the same role-level input.
-        return (
-            (scope_id, requirement["allocation_parent_id"], "input")
-            if requirement.get("allocation_parent_id")
-            else (scope_id, device["id"], requirement.get("id"), "input")
-        )
+        return (scope_id, origin["input_scope"], origin["input_scope_id"], rule["quantity_key"])
     if (
         Decimal(device["quantity"]) > 1
         and requirement.get("device_id") == device["id"]
