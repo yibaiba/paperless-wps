@@ -12,6 +12,19 @@ class AttributeDefinition:
 
 
 ATTRIBUTE_DEFINITIONS = (
+    AttributeDefinition("room_count", "项目会议室数量", "number"),
+    AttributeDefinition("paperless_server_count", "无纸化服务器部署台数", "number"),
+    AttributeDefinition("paperless_management_count", "会议管理软件许可套数", "number"),
+    AttributeDefinition("paperless_tablet_count", "实际使用的会议平板台数", "number"),
+    AttributeDefinition("paperless_tablet_license_count", "平板客户端软件许可套数", "number"),
+    AttributeDefinition("paperless_video_input_count", "外部视频输入点位数", "number"),
+    AttributeDefinition("paperless_video_output_count", "视频输出点位数", "number"),
+    AttributeDefinition("paperless_info_terminal_count", "信息发布终端台数", "number"),
+    AttributeDefinition("paperless_info_license_count", "信息发布软件许可套数", "number"),
+    AttributeDefinition("paperless_service_terminal_count", "会议服务终端台数", "number"),
+    AttributeDefinition("paperless_service_license_count", "会议服务软件许可套数", "number"),
+    AttributeDefinition("paperless_broadcast_terminal_count", "候会播报终端台数", "number"),
+    AttributeDefinition("paperless_broadcast_license_count", "候会播报软件许可套数", "number"),
     AttributeDefinition("eg_floor_box_count", "会议地插安装数量", "number"),
     AttributeDefinition("eg_extension_cable_count", "会议延长线条数", "number"),
     AttributeDefinition("audio_capture_room_count", "需要音频采集的会议室数量", "number"),

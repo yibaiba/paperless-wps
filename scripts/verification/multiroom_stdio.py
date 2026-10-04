@@ -17,6 +17,9 @@ from presales.configuration.common import Entities
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from paperless_review.distributed_specs import CASE_ROLES, DISTRIBUTED, FEATURES, selected_roles
+
 
 def sources(database):
     engine = create_engine("sqlite:///" + str(database))
@@ -40,6 +43,15 @@ def configuration_operations(case, variants, definitions):
         ["paper", "eg1", "eg2", "ai"], ["room1", "room1", "room2", "rack"], names, strict=True
     ):
         definition = definitions[name]
+        role_ids = (
+            [r["id"] for r in selected_roles(definition, CASE_ROLES.values())]
+            if name == DISTRIBUTED
+            else [
+                r["id"]
+                for r in definition["roles"]
+                if r["id"] in {"microphone", "software", "server", "host", "speech", "llm"}
+            ]
+        )
         inputs = (
             [
                 dict(key="audio_capture_room_count", kind="number", value="2"),
@@ -58,12 +70,9 @@ def configuration_operations(case, variants, definitions):
                     definition_id=definition["id"],
                     served_room_ids=["room1", "room2"] if identity == "ai" else [room],
                     inputs=inputs,
+                    features=list(FEATURES) if name == DISTRIBUTED else [],
                 ),
-                roles=[
-                    dict(role_id=r["id"])
-                    for r in definition["roles"]
-                    if r["id"] in {"microphone", "software", "server", "host", "speech", "llm"}
-                ],
+                roles=[dict(role_id=role_id) for role_id in role_ids],
                 features_confirmed=True,
             )
         )
@@ -256,6 +265,13 @@ async def run(args):
                 ("eg1", "host"): "row-153",
                 ("eg2", "host"): "row-164",
             }
+            paper_roles = [r for r in roles["items"] if r["system_id"] == "paper"]
+            assert len(paper_roles) == len(CASE_ROLES), "分布式角色不能被短ID筛选漏掉"
+            case_by_row = {r["id"]: r for r in case["rows"]}
+            for row, name in CASE_ROLES.items():
+                role = next(r for r in paper_roles if r["role"] == name)
+                if case_by_row[f"row-{row}"]["variant_ids"]:
+                    assignments["paper", role["role_id"]] = f"row-{row}"
             chosen = selected_operations(case, variants)
             mapping = chosen.pop()
             chosen.extend(
