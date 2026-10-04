@@ -3,17 +3,17 @@
 from collections import defaultdict
 from decimal import Decimal
 
+from .included_capacity import IncludedCapacity
+
 
 def included_fulfillment(data, suggestions):
     devices = {d["id"]: d for d in data["devices"]}
     demands = {s["id"]: s for s in suggestions}
     allocations = data.get("included_allocations", [])
-    reserved = defaultdict(Decimal)
-    for allocation in allocations:
-        reserved[pool_key(allocation)] += Decimal(allocation["quantity"])
+    capacity = IncludedCapacity(data, suggestions)
     checks, credits = [], defaultdict(Decimal)
     for allocation in allocations:
-        check = allocation_check(allocation, devices=devices, demands=demands, reserved=reserved)
+        check = allocation_check(allocation, devices=devices, demands=demands, capacity=capacity)
         checks.append(check)
         if check["status"] == "pass":
             credits[allocation["demand_id"]] += Decimal(allocation["quantity"])
@@ -22,7 +22,7 @@ def included_fulfillment(data, suggestions):
         by_demand[check["demand_id"]].append(check)
     projected = []
     for demand in suggestions:
-        offers = demand_offers(demand, devices=devices, reserved=reserved)
+        offers = demand_offers(demand, devices=devices, capacity=capacity)
         projected.append(
             dict(
                 with_credit(demand, credits[demand["id"]], offers=offers),
@@ -30,10 +30,6 @@ def included_fulfillment(data, suggestions):
             )
         )
     return projected, checks
-
-
-def pool_key(allocation):
-    return allocation["device_id"], allocation["included_item_id"]
 
 
 def fact_for(device, identity):
@@ -67,7 +63,7 @@ def fact_status(fact, demand, *, device):
     return "pass", "按已确认包含依据抵扣；不新增采购项"
 
 
-def allocation_check(allocation, *, devices, demands, reserved):
+def allocation_check(allocation, *, devices, demands, capacity):
     device = devices.get(allocation["device_id"])
     demand = demands.get(allocation["demand_id"])
     status, message = "conflict", "配套需求或宿主设备已变化，请移除旧抵扣后重新检查"
@@ -83,9 +79,9 @@ def allocation_check(allocation, *, devices, demands, reserved):
         elif not demand["selected"]:
             status, message = "conflict", "需求已取消选用，请移除已含抵扣"
         elif fact and fact.get("quantity") is not None:
-            capacity = Decimal(device["quantity"]) * Decimal(fact["quantity"])
-            if reserved[pool_key(allocation)] > capacity:
-                status, message = "conflict", "已含数量被重复占用或超出宿主数量，相关抵扣均不计入"
+            conflict = capacity.conflict(device, fact, demand=demand)
+            if conflict:
+                status, message = "conflict", conflict
     return dict(
         kind="included_allocation",
         status=status,
@@ -94,7 +90,9 @@ def allocation_check(allocation, *, devices, demands, reserved):
         demand_id=allocation["demand_id"],
         device_id=allocation["device_id"],
         included_item_id=allocation["included_item_id"],
-        **allocation_details(allocation, device=device, reserved=reserved, status=status),
+        **allocation_details(
+            allocation, device=device, capacity=capacity, demand=demand, status=status
+        ),
         evidence=[
             dict(
                 name="已含内容抵扣",
@@ -108,16 +106,20 @@ def allocation_check(allocation, *, devices, demands, reserved):
     )
 
 
-def allocation_details(allocation, *, device, reserved, status):
+def allocation_details(allocation, *, device, capacity, demand, status):
     snapshot = (device or {}).get("variant_snapshot") or {}
     fact = fact_for(device, allocation["included_item_id"]) if device else None
-    total = None
-    if fact and fact.get("quantity") is not None:
-        total = Decimal(device["quantity"]) * Decimal(fact["quantity"])
+    counts = capacity.quantities(device, fact, demand=demand) if fact else {}
     return dict(
         counted_quantity=allocation["quantity"] if status == "pass" else "0",
-        allocated_quantity=str(reserved[pool_key(allocation)]),
-        capacity=str(total) if total is not None else None,
+        allocated_quantity=str(
+            capacity.reserved[allocation["device_id"], allocation["included_item_id"]]
+        ),
+        capacity=str(counts["total"]) if counts.get("total") is not None else None,
+        scope_capacity=str(counts["scope_total"])
+        if counts.get("scope_total") is not None
+        else None,
+        scope_allocated_quantity=str(counts["scope_allocated"]) if counts else None,
         current_host_variant_id=snapshot.get("id"),
         current_host_variant_revision=snapshot.get("revision"),
         current_evidence=(fact or {}).get("evidence", ""),
@@ -125,7 +127,7 @@ def allocation_details(allocation, *, device, reserved, status):
     )
 
 
-def demand_offers(demand, *, devices, reserved):
+def demand_offers(demand, *, devices, capacity):
     host_ids = {i["device_id"] for i in demand.get("quantity_inputs", [])}
     offers = []
     for identity in sorted(host_ids):
@@ -135,12 +137,7 @@ def demand_offers(demand, *, devices, reserved):
             if not relevant(fact, demand):
                 continue
             status, reason = fact_status(fact, demand, device=device)
-            capacity = (
-                (Decimal(device["quantity"]) * Decimal(fact["quantity"]))
-                if fact.get("quantity") is not None
-                else None
-            )
-            used = reserved[(identity, fact["id"])]
+            counts = capacity.quantities(device, fact, demand=demand)
             offers.append(
                 dict(
                     device_id=identity,
@@ -154,11 +151,7 @@ def demand_offers(demand, *, devices, reserved):
                     reason=reason,
                     evidence=fact["evidence"],
                     per_unit=fact.get("quantity"),
-                    total=str(capacity) if capacity is not None else None,
-                    allocated=str(used),
-                    available=str(max(capacity - used, Decimal(0)))
-                    if capacity is not None
-                    else None,
+                    **{k: str(v) if v is not None else None for k, v in counts.items()},
                 )
             )
     return offers
