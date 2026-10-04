@@ -95,21 +95,33 @@ def confirmed_choice(valid):
     return None
 
 
+def empty_decision(*, query, issues, suppressed):
+    codes = {q.get("code") for q in issues if isinstance(q, dict)}
+    if "role_ambiguous" in codes or "product_source_ambiguous" in codes:
+        return dict(status="choice_required", reason_code="identity_ambiguous")
+    if suppressed:
+        return dict(status="dismissed", reason_code="suggestion_dismissed")
+    input_reasons = {
+        "typed_no_match": "no_match",
+        "typed_source_excluded": "confirmation_required",
+        "typed_selection_stale": "choice_required",
+        "typed_role_unresolved": "confirmation_required",
+    }
+    if query:
+        for code, status in input_reasons.items():
+            if code in codes:
+                return dict(status=status, reason_code=code)
+    if issues:
+        return dict(status="confirmation_required", reason_code="evidence_required")
+    return dict(
+        status="no_match" if query else "satisfied",
+        reason_code="typed_no_edit" if query else "requirements_satisfied",
+    )
+
+
 def decision_for(items, *, query, issues, suppressed):
     if not items:
-        codes = {q.get("code") for q in issues if isinstance(q, dict)}
-        if "role_ambiguous" in codes or "product_source_ambiguous" in codes:
-            return None, dict(status="choice_required", reason_code="identity_ambiguous")
-        if suppressed:
-            return None, dict(status="dismissed", reason_code="suggestion_dismissed")
-        if query and "typed_no_match" in codes:
-            return None, dict(status="no_match", reason_code="typed_no_match")
-        if issues:
-            return None, dict(status="confirmation_required", reason_code="evidence_required")
-        return None, dict(
-            status="no_match" if query else "satisfied",
-            reason_code="typed_no_match" if query else "requirements_satisfied",
-        )
+        return None, empty_decision(query=query, issues=issues, suppressed=suppressed)
     primary, reason = primary_choice(items, query)
     if primary:
         status = "ready" if primary["acceptance"] == "inline" else "confirmation_required"

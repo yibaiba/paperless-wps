@@ -19,6 +19,21 @@ test('issues retain actionable row and business field locations', () => {
   assert.match(text, /授权数量待确认/);
 });
 
+test('input diagnosis distinguishes catalog, source, knowledge and stale choices', () => {
+  assert.match(decisionText({ status: 'no_match', reason_code: 'typed_no_match' }), /固定目录/);
+  assert.match(decisionText({ status: 'no_match', reason_code: 'typed_no_edit' }), /未产生新的业务修改/);
+  assert.match(decisionText({ status: 'confirmation_required', reason_code: 'typed_source_excluded' }), /来源范围/);
+  assert.match(decisionText({ status: 'confirmation_required', reason_code: 'typed_role_unresolved' }), /适用依据/);
+  assert.match(decisionText({ status: 'choice_required', reason_code: 'typed_selection_stale' }), /重新选择/);
+  for (const [origin, label] of [['catalog_data', '目录数据'], ['catalog_scope', '来源范围'],
+    ['knowledge', '知识依据'], ['business_context', '业务上下文']]) {
+    const text = issueText({ origin, sheet: '报价', row: 3, message: '需要核对' });
+    assert.match(text, new RegExp(label));
+    assert.match(text, /报价 · 第 3 行/);
+    assert.match(text, /需要核对/);
+  }
+});
+
 test('new products use the nearest safe business row, including above the current cell', () => {
   const reads = [], profile = { sheet_selector: 'q', managed_fields: ['model', 'name'] };
   const row = (number) => ({ sheet: 'q', row: number, values: {}, formula_fields: number === 7 ? ['quantity'] : [], merged_fields: [] });

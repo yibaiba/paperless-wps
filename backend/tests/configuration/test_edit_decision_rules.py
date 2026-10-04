@@ -35,6 +35,12 @@ def test_complete_is_distinct_from_unknown_quantity_or_no_match():
     )
 
 
+def test_no_business_change_does_not_claim_the_catalog_lacks_the_input():
+    assert decision_for([], query="KNOWN", issues=[], suppressed=False)[1] == dict(
+        status="no_match", reason_code="typed_no_edit"
+    )
+
+
 def candidate(variant_id, model):
     return {
         "id": variant_id,

@@ -112,6 +112,7 @@ def completion_context_summary(projection, *, request, profile, context, issues)
         versions=projection["versions"],
         local_revision=request.local_revision,
         catalog_scope=profile["catalog_scope"],
+        input_resolution=context.input_resolution,
         rows=context_rows(projection, request, allowed_sources=context.allowed_sources or {}),
         local_changes=[
             {key: change[key] for key in ("kind", "id")}

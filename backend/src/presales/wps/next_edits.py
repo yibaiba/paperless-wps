@@ -95,7 +95,12 @@ def completion_preview(sync, request):
     filtered = [item for item in items if not is_dismissed(item, request.recent_edits)]
     suppressed = len(filtered) != len(items)
     items = sorted(filtered, key=lambda item: (not item["applicable"], added_purchase(item)))
-    issues = [*questions, *sync._issues(checked)]
+    issues = [
+        dict(q, sheet=request.active_cell.sheet, row=request.active_cell.row)
+        if q.get("origin") in {"catalog_data", "catalog_scope", "knowledge", "business_context"}
+        else q
+        for q in questions
+    ] + sync._issues(checked)
     primary, decision = decision_for(
         items, query=request.query, issues=issues, suppressed=suppressed
     )
@@ -123,28 +128,40 @@ def completion_preview(sync, request):
     )
 
 
+def active_recent_edits(edits):
+    undone = {edit.operation_id for edit in edits if edit.kind == "undo"}
+    ordered = sorted(
+        enumerate(edits),
+        key=lambda pair: pair[1].sequence if pair[1].sequence is not None else pair[0],
+    )
+    for _, edit in reversed(ordered):
+        if edit.kind in {"undo", "dismiss"} or edit.operation_id in undone:
+            continue
+        yield edit
+
+
+def requirement_affected(requirement, *, edit, affected):
+    devices = {a["device_id"] for a in requirement.get("allocations", [])}
+    if requirement.get("device_id"):
+        devices.add(requirement["device_id"])
+    return (
+        bool(affected.intersection({requirement["id"], *devices}))
+        or edit.requirement_id == requirement["id"]
+        or edit.device_id in devices
+    )
+
+
 def recent_requirement(request, checked):
     requirements = [
         r
         for r in checked["configuration"]["requirements"]
         if r["system_id"] == request.scope.system_id
     ]
-    undone = {edit.operation_id for edit in request.recent_edits if edit.kind == "undo"}
-    ordered = sorted(
-        enumerate(request.recent_edits),
-        key=lambda pair: pair[1].sequence if pair[1].sequence is not None else pair[0],
-    )
-    for _, edit in reversed(ordered):
-        if edit.kind in {"undo", "dismiss"} or edit.operation_id in undone:
-            continue
+    for edit in active_recent_edits(request.recent_edits):
         affected = {
             change.id for change in edit.changes if change.kind in {"devices", "requirements"}
         }
         for requirement in requirements:
-            if (
-                affected.intersection({requirement["id"], requirement.get("device_id")})
-                or edit.requirement_id == requirement["id"]
-                or (edit.device_id and edit.device_id == requirement.get("device_id"))
-            ):
+            if requirement_affected(requirement, edit=edit, affected=affected):
                 return requirement["id"]
     return None

@@ -161,4 +161,6 @@ def test_only_reviewed_alias_in_pinned_catalog_matches_http(client, catalog, sta
     )
     assert response.status_code == 200, response.text
     body["query"] = "绑定后新别名"
-    assert not preview(client, headers, body)["items"]
+    result = preview(client, headers, body)
+    assert not result["items"]
+    assert result["context_summary"]["input_resolution"]["catalog_match_count"] == 0

@@ -101,6 +101,11 @@ export interface CompletionContextSummary {
   room: { id: string; name: string } | null;
   versions: Record<string, string | null>; local_revision: number;
   catalog_scope: { import_id: string; sheet: string };
+  input_resolution?: {
+    status: 'matched' | 'no_catalog_match' | 'outside_source' | 'selection_mismatch';
+    catalog_match_count: number; scoped_match_count: number; selected_match_count: number;
+    variant_ids: string[];
+  } | null;
   rows: Array<Pick<BusinessDevice, 'id' | 'name' | 'kind' | 'quantity' | 'variant_id' | 'source_id'> & {
     line_id: string | null; sheet: string | null; row: number | null;
     participation: 'dependency' | 'inventory' | 'business_area';

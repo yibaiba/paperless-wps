@@ -3,20 +3,22 @@
 from decimal import Decimal
 
 from .accessories import accessory_options, demand_gap
+from .input_resolution import product_terms as product_terms
+from .input_resolution import unresolved_input
 
 
-def product_terms(variant):
-    product = variant["product"]
-    aliases = [a["name"] for a in variant.get("aliases", []) if a["status"] == "confirmed"]
-    return [product["name"], product["model"], variant["name"], *aliases]
+def explicit_task(context, tasks, requirement_id):
+    selected = next((t for t in tasks if t["requirement"]["id"] == requirement_id), None)
+    if not selected:
+        return None, [dict(code="role_required", message="当前行角色不在当前系统有效需求内")]
+    if not context.candidates(selected["requirement"], selected["system"]):
+        return None, [unresolved_input(context.input_resolution, task=selected)]
+    return selected, []
 
 
 def typed_task(context, tasks, *, requirement_id):
     if requirement_id:
-        selected = next((t for t in tasks if t["requirement"]["id"] == requirement_id), None)
-        return selected, [] if selected else [
-            dict(code="role_required", message="当前行角色不在当前系统有效需求内")
-        ]
+        return explicit_task(context, tasks, requirement_id)
     matches, rejected = [], []
     for task in tasks:
         candidates = context.candidates(task["requirement"], task["system"])
@@ -35,7 +37,7 @@ def typed_task(context, tasks, *, requirement_id):
                     evidence=[c["evidence"] for c in rejected],
                 )
             ]
-        return None, [dict(code="typed_no_match", message="当前来源与系统中没有匹配的适用产品")]
+        return None, [unresolved_input(context.input_resolution)]
     return None, [
         dict(
             code="role_ambiguous",

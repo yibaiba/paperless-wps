@@ -10,6 +10,7 @@ from .accessories import accessory_options, apply_included, demand_gap, manual_a
 from .context import PlanningContext
 from .devices import put_device
 from .fulfillment import bind_fulfilled_roles, fulfillment_devices
+from .input_resolution import matches_query, resolve_input
 from .quantities import role_quantity
 from .roles import locked_role, prepare_roles, role_branches
 from .typed_intent import product_terms, typed_dependency, typed_task
@@ -31,9 +32,17 @@ class NextEditContext(PlanningContext):
     selected_source_id: str = ""
     system_id: str = ""
     exact_variant_ids: frozenset[str] = field(init=False, default=frozenset())
+    input_resolution: dict | None = field(init=False, default=None)
 
     def __post_init__(self):
         super().__post_init__()
+        self.input_resolution = resolve_input(
+            self.variants.values(),
+            query=self.query,
+            allowed_sources=self.allowed_sources or {},
+            selected_variant_id=self.selected_variant_id,
+            selected_source_id=self.selected_source_id,
+        )
         self.variants = {key: self.scoped_variant(value) for key, value in self.variants.items()}
         if self.selected_variant_id:
             self.variants = {
@@ -42,20 +51,15 @@ class NextEditContext(PlanningContext):
                 if key == self.selected_variant_id
             }
         if self.query:
+            resolved_ids = set(self.input_resolution["variant_ids"])
             self.variants = {
-                key: value for key, value in self.variants.items() if self.matches(value)
+                key: value for key, value in self.variants.items() if key in resolved_ids
             }
             self.exact_variant_ids = frozenset(
                 key
                 for key, value in self.variants.items()
                 if self.query.strip().casefold() in {t.casefold() for t in product_terms(value)}
             )
-            if self.exact_variant_ids:
-                self.variants = {
-                    key: value
-                    for key, value in self.variants.items()
-                    if key in self.exact_variant_ids
-                }
 
     def scoped_variant(self, variant):
         allowed = (self.allowed_sources or {}).get(variant["id"], [])
@@ -79,8 +83,7 @@ class NextEditContext(PlanningContext):
             return False
         if not self.scoped_variant(variant)["source_ids"]:
             return False
-        text = " ".join(product_terms(variant))
-        return all(token in text.casefold() for token in self.query.casefold().split())
+        return matches_query(variant, self.query)
 
     def preference(self, requirement_id):
         preference = super().preference(requirement_id)
