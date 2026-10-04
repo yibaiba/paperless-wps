@@ -8,6 +8,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 from paperless_review.distributed import build_distributed_plan
+from paperless_review.distributed_accessories import build_accessory_plan
 from paperless_review.distributed_sources import build_source_plan
 from paperless_review.maintenance import apply_plan
 from presales.configuration.common import Entities
@@ -18,10 +19,14 @@ from sqlalchemy.orm import Session
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--apply", action="store_true")
-    parser.add_argument(
+    phase = parser.add_mutually_exclusive_group()
+    phase.add_argument(
         "--source-details",
         action="store_true",
         help="补齐明确参数、环境关系与条件配套，不发布资料包",
+    )
+    phase.add_argument(
+        "--accessory-details", action="store_true", help="复核升降话筒必配、主机容量及已含标语功能"
     )
     parser.add_argument("--report", type=Path, required=True)
     args = parser.parse_args()
@@ -30,7 +35,12 @@ def main():
     engine = create_engine(os.environ["DATABASE_URL"])
     try:
         with Session(engine) as session:
-            plan = (build_source_plan if args.source_details else build_distributed_plan)(session)
+            builder = build_distributed_plan
+            if args.source_details:
+                builder = build_source_plan
+            elif args.accessory_details:
+                builder = build_accessory_plan
+            plan = builder(session)
             updated = apply_plan(session, plan)
             report = dict(
                 mode="applied" if args.apply else "validated-preview",

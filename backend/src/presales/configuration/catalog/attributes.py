@@ -13,6 +13,13 @@ class AttributeDefinition:
 
 
 ATTRIBUTE_DEFINITIONS = (
+    AttributeDefinition("microphone_chair_capacity", "主席单元接入容量", "quantity", ("个",)),
+    AttributeDefinition("microphone_delegate_capacity", "代表单元接入容量", "quantity", ("个",)),
+    AttributeDefinition("microphone_wiring_spec", "话筒单路接入限制", "text"),
+    AttributeDefinition("microphone_line_ports", "话筒线路接口原文", "text"),
+    AttributeDefinition("microphone_cascade_spec", "话筒级联能力原文", "text"),
+    AttributeDefinition("microphone_speaking_spec", "同时发言人数范围", "text"),
+    AttributeDefinition("included_feature_description", "已含功能原文", "text"),
     AttributeDefinition(
         "paperless_matrix_usage", "是否按矩阵方式使用", "enum", purpose="project_input"
     ),

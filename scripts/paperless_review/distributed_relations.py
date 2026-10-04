@@ -35,7 +35,7 @@ def os_relation(original, *, row, sources):
     return KnowledgeInput.model_validate(payload).model_dump(mode="json")
 
 
-def relation(definition, role_name, *, variant_ids, **fields):
+def relation(definition, role_name, *, variant_ids, actor=ACTOR, **fields):
     role = next(r for r in definition["roles"] if r["name"] == role_name)
     return KnowledgeInput.model_validate(
         dict(
@@ -45,7 +45,7 @@ def relation(definition, role_name, *, variant_ids, **fields):
             system_definition_id=definition["id"],
             role_id=role["id"],
             selector=dict(variant_ids=variant_ids),
-            actor=ACTOR,
+            actor=actor,
             mode=None,
             factor=None,
             calculation_scope=None,
