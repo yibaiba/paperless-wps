@@ -128,15 +128,17 @@ def _semantic_query(data):
 
 
 def _known_variants(variants, *, knowledge, data, capabilities=()):
+    requirement = data.model_dump(mode="json")
+    relevant = [
+        item
+        for item in knowledge
+        if item["kind"] == "suitability"
+        and item["status"] != "disabled"
+        and role_matches(item, requirement)
+    ]
     return [
         variant
         for variant in variants
         if (capabilities and set(capabilities) <= set(variant.get("capability_ids", [])))
-        or any(
-            item["kind"] == "suitability"
-            and item["status"] != "disabled"
-            and role_matches(item, data.model_dump(mode="json"))
-            and scope_matches(variant, item["selector"])
-            for item in knowledge
-        )
+        or any(scope_matches(variant, item["selector"]) for item in relevant)
     ]

@@ -152,7 +152,7 @@ def role_fields(profile, rules, attributes):
                     ),
                     unit=condition["unit"],
                     scope=key[0],
-                    purpose="product_requirement",
+                    purpose=attribute.get("purpose", "product_requirement"),
                     evidence=[],
                 ),
             )

@@ -9,9 +9,17 @@ class AttributeDefinition:
     kind: Literal["text", "enum", "number", "quantity"]
     units: tuple[str, ...] = ()
     aliases: tuple[str, ...] = ()
+    purpose: Literal["product_requirement", "project_input"] = "product_requirement"
 
 
 ATTRIBUTE_DEFINITIONS = (
+    AttributeDefinition(
+        "paperless_matrix_usage", "是否按矩阵方式使用", "enum", purpose="project_input"
+    ),
+    AttributeDefinition("video_input_spec", "视频输入规格原文", "text"),
+    AttributeDefinition("video_output_spec", "视频输出规格原文", "text"),
+    AttributeDefinition("video_decode_spec", "视频解码能力原文", "text"),
+    AttributeDefinition("power_supply_spec", "供电方式原文", "text"),
     AttributeDefinition("room_count", "项目会议室数量", "number"),
     AttributeDefinition("paperless_server_count", "无纸化服务器部署台数", "number"),
     AttributeDefinition("paperless_management_count", "会议管理软件许可套数", "number"),
