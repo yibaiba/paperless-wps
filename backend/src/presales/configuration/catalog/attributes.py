@@ -47,6 +47,9 @@ ATTRIBUTE_DEFINITIONS = (
     AttributeDefinition("extra_audio_concurrency_count", "需额外购买的音频并发路数", "number"),
     AttributeDefinition("microphone_count", "本系统会议话筒数量", "number"),
     AttributeDefinition(
+        "face_terminal_count", "启用人脸签到的终端数量", "number", purpose="project_input"
+    ),
+    AttributeDefinition(
         "simultaneous_charging_count",
         "需要同时充电的终端数量",
         "quantity",

@@ -25,8 +25,8 @@ def inventory(session):
     return package_readiness(package, latest=latest)
 
 
-def main():
-    parser = argparse.ArgumentParser(description=__doc__)
+def main(*, build_plan=build_mapping_plan, description=__doc__):
+    parser = argparse.ArgumentParser(description=description)
     parser.add_argument("--apply", action="store_true")
     parser.add_argument("--expected-fingerprint")
     parser.add_argument("--report", type=Path, required=True)
@@ -35,7 +35,7 @@ def main():
     engine = create_engine(os.environ["DATABASE_URL"])
     try:
         with Session(engine) as session:
-            plan = build_mapping_plan(session)
+            plan = build_plan(session)
             if args.apply and args.expected_fingerprint != plan["fingerprint"]:
                 raise ValueError("应用必须提供本次预览指纹；资料变化后请重新预览")
             before = inventory(session)

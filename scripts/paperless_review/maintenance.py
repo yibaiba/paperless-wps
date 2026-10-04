@@ -13,7 +13,7 @@ from presales.configuration.definitions.schemas import (
 from presales.configuration.definitions.service import Definitions
 from presales.configuration.knowledge.routes import validate_knowledge
 from presales.configuration.knowledge.schemas import KnowledgeInput
-from presales.configuration.models import Entity
+from presales.configuration.models import Entity, SourceLink
 from presales.rules.calculation import digest
 from presales.rules.repository import RuleConflict
 from presales.storage import ProductRecord
@@ -61,6 +61,10 @@ def apply_plan(session, plan):
         source = session.get(ProductRecord, identity)
         if source is None or digest(source.payload) != fingerprint:
             raise RuleConflict("维护依据已变化，请重新核对来源：" + identity)
+    for identity, variant_id in sorted(plan.get("source_link_guards", {}).items()):
+        link = session.get(SourceLink, identity, populate_existing=True, with_for_update=True)
+        if link is None or link.variant_id != variant_id:
+            raise RuleConflict("来源配置归属已变化，请重新核对：" + identity)
     entities = Entities(session)
     pending = []
     for item in sorted(plan["changes"], key=lambda value: value["id"]):

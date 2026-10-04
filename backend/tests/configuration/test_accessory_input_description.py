@@ -60,6 +60,18 @@ def test_preselection_discovers_generic_accessory_inputs_and_does_not_invent_pro
     assert not output["roles"][1]["active"]
 
 
+def test_face_licensing_input_has_business_label_and_is_not_a_hardware_requirement():
+    definition, rules = records()
+    rules[1]["quantity_key"] = "face_terminal_count"
+    output = describe_requirements(definition, rules=rules, features=[])
+    field = next(f for f in output["shared_inputs"] if f["key"] == "face_terminal_count")
+    assert (field["label"], field["purpose"], field["unit"]) == (
+        "启用人脸签到的终端数量",
+        "project_input",
+        "",
+    )
+
+
 def test_chain_cycles_and_different_units_are_visible_without_truncating():
     definition, rules = records()
     chained = dict(
