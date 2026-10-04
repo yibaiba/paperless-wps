@@ -68,6 +68,10 @@ class CatalogService:
         return self.entities.save("product", data, **options)
 
     def save_variant(self, data: VariantInput, **options):
+        from ..knowledge.evidence import validate_evidence_refs
+
+        for item in data.included_items:
+            validate_evidence_refs(self.session, item.evidence_refs)
         identity = options.get("entity_id")
         if identity:
             previous = self.entities.get(identity, kind="variant").payload

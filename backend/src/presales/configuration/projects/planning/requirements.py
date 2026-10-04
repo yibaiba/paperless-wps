@@ -22,8 +22,10 @@ def patch_requirements(configuration, operation, *, repository):
                 definition_id=item.system.definition_id,
                 knowledge_package_id=item.system.knowledge_package_id,
                 definition_snapshot_id=data.get("definition_snapshot_id"),
+                knowledge_snapshot_id=data.get("knowledge_snapshot_id"),
                 features=item.system.features,
             ),
+            catalog=repository.catalog,
         )
         role_ids = list(
             dict.fromkeys(

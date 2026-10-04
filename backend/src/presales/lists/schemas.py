@@ -17,6 +17,7 @@ class SystemsList(Page):
     knowledge_package_id: str = ""
     definition_snapshot_id: str | None = None
     knowledge_snapshot_id: str | None = None
+    catalog_snapshot_id: str | None = None
     features: list[str] = Field(default_factory=list)
 
 

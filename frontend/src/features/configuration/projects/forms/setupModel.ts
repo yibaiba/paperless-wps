@@ -1,7 +1,7 @@
 import type { Attribute, Configuration, System } from '../../types';
-export type SetupInput = { key: string; label: string; kind: Attribute['kind']; unit: string; scope: 'system' | 'role' | 'room' | 'project'; purpose: 'project_input' | 'product_requirement'; evidence: unknown[] };
+export type SetupInput = { key: string; label: string; kind: Attribute['kind']; unit: string; scope: 'system' | 'role' | 'room' | 'project'; purpose: 'project_input' | 'product_requirement'; evidence: unknown[]; conditional?: boolean; candidate_variant_ids?: string[]; consumer_role_ids?: string[]; need_keys?: string[] };
 export type SetupRole = { id: string; name: string; active: boolean; necessary: boolean; feature: string; inputs: SetupInput[] };
-export type SetupDescription = { definition_id: string; definition_revision: number; definition_status: string; name: string; package_revision?: number; roles: SetupRole[]; features: string[]; notice: string; readiness?: { roles: { id: string; name: string; missing: string[] }[]; rules: { id: string; name: string; missing: string[] }[] } | null };
+export type SetupDescription = { definition_id: string; definition_revision: number; definition_status: string; name: string; input_gaps?: { code: string; key?: string; message: string }[]; package_revision?: number; roles: SetupRole[]; features: string[]; notice: string; readiness?: { roles: { id: string; name: string; missing: string[] }[]; rules: { id: string; name: string; missing: string[] }[] } | null };
 export type SetupValues = { name: string; definition_id: string; knowledge_package_id?: string; room_mode: "new" | "existing"; room_id: string; room_name: string; features?: string[]; features_confirmed?: boolean; role_ids?: string[]; inputs?: Record<string, Attribute["value"]>; actor?: string; evidence?: string };
 export type SetupField = SetupInput & { roleId?: string; formKey: string };
 type ScopeLocation = { systemId?: string; roomId?: string };
@@ -18,11 +18,12 @@ export function previousParameter(field: SetupField, configuration: Configuratio
 export function setupFields(description: SetupDescription | undefined, selected: string[]) {
   const fields = new Map<string, SetupField>();
   for (const role of description?.roles ?? []) {
-    if (!selected.includes(role.id)) continue;
+    if (!selected.includes(role.id) || role.active === false) continue;
     for (const input of role.inputs) {
       const roleId = input.scope === 'role' ? role.id : undefined;
-      const formKey = [input.scope, roleId ?? '', input.key, input.unit].join(':');
-      fields.set(formKey, { ...input, roleId, formKey });
+      const formKey = [input.scope, roleId ?? '', input.key, input.unit, input.kind, input.purpose].join(':');
+      const previous = fields.get(formKey);
+      fields.set(formKey, { ...input, roleId, formKey, evidence: [...(previous?.evidence ?? []), ...input.evidence], conditional: previous ? previous.conditional === true && input.conditional === true : input.conditional });
     }
   }
   return [...fields.values()];
@@ -44,6 +45,9 @@ function replaceParameter(values: Attribute[], parameter: Attribute) {
 }
 export function setupPayload(options: { configuration: Configuration; systemId: string; roomId: string; newRoom?: { id: string; name: string }; values: SetupValues; description: SetupDescription; fields: SetupField[] }) {
   const { configuration, systemId, roomId, newRoom, values, description, fields } = options;
+  for (const field of fields) {
+    if (fields.some(other => other.key === field.key && other.scope === field.scope && other.roleId === field.roleId && (other.unit !== field.unit || other.kind !== field.kind || other.purpose !== field.purpose))) throw new Error(`${field.label} 的类型、单位或用途冲突，请先核对资料定义。`);
+  }
   const previous = configuration.systems.find(s => s.id === systemId);
   const scoped = { system: [...(previous?.inputs ?? [])], room: [...(configuration.room_inputs?.[roomId] ?? [])], project: [...(configuration.project_inputs ?? [])] };
   const environments: Record<string, Attribute[]> = {};

@@ -5,6 +5,7 @@ from pydantic import Field, model_validator
 
 from ..catalog.schemas import UNITS
 from ..common import Authored, Input, Text
+from ..evidence import EvidenceReference as EvidenceReference
 from .combination_schemas import Combination, missing_combination
 
 
@@ -67,12 +68,6 @@ class Resource(Input):
         if self.applies_to == "selected_device" and self.target_need_key:
             raise ValueError("当前配置资源不能指定配套需求标识")
         return self
-
-
-class EvidenceReference(Input):
-    source_id: Text
-    locator: Text
-    quote: Text
 
 
 class SharedRole(Input):

@@ -1,3 +1,4 @@
+import { EvidenceReferenceFields } from "../knowledge/EvidenceReferenceFields";
 import { Alert, Button, Card, Form, Input, InputNumber, Select, Space } from "antd";
 import { required, useKnowledge, useVariants, variantOptions } from "../shared";
 
@@ -35,6 +36,7 @@ export function IncludedItemsEditor({ hostId }: { hostId?: string }) {
           <Select mode="multiple" showSearch optionFilterProp="label" options={needs} placeholder="选择明确对应的配套需求" />
         </Form.Item>
         <Form.Item name={[field.name, "evidence"]} label="包含及数量依据"><Input.TextArea placeholder="资料位置、原文、适用版本和数量口径" /></Form.Item>
+        <EvidenceReferenceFields name={[field.name, "evidence_refs"]} path={["included_items", field.name, "evidence_refs"]} />
       </Card>)}
       <Button onClick={() => add({ id: crypto.randomUUID(), name: "", kind: "accessory", status: "draft", quantity: null, variant_id: null, need_keys: [], evidence: "" })}>添加已含内容</Button>
     </Space>}</Form.List>

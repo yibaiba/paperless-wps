@@ -1,3 +1,4 @@
+export type EvidenceReference = { source_id?: string; material_id?: string; material_revision?: number; segment_id?: string; locator: string; quote: string };
 import type { InspectionProfile } from "./knowledge/inspectionTypes";
 export interface Attribute {
   key: string;
@@ -28,6 +29,7 @@ export interface Product extends Authored {
   category: string;
 }
 export interface IncludedItem {
+  evidence_refs?: EvidenceReference[];
   id: string; name: string; variant_id: string | null;
   kind: Deployment["kind"]; quantity: string | null; need_keys: string[];
   status: "draft" | "confirmed" | "disabled"; evidence: string;
@@ -90,7 +92,7 @@ export interface Knowledge extends Authored {
   quantity_review?: "unreviewed" | "confirmed";
   quantity_evidence?: string;
   resource_policy?: "unknown" | "required" | "not_applicable";
-  evidence_refs?: { source_id: string; locator: string; quote: string }[];
+  evidence_refs?: EvidenceReference[];
   shared_role_refs?: { system_definition_id: string; role_id: string }[];
   scope_basis?: "listed_configurations" | "entire_scope";
   reviewed_variant_ids?: string[];

@@ -4,6 +4,7 @@ from typing import Literal
 from pydantic import Field, model_validator
 
 from ..common import Input, Text
+from ..evidence import EvidenceReference
 
 
 class IncludedItem(Input):
@@ -15,6 +16,7 @@ class IncludedItem(Input):
     need_keys: list[Text] = Field(default_factory=list)
     status: Literal["draft", "confirmed", "disabled"] = "draft"
     evidence: str = ""
+    evidence_refs: list[EvidenceReference] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def confirmed_basis(self):

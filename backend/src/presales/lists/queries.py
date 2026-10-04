@@ -224,6 +224,7 @@ def systems(session, request):
                 knowledge_package_id=request.knowledge_package_id,
                 definition_snapshot_id=request.definition_snapshot_id,
                 knowledge_snapshot_id=request.knowledge_snapshot_id,
+                catalog_snapshot_id=request.catalog_snapshot_id,
                 features=request.features,
             ),
         )

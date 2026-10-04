@@ -66,3 +66,19 @@ test('moving a system reads the selected room and never copies the old room scal
  assert.equal(setupPayload({ ...options, roomId: 'new' }).room_inputs[0].value, null);
  assert.equal(configuration.room_inputs.old[0].value, '32');
 });
+
+
+test('conditional inputs preserve evidence and skip disabled roles', () => {
+  const input = { ...count, conditional: true, evidence: ['a'] };
+  const fields = setupFields({ roles: [{ id: 'a', active: true, inputs: [input] }, { id: 'b', active: true, inputs: [{ ...input, evidence: ['b'] }] }, { id: 'off', active: false, inputs: [os] }] }, ['a', 'b', 'off']);
+  assert.equal(fields.length, 1);
+  assert.deepEqual(fields[0].evidence, ['a', 'b']);
+  assert.equal(fields[0].conditional, true);
+});
+
+test('conflicting shared units cannot overwrite each other', () => {
+  const description = { name: 'test', roles: [{ id: 'a', inputs: [count] }, { id: 'b', inputs: [{ ...count, unit: '套' }] }] };
+  const fields = setupFields(description, ['a', 'b']);
+  assert.equal(fields.length, 2);
+  assert.throws(() => setupPayload({ configuration: { systems: [], requirements: [] }, systemId: 's', roomId: 'r', description, fields, values: {} }), /冲突/);
+});

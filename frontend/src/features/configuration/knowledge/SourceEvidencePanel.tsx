@@ -1,10 +1,10 @@
-import { Button, Collapse, Empty, Form, Space, Typography } from 'antd';
+import { WorkbookEvidence } from "../materials/WorkbookEvidence";
+import { Button, Collapse, Empty, Form, Space, Tabs, Typography } from 'antd';
 import type { Variant } from '../types';
 
 export function SourceEvidencePanel({ variants }: { variants: Variant[] }) {
   const form = Form.useFormInstance();
-  if (!variants.length) return <Empty description="选择产品查看原文" />;
-  return <Collapse items={variants.map(v => ({ key: v.id, label: `${v.product.model} · ${v.name}`, children:
+  const products = !variants.length ? <Empty description="选择产品查看原文" /> : <Collapse items={variants.map(v => ({ key: v.id, label: `${v.product.model} · ${v.name}`, children:
     <Space orientation="vertical" style={{ width: '100%' }}>{v.source_details?.map(source => <div key={source.id}>
       <Typography.Text strong>{source.sheet} · 第 {source.row} 行</Typography.Text>
       {[['规格', source.specification], ['备注', source.note]].filter(([, text]) => text).map(([label, text]) => <div key={label}>
@@ -17,4 +17,5 @@ export function SourceEvidencePanel({ variants }: { variants: Variant[] }) {
       </div>)}
     </div>)}</Space>,
   }))} />;
+  return <Tabs items={[{ key: "products", label: "产品资料", children: products }, { key: "workbook", label: "工作簿说明", children: <WorkbookEvidence onReference={ref => form.setFieldValue("evidence_refs", [...(form.getFieldValue("evidence_refs") ?? []), ref])} /> }]} />;
 }

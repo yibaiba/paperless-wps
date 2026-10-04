@@ -1,4 +1,6 @@
 export const configurationKeys = {
+  materials: ["configuration", "materials"] as const,
+  materialRevision: (id: string | undefined, revision: number) => ["configuration", "material", id, revision] as const,
   packageReadiness: (scope: { id: string; revision: number; knowledgeRevision: string; definitionRevision: number }) =>
     ["configuration", "package-readiness", scope] as const,
   all: ["configuration"] as const,
