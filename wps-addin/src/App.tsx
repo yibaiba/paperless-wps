@@ -15,8 +15,9 @@ import { WpsHostAdapter } from './host';
 import { LatestRequest } from './latestRequest';
 import { matchingProfile } from './template';
 import { suggestionContext } from './suggestionContext';
+import { isProductInputCell } from './productInput';
 import type {
-  ActiveCell, Candidate, TemplateField, TemplateProfile,
+  ActiveCell, Candidate, TemplateProfile,
   WorkbookMetadata,
 } from './types';
 import { bindingForRow } from './workbook.ts';
@@ -94,10 +95,7 @@ export function App() {
     if (!profile || capabilityIssues.length || host.workbookKey() !== workbookKey) return;
     let current: ActiveCell;
     try { current = host.activeCell(); } catch (reason) { setError(String(reason)); return; }
-    const suggestionFields: TemplateField[] = ['model', 'name', 'description'];
-    const allowed = suggestionFields.some(
-      (field) => profile.field_columns[field] === current.column,
-    );
+    const allowed = isProductInputCell(profile, current);
     requests.current.cancel();
     candidateSession.current = undefined;
     clearTimeout(timer.current);
@@ -107,7 +105,10 @@ export function App() {
       if (showEditor) host.hideInlineEditor();
       return;
     }
-    if (showEditor) host.showInlineEditor(profile, current);
+    if (showEditor) {
+      try { host.showInlineEditor(profile, current); }
+      catch (reason) { setError(String(reason)); return; }
+    }
     const inlineCell = host.inlineContext()?.cell;
     const inlineOwnsQuery = inlineCell?.sheet === current.sheet
       && inlineCell.row === current.row
@@ -315,6 +316,16 @@ export function App() {
     host.writeMetadata(next); setMetadata(next); setProfile(value);
   }
 
+  function reopenCompletion() {
+    if (!profile) return;
+    try {
+      if (!isProductInputCell(profile, host.activeCell())) {
+        throw new Error('请先选中表头下方、由插件管理的型号、名称或说明单元格');
+      }
+      setError(''); queryCell(true);
+    } catch (reason) { setError(String(reason)); }
+  }
+
   if (!host.ready()) return <main className="fatal"><h1>售前产品助手</h1><div className="error">请在 WPS 表格中打开工作簿后重试。</div></main>;
   if (capabilityIssues.length) return <main className="fatal"><h1>售前产品助手</h1>
     <div className="error">当前 WPS 版本不支持完整的内联 Tab 补全：
@@ -336,6 +347,10 @@ export function App() {
         {metadata.binding ? `项目 v${metadata.binding.base_revision}` : '未绑定'}
       </span>
     </header>
+    <section className="completion-mode" aria-label="补全方式">
+      <p>浮层补全 · 在单元格旁输入，Tab 接受；业务联动需预览确认。不是原生单元格灰字。</p>
+      {profile ? <button onClick={reopenCompletion}>打开当前单元格补全</button> : null}
+    </section>
     <nav className="tabs" aria-label="助手功能">
       <Tab icon={<SearchOutlined />} label="联想" active={view === 'suggestions'} onClick={() => setView('suggestions')} />
       <Tab icon={<TableOutlined />} label="模板" active={view === 'mapping'} onClick={() => setView('mapping')} />
@@ -343,7 +358,7 @@ export function App() {
       <Tab icon={<TableOutlined />} label="业务" active={view === 'business'} onClick={() => setView('business')} />
       <Tab icon={<AppstoreOutlined />} label="同步" active={view === 'sync'} onClick={() => setView('sync')} />
     </nav>
-    {error && metadata.schema_version === 2 ? <div className="error" role="alert">{error}</div> : null}
+    {error && (metadata.schema_version === 2 || view !== 'suggestions') ? <div className="error" role="alert">{error}</div> : null}
     {view === 'account' ? <section className="panel-section" aria-labelledby="account-title">
       <div className="section-heading">
         <div><h2 id="account-title">连接账号</h2><p>当前加载项身份</p></div><LoginOutlined />

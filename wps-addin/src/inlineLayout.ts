@@ -1,5 +1,7 @@
 export const INLINE_DIALOG_MIN_WIDTH = 240;
 export const INLINE_DIALOG_LIST_WIDTH = 360;
+export const INLINE_ERROR_STATUS_ROWS = 2;
+export const BUSINESS_CANDIDATE_ROW_HEIGHT = 72;
 
 const MAX_DIALOG_WIDTH = 520;
 const MIN_INPUT_ROW_HEIGHT = 32;
@@ -14,6 +16,7 @@ export interface InlineLayoutOptions {
   listVisible: boolean;
   showStatus: boolean;
   statusRows?: number;
+  candidateRowHeight?: number;
   windowChromeHeight?: number;
 }
 
@@ -32,7 +35,7 @@ export function inlineDialogSize(options: InlineLayoutOptions): InlineDialogSize
     ? Math.min(options.candidateCount, MAX_VISIBLE_CANDIDATES) : 0;
   const contentHeight = inputHeight
     + (options.showStatus ? STATUS_ROW_HEIGHT * (options.statusRows ?? 1) : 0)
-    + (visibleCandidates * CANDIDATE_ROW_HEIGHT);
+    + (visibleCandidates * (options.candidateRowHeight ?? CANDIDATE_ROW_HEIGHT));
   const desiredWidth = options.listVisible
     ? Math.max(options.anchorWidth, INLINE_DIALOG_LIST_WIDTH)
     : Math.max(options.anchorWidth, INLINE_DIALOG_MIN_WIDTH);

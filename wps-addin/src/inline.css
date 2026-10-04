@@ -7,6 +7,7 @@
   --border: #c7cfcb;
   --muted: #5f6b65;
   --selected: #eaf5ef;
+  --inline-status-height: 30px;
 }
 
 * { box-sizing: border-box; }
@@ -98,6 +99,12 @@ button, input { font: inherit; letter-spacing: 0; }
 .inline-candidates button:last-child { border-bottom: 0; }
 .inline-candidates button.selected { background: var(--selected); box-shadow: inset 3px 0 var(--primary); }
 .inline-candidates button:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }
+.inline-candidates button:disabled { cursor: wait; opacity: 0.5; }
+.business-candidates button { align-items: stretch; flex-direction: column; justify-content: center; gap: 3px; height: 72px; min-height: 72px; }
+.business-candidates button > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: 12px; }
+.business-candidate-title { display: flex; align-items: baseline; gap: 8px; }
+.business-candidate-title strong { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; color: #17211d; font-size: 13px; }
+.business-candidate-title small { flex-shrink: 0; max-width: 45%; overflow: hidden; text-overflow: ellipsis; }
 .candidate-copy { display: flex; flex: 1; min-width: 0; }
 .candidate-copy strong, .candidate-copy span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .candidate-copy strong { flex: 1; font-size: 13px; font-weight: 600; }
@@ -117,17 +124,19 @@ button, input { font: inherit; letter-spacing: 0; }
 .inline-error, .inline-status, .inline-empty { color: var(--muted); font-size: 12px; }
 .inline-error, .inline-status {
   border-top: 1px solid var(--border);
-  flex: 0 0 30px;
+  flex: 0 0 var(--inline-status-height);
   padding: 6px 8px;
 }
-.inline-error { background: #fff1f0; color: #a82218; }
+.inline-error { background: #fff1f0; color: #a82218; flex-basis: calc(2 * var(--inline-status-height)); }
 .inline-status { background: #f7faf8; color: #47534d; }
-.inline-next-notice { flex-basis: 90px; }
+.inline-next-notice { flex-basis: calc(3 * var(--inline-status-height)); }
 .inline-next-notice > div { line-height: 24px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .inline-empty { background: #fff; height: 100%; }
 .inline-business-preview { overflow: auto; padding: 8px; }
 .inline-business-preview pre { white-space: pre-wrap; overflow-wrap: anywhere; }
 .inline-business-preview button { min-height: 32px; }
+.inline-business-preview button + button { margin-left: 6px; }
+.inline-error button { margin-left: 8px; cursor: pointer; }
 .next-edit-preview:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }
 .inline-error, .inline-status { overflow: auto; }
 

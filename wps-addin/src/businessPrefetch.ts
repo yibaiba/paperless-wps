@@ -23,11 +23,15 @@ export class BusinessPrefetch {
       (value) => ({ value }), (error) => ({ error }),
     ) };
   }
-  take(key: string) {
+  take(key: string, signal?: AbortSignal) {
     if (this.pending?.key !== key) { this.clear(); return undefined; }
     const pending = this.pending;
     this.pending = undefined;
-    return pending.result;
+    if (!signal) return pending.result;
+    const cancel = () => pending.controller.abort();
+    if (signal.aborted) cancel();
+    else signal.addEventListener('abort', cancel, { once: true });
+    return pending.result.finally(() => signal.removeEventListener('abort', cancel));
   }
   clear() { this.pending?.controller.abort(); this.pending = undefined; }
 }

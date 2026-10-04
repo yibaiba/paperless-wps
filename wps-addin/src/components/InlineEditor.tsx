@@ -21,7 +21,7 @@ import { WpsHostAdapter } from '../host';
 import { assertInlineSession, writeInlineInput } from '../workbookSession';
 import { prioritizeInlineCandidates } from '../inlineCandidates';
 import { ghostCompletion } from '../inlineCompletion';
-import type { InlineLayoutOptions, InlinePlacement, InlineLayoutResult } from '../inlineLayout';
+import { INLINE_ERROR_STATUS_ROWS, type InlineLayoutOptions, type InlinePlacement, type InlineLayoutResult } from '../inlineLayout';
 import {
   INLINE_CANDIDATE_LIMIT,
   inlineWorkbookContextForQuery,
@@ -60,6 +60,7 @@ export function InlineEditor() {
   const [placement, setPlacement] = useState<InlinePlacement>('below');
   const [anchorHeight, setAnchorHeight] = useState(context?.anchor.height ?? 32);
   const [tabGeneration, setTabGeneration] = useState(0);
+  const [queryRevision, setQueryRevision] = useState(0);
   const input = useRef<HTMLInputElement>(null);
   const requests = useRef(new LatestRequest());
   const accepting = useRef(false);
@@ -68,7 +69,7 @@ export function InlineEditor() {
   const windowChromeHeight = useRef(Math.max(0, window.outerHeight - window.innerHeight));
   const baseWorkbookContext = useMemo(
     () => context && readInlineWorkbookContext(host, context),
-    [context, host],
+    [context, host, queryRevision],
   );
   const workbookContext = useMemo(() => {
     if (!context || !baseWorkbookContext || 'error' in baseWorkbookContext) {
@@ -245,6 +246,7 @@ export function InlineEditor() {
     candidateCount: candidates.length,
     listVisible,
     showStatus: Boolean(error) || needsChoice,
+    statusRows: error ? INLINE_ERROR_STATUS_ROWS : 1,
     windowChromeHeight: windowChromeHeight.current,
   }), [ambiguous, candidates.length, error, listVisible, needsChoice]);
   const layoutRef = useRef(layout);
@@ -511,7 +513,12 @@ export function InlineEditor() {
       {ghost && !listVisible ? <kbd>Tab</kbd> : null}
       {busy ? <span className="inline-busy" aria-hidden="true" /> : null}
     </div>
-    {error ? <div className="inline-error" role="alert">{error}</div> : null}
+    {error ? <div className="inline-error" role="alert">{error}
+      <button type="button" onClick={() => {
+        requests.current.cancel(); host.restoreNativeTab(); setCandidates([]); setError('');
+        setQueryRevision((value) => value + 1);
+      }}>重新查询</button>
+    </div> : null}
     {!error && needsChoice
       ? <div className="inline-status" role="status">{choiceMessage}</div> : null}
     {listVisible ? <div id={CANDIDATE_LIST_ID} className="inline-candidates"

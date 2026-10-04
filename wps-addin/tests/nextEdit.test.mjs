@@ -58,7 +58,9 @@ test('inline input handler rejects a stale file or project binding before writin
   const host = { workbookKey: () => filename,
     readMetadata: () => ({ binding: { binding_id: bindingId } }),
     writeCellValue: (cell, value) => writes.push([cell, value]) };
-  const context = { workbook_key: filename, binding_id: bindingId, cell: { row: 4, column: 2 } };
+  const context = { workbook_key: filename, binding_id: bindingId,
+    profile: { sheet_selector: 'quote', header_row: 1, managed_fields: ['name'], field_columns: { name: 2 } },
+    cell: { sheet: 'quote', row: 4, column: 2, formula: '', merged: false } };
   filename = 'B.xlsx';
   assert.throws(() => writeInlineInput({ host, context, value: '软件' }), /工作簿或项目绑定/);
   filename = 'A.xlsx'; bindingId = 'binding-B';

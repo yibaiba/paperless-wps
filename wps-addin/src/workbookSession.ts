@@ -1,4 +1,5 @@
 import type { ActiveCell, InlineEditorContext, WorkbookMetadata } from './types';
+import { isProductInputCell } from './productInput.ts';
 
 interface SessionHost {
   workbookKey(): string;
@@ -30,6 +31,9 @@ export function writeInlineInput(options: {
   context: InlineEditorContext; value: string;
 }) {
   assertInlineSession(options.host, options.context);
+  if (!isProductInputCell(options.context.profile, options.context.cell)) {
+    throw new Error('请选择表头下方、由插件管理的型号、名称或说明单元格');
+  }
   options.host.writeCellValue(options.context.cell, options.value);
 }
 

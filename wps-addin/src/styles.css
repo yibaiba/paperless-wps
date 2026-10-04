@@ -46,6 +46,8 @@ p { color: var(--muted); font-size: 12px; }
   white-space: nowrap;
 }
 .connected { background: #edf8f2; border-color: #a9d9c1; color: #0f6b40; }
+.completion-mode { border-bottom: 1px solid var(--border); padding: 10px 14px; }
+.completion-mode button { margin-top: 8px; width: 100%; }
 
 .tabs {
   background: #f8faf9;

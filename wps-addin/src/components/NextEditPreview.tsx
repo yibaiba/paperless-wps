@@ -1,11 +1,16 @@
+import { useEffect, useRef } from 'react';
 import type { NextEditSuggestion } from '../businessTypes';
 
-export function NextEditPreview({ suggestion, onApply, busy = false }: {
+export function NextEditPreview({ suggestion, onApply, busy = false, autoFocus = false, onCancel }: {
   suggestion: NextEditSuggestion; onApply: () => void; busy?: boolean;
+  autoFocus?: boolean; onCancel?: () => void;
 }) {
-  return <section className="next-edit-preview" tabIndex={0} aria-label="本组修改预览"
+  const preview = useRef<HTMLElement>(null);
+  useEffect(() => { if (autoFocus) preview.current?.focus(); }, [autoFocus, suggestion.id]);
+  return <section ref={preview} className="next-edit-preview" tabIndex={0} aria-label="本组修改预览"
     onKeyDown={(event) => {
       if (event.nativeEvent.isComposing) return;
+      if (event.key === 'Escape' && onCancel) { event.preventDefault(); event.stopPropagation(); onCancel(); return; }
       if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
         event.preventDefault();
         if (suggestion.applicable && !busy) onApply();
@@ -24,6 +29,7 @@ export function NextEditPreview({ suggestion, onApply, busy = false }: {
     <details><summary>业务理由与固定版本证据</summary><pre>{JSON.stringify(suggestion.evidence, null, 2)}</pre></details>
     {suggestion.issues.map((issue, i) => <div className="issue" key={i}>{issueText(issue)}</div>)}
     <button className="primary" disabled={busy || !suggestion.applicable} onClick={onApply}>确认应用本组修改</button>
+    {onCancel && <button type="button" disabled={busy} onClick={onCancel}>返回补全，不应用</button>}
   </section>;
 }
 
