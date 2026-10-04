@@ -82,6 +82,64 @@ def test_abstention_is_not_counted_as_correct_product_accuracy():
     assert report["passed"] is False
 
 
+def test_actual_primary_not_array_position_drives_score_and_tab():
+    correct = candidate(id="primary")
+    other = candidate(id="other", business_operations=[{"action": "other"}])
+    row = replay.evaluate(
+        {
+            "id": "ordered",
+            "request": request(),
+            "expected_edits": [replay.edit_signature(correct)],
+        },
+        {
+            "items": [other, correct],
+            "issues": [],
+            "primary_suggestion_id": "primary",
+            "decision": {"status": "ready", "reason_code": "unique_candidate"},
+        },
+    )
+    assert row["top1"] and row["initial_tab_action"] == "apply"
+    assert not row["inline_error"]
+    with pytest.raises(ValueError, match="主建议"):
+        replay.ranked_items({"items": [other], "primary_suggestion_id": "missing"})
+
+
+def test_abstention_and_false_satisfaction_are_visible_in_denominators():
+    cases = [
+        {"id": "gap", "request": request(), "expected_questions": ["missing"]},
+        {
+            "id": "edit",
+            "request": request(),
+            "expected_edits": [replay.edit_signature(candidate())],
+        },
+    ]
+    rows = [
+        dict(
+            replay.evaluate(
+                cases[0],
+                {
+                    "items": [],
+                    "issues": [{"code": "missing"}],
+                    "decision": {"status": "confirmation_required"},
+                },
+            ),
+            duration_ms=1,
+        ),
+        dict(
+            replay.evaluate(
+                cases[1],
+                {"items": [], "issues": [], "decision": {"status": "satisfied"}},
+            ),
+            duration_ms=1,
+        ),
+    ]
+    report = replay.summary(rows)
+    assert report["decidable_ratio"] == 0.5
+    assert report["confirmation_required_ratio"] == 0.5
+    assert report["incorrect_stops"] == 1
+    assert not report["passed"]
+
+
 def test_correct_second_candidate_is_top3_not_gray_coverage_or_direct_write():
     correct = candidate(business_operations=[{"action": "accessory_link"}])
     row = score([candidate(), correct], expected=correct)
@@ -185,7 +243,7 @@ def test_satisfied_case_cannot_be_passed_by_missing_evidence_response():
     assert replay.evaluate(case, result)["questions_ok"]
 
 
-def test_out_of_order_primary_is_not_scored_as_an_invisible_direct_accept():
+def test_out_of_order_primary_matches_the_actual_ui_highlight():
     first, primary = candidate(id="first"), candidate(id="primary")
     result = {
         "items": [first, primary],
@@ -193,7 +251,7 @@ def test_out_of_order_primary_is_not_scored_as_an_invisible_direct_accept():
         "decision": {"status": "ready"},
         "issues": [],
     }
-    assert replay.initial_tab_action(request(), result["items"], result) == "expand"
+    assert replay.initial_tab_action(request(), result["items"], result) == "apply"
 
 
 def validation_fixture(tmp_path):

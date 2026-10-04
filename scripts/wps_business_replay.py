@@ -6,6 +6,7 @@ import json
 import math
 import os
 import time
+from collections import Counter
 from pathlib import Path
 from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
@@ -161,6 +162,17 @@ def request_location(request):
     return cell
 
 
+def ranked_items(result):
+    items = result["items"]
+    identity = result.get("primary_suggestion_id")
+    if not identity:
+        return items
+    primary = [item for item in items if item.get("id") == identity]
+    if len(primary) != 1:
+        raise ValueError("主建议 ID 必须唯一指向响应中的建议")
+    return [primary[0], *[item for item in items if item.get("id") != identity]]
+
+
 def initial_tab_action(request, items, result=None):
     """Mirror nextEditAction's initial, non-IME state; not a host write measurement."""
     cell = request_location(request)
@@ -170,7 +182,7 @@ def initial_tab_action(request, items, result=None):
     decision = result.get("decision") or {}
     if decision.get("status") == "choice_required":
         return "expand"
-    item = items[0]  # The UI initially highlights the first item, not an arbitrary ID.
+    item = ranked_items({**result, "items": items})[0]
     primary = result.get("primary_suggestion_id") and result[
         "primary_suggestion_id"
     ] == item.get("id")
@@ -199,7 +211,7 @@ def initial_tab_action(request, items, result=None):
 
 
 def evaluate(case, result):
-    items = result["items"]
+    items = ranked_items(result)
     expected = case.get("expected_edits", [])
     matches = [i["applicable"] and edit_signature(i) in expected for i in items]
     codes = {i.get("code") for i in result["issues"] if isinstance(i, dict)}
@@ -209,6 +221,7 @@ def evaluate(case, result):
     )
     action = initial_tab_action(case["request"], items, result)
     top1 = bool(matches and matches[0])
+    status = (result.get("decision") or {}).get("status", "not_reported")
     return {
         "id": case["id"],
         "decidable": bool(expected),
@@ -218,9 +231,13 @@ def evaluate(case, result):
         "inline_error": action == "apply" and not top1,
         "questions_ok": questions_ok and decision_ok,
         "decision_ok": decision_ok,
+        "decision_status": status,
+        "incorrect_stop": status == "satisfied"
+        and bool(expected or case.get("expected_questions") or not decision_ok),
         "unexpected_edit": not expected and any(i["applicable"] for i in items),
         "blank_decidable": bool(expected) and not case["request"].get("query", ""),
         "blank_covered": top1 and action == "apply",
+        "blank_suggested": top1,
     }
 
 
@@ -228,17 +245,26 @@ def summary(rows):
     decided = [r for r in rows if r["decidable"]]
     blank = [r for r in rows if r["blank_decidable"]]
     latencies = sorted(r["duration_ms"] for r in rows)
-    ratio = lambda values, key: (
-        sum(bool(r[key]) for r in values) / len(values) if values else None
-    )
+
+    def ratio(values, key):
+        return sum(bool(r[key]) for r in values) / len(values) if values else None
+
     result = {
         "evidence_scope": "read_only_api_replay",
         "host_writes_verified": False,
         "cases": len(rows),
         "decidable": len(decided),
+        "decidable_ratio": len(decided) / len(rows),
+        "decision_counts": dict(Counter(r["decision_status"] for r in rows)),
+        "confirmation_required_ratio": sum(
+            r["decision_status"] == "confirmation_required" for r in rows
+        )
+        / len(rows),
+        "incorrect_stops": sum(r["incorrect_stop"] for r in rows),
         "top1": ratio(decided, "top1"),
         "top3": ratio(decided, "top3"),
         "blank_coverage": ratio(blank, "blank_covered"),
+        "blank_suggestion_coverage": ratio(blank, "blank_suggested"),
         "incorrect_direct_edits": sum(r["inline_error"] for r in rows),
         "p95_ms": latencies[math.ceil(len(latencies) * 0.95) - 1],
     }
@@ -249,6 +275,7 @@ def summary(rows):
         and result["top3"] == 1
         and result["blank_coverage"] >= 0.8
         and result["incorrect_direct_edits"] == 0
+        and result["incorrect_stops"] == 0
         and result["p95_ms"] <= 500
         and all(r["questions_ok"] and not r["unexpected_edit"] for r in rows)
     )
