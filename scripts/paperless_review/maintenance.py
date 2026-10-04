@@ -5,6 +5,7 @@ from uuid import NAMESPACE_URL, uuid5
 from presales.configuration.catalog.schemas import VariantInput
 from presales.configuration.catalog.service import CatalogService
 from presales.configuration.common import Entities
+from presales.configuration.definitions.inspection_schemas import InspectionProfile
 from presales.configuration.definitions.schemas import (
     KnowledgePackage,
     SystemDefinition,
@@ -75,8 +76,9 @@ def apply_plan(session, plan):
         if (record.payload if record else None) != item["before"]:
             raise RuleConflict("维护预览内容过期：" + item["id"])
         pending.append(item["id"])
-    # Definitions first, then knowledge, then packages referencing the exact new revisions.
-    return [save_change(session, item) for item in plan["changes"] if item["id"] in pending]
+    # Profiles must exist before definitions pin them; retain the batch's remaining order.
+    ordered = sorted(plan["changes"], key=lambda item: item["kind"] != "inspection_profile")
+    return [save_change(session, item) for item in ordered if item["id"] in pending]
 
 
 def save_change(session, item):
@@ -85,6 +87,10 @@ def save_change(session, item):
         if item["expected_revision"]
         else dict(create_id=item["id"])
     )
+    if item["kind"] == "inspection_profile":
+        return Entities(session).save(
+            "inspection_profile", InspectionProfile.model_validate(item["payload"]), **options
+        )
     if item["kind"] == "variant":
         return CatalogService(session).save_variant(
             VariantInput.model_validate(item["payload"]), **options

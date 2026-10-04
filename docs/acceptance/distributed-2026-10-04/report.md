@@ -2,7 +2,7 @@
 
 日期：2026-10-04。来源为用户提供的 V2.2 工作簿，不代表 OA 最新资料。
 
-后续补充见 [参数、Android 环境及条件配套补齐](source-followup.md)和[升降话筒、主机容量与已含功能](accessory-followup.md)。以下保留首次验收当时的数据与结果。
+后续补充见 [参数、Android 环境及条件配套补齐](source-followup.md)、[升降话筒、主机容量与已含功能](accessory-followup.md)和[集中充电需求、候选与容量检查](charging-followup.md)。以下保留首次验收当时的数据与结果。
 
 ## 本次补齐什么
 

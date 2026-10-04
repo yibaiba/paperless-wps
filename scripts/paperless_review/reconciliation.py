@@ -43,7 +43,7 @@ LICENSE_ROLES = {
 
 
 def current_records(session):
-    kinds = ("variant", "system_definition", "knowledge", "knowledge_package")
+    kinds = ("variant", "system_definition", "knowledge", "knowledge_package", "inspection_profile")
     return {
         e.id: dict(kind=e.kind, revision=e.revision, payload=deepcopy(e.payload))
         for e in session.scalars(select(Entity).where(Entity.kind.in_(kinds)))

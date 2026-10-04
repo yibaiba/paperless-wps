@@ -9,6 +9,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from paperless_review.distributed import build_distributed_plan
 from paperless_review.distributed_accessories import build_accessory_plan
+from paperless_review.distributed_charging import build_charging_plan
 from paperless_review.distributed_sources import build_source_plan
 from paperless_review.maintenance import apply_plan
 from presales.configuration.common import Entities
@@ -28,6 +29,11 @@ def main():
     phase.add_argument(
         "--accessory-details", action="store_true", help="复核升降话筒必配、主机容量及已含标语功能"
     )
+    phase.add_argument(
+        "--charging-checks",
+        action="store_true",
+        help="接入集中充电容量检查及五款候选，兼容仍待确认",
+    )
     parser.add_argument("--report", type=Path, required=True)
     args = parser.parse_args()
     signal.alarm(60)
@@ -40,6 +46,8 @@ def main():
                 builder = build_source_plan
             elif args.accessory_details:
                 builder = build_accessory_plan
+            elif args.charging_checks:
+                builder = build_charging_plan
             plan = builder(session)
             updated = apply_plan(session, plan)
             report = dict(

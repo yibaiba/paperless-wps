@@ -46,7 +46,13 @@ ATTRIBUTE_DEFINITIONS = (
     AttributeDefinition("subtitle_room_count", "启用字幕投屏的会议室数量", "number"),
     AttributeDefinition("extra_audio_concurrency_count", "需额外购买的音频并发路数", "number"),
     AttributeDefinition("microphone_count", "本系统会议话筒数量", "number"),
-    AttributeDefinition("simultaneous_charging_count", "需要同时充电的终端数量", "number"),
+    AttributeDefinition(
+        "simultaneous_charging_count",
+        "需要同时充电的终端数量",
+        "quantity",
+        ("台",),
+        purpose="project_input",
+    ),
     AttributeDefinition("cpu_arch", "CPU 架构", "enum"),
     AttributeDefinition("cpu_count", "CPU 数量", "number"),
     AttributeDefinition(
