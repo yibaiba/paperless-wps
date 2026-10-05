@@ -48,7 +48,7 @@ export function ProjectDeviceTable({
                     color={consumer.via === "accessory" ? "blue" : "default"}
                   >
                     {consumer.system_name} / {consumer.role}
-                    {consumer.via === "accessory" ? "（配套）" : ""}
+                    {consumer.fulfilled_by_demand_ids?.length ? "（引用已有分配）" : consumer.via === "accessory" ? "（配套）" : ""}
                   </Tag>
                 ))}
               </Space>

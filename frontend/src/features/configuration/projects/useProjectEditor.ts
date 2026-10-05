@@ -33,20 +33,25 @@ export function useProjectEditor({
   initial: ProjectConfiguration;
   workspace?: Workspace;
 }) {
-  const draft = useConfigurationDraft(workspace?.configuration ?? initial.configuration),
+  const projectionChanged = workspace && (workspace.checked.usage_projection?.fingerprint !== initial.usage_projection?.fingerprint ||
+    workspace.checked.usage_projection?.version !== initial.usage_projection?.version);
+  const initialHistoryKey = projectionChanged ? `workspace:${workspace!.id}:${workspace!.revision}` : '';
+  const draft = useConfigurationDraft(workspace?.configuration ?? initial.configuration, initialHistoryKey),
     config = draft.present;
   const [saved, setSaved] = useState(initial);
   const savedJson = useRef(JSON.stringify(initial.configuration));
+  const savedHistoryKey = useRef('');
   const serialized = useMemo(() => JSON.stringify(config), [config]);
-  const dirty = serialized !== savedJson.current;
+  const dirty = serialized !== savedJson.current || draft.historyKey !== savedHistoryKey.current;
+  const checkedKey = (value: Configuration, historyKey = draft.historyKey) => businessKey(value) + historyKey;
   const [checkHistory, setCheckHistory] = useState<{ latest?: Checked; results: Map<string, Checked> }>(() => ({
     latest: workspace?.checked ?? (initial.fingerprint ? initial : undefined),
-    results: new Map(workspace ? [[businessKey(workspace.configuration), workspace.checked]] : initial.fingerprint ? [[businessKey(initial.configuration), initial]] : []),
+    results: new Map(workspace ? [[businessKey(workspace.configuration) + initialHistoryKey, workspace.checked]] : initial.fingerprint ? [[businessKey(initial.configuration), initial]] : []),
   }));
-  const checked = checkHistory.results.get(businessKey(config)) ?? checkHistory.latest;
-  const setChecked = (result: Checked | undefined) => setCheckHistory((previous) => ({
+  const checked = checkHistory.results.get(checkedKey(config)) ?? checkHistory.latest;
+  const setChecked = (result: Checked | undefined, historyKey = draft.historyKey) => setCheckHistory((previous) => ({
     latest: result,
-    results: result ? new Map(previous.results).set(businessKey(result.configuration), result) : previous.results,
+    results: result ? new Map(previous.results).set(checkedKey(result.configuration, historyKey), result) : previous.results,
   }));
   const [systemModal, setSystemModal] = useState(false),
     [author, setAuthor] = useState(false),
@@ -75,11 +80,14 @@ export function useProjectEditor({
     queryFn: () => api<{ id: string; name: string }[]>("/topologies"),
   });
   const persistence = usePersistentDraft({ projectId, saved, configuration: config, initialWorkspace: workspace,
+    historyKey: draft.historyKey,
+    acceptCheckpoint: (result, key) => { setChecked(result, key); draft.commit(result.configuration, key); },
     accept: (result) => { setChecked(result); draft.replaceCurrent(result.configuration); },
     acceptOperation: (result) => { setChecked(result); draft.commit(result.configuration); },
   });
   const { drawing, check, save, apply, acceptChecked, reloadSaved } = useProjectRequests({
     projectId, draft, saved, checked, setSaved, setChecked, savedJson, saveWorkspace: persistence.save,
+    onSaved: (historyKey) => { savedHistoryKey.current = historyKey; },
   });
   const importing = useMutation({
     mutationFn: () =>

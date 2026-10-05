@@ -2,24 +2,25 @@
 
 from copy import deepcopy
 
-from sqlalchemy import select
-
 from presales.configuration.models import Entity, Revision
+from presales.configuration.projects.calculation.usage.versioning import projection_status
 from presales.configuration.projects.schemas import Configuration
 from presales.configuration.projects.services.incremental import edit_check
 from presales.lists.catalog_snapshot import DraftCatalog, capture_catalog, edit_catalog_snapshot
 from presales.lists.receipts import once
 from presales.rules.repository import RuleConflict
+from sqlalchemy import select
 
 from .projection_patch import projection_patch
 
 
 def workspace(record):
+    payload = dict(record.payload, checked=projection_status(record.payload["checked"]))
     return dict(
         id=record.id,
         revision=record.revision,
         updated_at=record.updated_at.isoformat(),
-        **record.payload,
+        **payload,
     )
 
 
@@ -95,7 +96,12 @@ class WebDrafts:
         data["evidence"] = data.get("evidence") or "未正式保存的网页编辑"
         snapshot_id = capture_catalog(self.session)
         self.repository.catalog = DraftCatalog(self.session, snapshot_id)
-        checked = self.repository.check(Configuration.model_validate(data))
+        # Creating a workspace preserves the saved calculation; adopting a recheck is explicit.
+        checked = (
+            projection_status(dict(saved, configuration=data))
+            if saved.get("fingerprint")
+            else self.repository.check(Configuration.model_validate(data))
+        )
         result = self.entities.save(
             "list_draft",
             dict(
@@ -160,6 +166,16 @@ class WebDrafts:
             namespace="web_draft_restore",
             request=request,
             perform=lambda: self._restore(request),
+        )
+
+    def recheck(self, request):
+        from .recheck import adopt_recheck
+
+        return once(
+            self.session,
+            namespace="web_draft_recheck",
+            request=request,
+            perform=lambda: adopt_recheck(self, request),
         )
 
     def _restore(self, request):

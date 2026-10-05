@@ -39,12 +39,14 @@ function scenario(failure) {
   class ApiError extends Error { constructor(status) { super(`VERSION_CONFLICT ${status}`); this.status = status; } }
   let workspace = { id: 'draft', revision: 1, base_revision: 0, configuration: { note: 'old' } };
   workspace.checked = { configuration: workspace.configuration };
+  const checkpoints = new Map([[1, structuredClone(workspace)]]);
   const options = {
     projectId: 'p', saved: { revision: 0, configuration: workspace.configuration },
     configuration: workspace.configuration,
     initialWorkspace: failure?.startsWith('create-') ? undefined : structuredClone(workspace),
     accept(checked) { options.configuration = checked.configuration; },
     acceptOperation(checked) { applied++; options.configuration = checked.configuration; },
+    acceptCheckpoint(checked, key) { applied++; options.configuration = checked.configuration; options.historyKey = key; },
   };
   async function post(path, request) {
     sent.push(structuredClone(request));
@@ -56,13 +58,19 @@ function scenario(failure) {
       if (failure === 'create-ack-lost' && creationAttempts === 1) throw new Error(failure);
       return structuredClone(workspace);
     }
-    assert.ok(path.endsWith('/edit'), path);
+    assert.ok(['/edit', '/restore', '/recheck'].some(suffix => path.endsWith(suffix)), path);
     attempt++;
     if (failure === 'offline' && attempt === 1) throw new Error('offline');
     if (['rejected', 'conflict'].includes(failure) && attempt === 1) throw new ApiError(failure === 'rejected' ? 422 : 409);
     if (request.expected_revision !== workspace.revision) throw new ApiError(409);
-    const configuration = { note: request.operations[0].note };
-    workspace = { ...workspace, revision: workspace.revision + 1, configuration, checked: { configuration } };
+    if (path.endsWith('/restore')) {
+      workspace = { ...structuredClone(checkpoints.get(request.checkpoint_revision)), revision: workspace.revision + 1 };
+    } else {
+      const configuration = request.operations ? { note: request.operations[0].note } : workspace.configuration;
+      workspace = { ...workspace, revision: workspace.revision + 1, configuration,
+        checked: { configuration, ...(path.endsWith('/recheck') ? { usage_projection: { version: 1 } } : {}) } };
+    }
+    checkpoints.set(workspace.revision, structuredClone(workspace));
     receipts.set(request.operation_id, structuredClone(workspace));
     if (failure === 'ack-lost' && attempt === 1) throw new Error('ack-lost');
     return structuredClone(workspace);
@@ -85,6 +93,31 @@ function scenario(failure) {
     leaving() { return blocker({ currentLocation: {pathname: '/configuration/p'}, nextLocation: {pathname: '/projects'}, historyAction: 'PUSH' }); },
     closing() { let prevented = false; listeners.get('beforeunload')?.({preventDefault() {prevented = true;}}); return prevented; },
   };
+}
+
+for (const failure of [undefined, 'ack-lost']) {
+  test(`recheck of unchanged facts restores the original check checkpoint (${failure ?? 'success'})`, async () => {
+    const s = scenario(failure), first = s.render();
+    const adoption = { expected_project_revision: 0, fingerprint: 'preview', refresh_knowledge: false,
+      upgrade_calculation: false, upgrade_decisions: false, cleanup_allocations: false };
+    if (failure) {
+      await assert.rejects(first.recheck(adoption), /ack-lost/);
+      await s.render().retry();
+    } else await first.recheck(adoption);
+    assert.equal(s.options.configuration.note, 'old');
+    assert.equal(s.applied(), 1);
+    const token = s.options.historyKey, state = s.render();
+    assert.match(token, /^workspace:draft:2$/);
+    assert.equal(state.unsynced, false);
+    s.options.historyKey = '';
+    await state.retry();
+    assert.equal(s.sent.at(-1).checkpoint_revision, 1, 'the old check must not be overwritten by the new check');
+    const undo = s.render();
+    s.options.historyKey = token;
+    await undo.retry();
+    assert.equal(s.sent.at(-1).checkpoint_revision, 2);
+    assert.equal(s.render().unsynced, false);
+  });
 }
 
 for (const failure of ['offline', 'ack-lost']) {

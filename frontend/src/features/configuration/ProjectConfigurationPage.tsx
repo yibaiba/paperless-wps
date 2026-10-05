@@ -1,6 +1,6 @@
 import { ReferenceCasePanel } from "./referenceCases/ReferenceCasePanel";
 import { QuantityInputsForm } from "./projects/forms/QuantityInputsForm";
-import type { QuantityInputIssue } from "./types";
+import type { IssueAction, QuantityInputIssue } from "./types";
 import { DeviceInspector } from "./projects/DeviceInspector";
 import { requirementDeviceIds } from "./projects/roleAllocations";
 import { ProposalPanel } from "./projects/ProposalPanel";
@@ -112,13 +112,41 @@ function ConfigurationEditor({
     tree,
   } = editor;
   const checkedStale =
-    !checked || businessKey(checked.configuration) !== businessKey(config);
+    !checked || businessKey(checked.configuration) !== businessKey(config) ||
+    (config.calculation_version === 3 && (!checked.usage_projection?.version || checked.usage_projection.current === false));
   const savedProjectionStale = checked ? checkedStale : dirty;
+  const recheck = () => {
+    const outdatedUsage = config.calculation_version === 3 &&
+      (!checked?.usage_projection?.version || checked.usage_projection.current === false);
+    if (outdatedUsage) setChangeRequest({ refresh: false, cleanup: false });
+    else check.mutate(false);
+  };
   const selecting = tab === "list" || tab === "drawing";
   const showInspector = selecting && (!!requirement || !!editingDevice);
   const openMaintenance = (query: Record<string, string>, context?: { systemId?: string; requirementId?: string }) => navigate('/knowledge?' + new URLSearchParams({ ...query,
     return_project: projectId, return_draft: editor.persistence.id ?? '', return_system: context?.systemId ?? selectedSystem ?? '',
     return_requirement: context?.requirementId ?? requirement?.id ?? '' }));
+  const handleIssueAction = (action: IssueAction) => {
+        if (action.type === 'edit_accessory') { setReviewTab('accessories'); setReviewOpen(true); return; }
+        setReviewOpen(false);
+        if (action.type === 'edit_quantity_inputs' && action.quantity_inputs?.length) { setQuantityInputs(action.quantity_inputs); return; }
+        if (action.type === 'edit_resources' && action.requirement_ids?.length) { setResourceRoles(action.requirement_ids); return; }
+        if (action.type === 'assign_device' && action.device_id) { setAssignDevice(action.device_id); return; }
+        if (action.type === 'add_system') { setSystemModal(true); return; }
+        if (action.type === 'add_requirement' && action.system_id) { setRequirementModal({ systemId: action.system_id, requestedRole: requestedRole(action) }); return; }
+        if (action.type === 'edit_price') { setTab('quotation'); return; }
+        if (action.type === 'edit_supply') { setTab('supply'); return; }
+        if (action.type === 'edit_system_inputs') { if (action.system_id) setInputsSystemId(action.system_id); else setInputSystemChoices(action.system_ids ?? []); return; }
+        if (action.type === 'edit_inspection') { openMaintenance({ view: 'inspections', ...(action.profile_id ? { profile: action.profile_id } : {}) }); return; }
+        if (action.type === 'edit_definition') { openMaintenance({ view: 'systems', system: config.systems.find(s => s.id === action.system_id)?.definition_id ?? '' }, { systemId: action.system_id, requirementId: action.requirement_id }); return; }
+        if (action.type === 'edit_knowledge') { openMaintenance(action.rule_id ? { rule: action.rule_id, variant: action.variant_id ?? '' } : { variant: action.variant_id ?? '' }); return; }
+        setTab('list');
+        const role = config.requirements.find((r) => r.id === action.requirement_id);
+        if (['edit_resources', 'edit_requirement'].includes(action.type) && role) setRequirementModal({ systemId: role.system_id, initial: role });
+        else if (role) { setDeviceModal(undefined); setSelectedRequirement(role.id); setSelectedSystem(role.system_id); }
+        else if (action.device_id) { const related = config.requirements.filter((r) => requirementDeviceIds(r).includes(action.device_id!)); if (related.length === 1) setRequirementModal({ systemId: related[0].system_id, initial: related[0] }); else setAssignDevice(action.device_id); }
+
+  };
   return (
     <DraftPreviewContext.Provider value={editor.persistence.preview}><div className="configuration-page">
       {editor.persistence.error ? <Alert type="error" title={editor.persistence.error} action={<Space>
@@ -172,7 +200,7 @@ function ConfigurationEditor({
         readiness={checked?.readiness ?? saved.readiness}
         stale={savedProjectionStale}
         onViewChecks={() => setReviewOpen(true)}
-        onCheck={() => check.mutate(false)}
+        onCheck={recheck}
         busy={busy || sheetPending}
         checking={check.isPending}
       />
@@ -222,7 +250,7 @@ function ConfigurationEditor({
             activeKey={tab}
             onChange={setTab}
             items={[
-              { key: "quotation", label: "报价与导出", children: <QuotationPanel configuration={config} output={checked?.quotation_output ?? saved.quotation_output} saved={saved} dirty={dirty} stale={checkedStale} busy={busy || sheetPending} checking={check.isPending} onApply={draft.commit} onCheck={() => check.mutate(false)} sheetControls={{ configuration: config, saved, draftVersion: draft.version,
+              { key: "quotation", label: "报价与导出", children: <QuotationPanel configuration={config} output={checked?.quotation_output ?? saved.quotation_output} saved={saved} dirty={dirty} stale={checkedStale} busy={busy || sheetPending} checking={check.isPending} onApply={draft.commit} onCheck={recheck} sheetControls={{ configuration: config, saved, draftVersion: draft.version,
                 onChecked: editor.acceptChecked, onPending: setSheetPending, onUndo: draft.undo, onRedo: draft.redo, canUndo: draft.canUndo, canRedo: draft.canRedo,
               }} /> },
               { key: "definitions", label: "系统版本与角色", children: <ProjectDefinitionPanel configuration={config} onApply={draft.commit} /> },
@@ -289,6 +317,8 @@ function ConfigurationEditor({
         {editingDevice ? (
           <DeviceInspector device={editingDevice} context={config} requiresSupply={config.calculation_version === 3}
             execute={editor.persistence.execute} onApply={editor.acceptChecked}
+            checked={checked} stale={checkedStale} onAction={handleIssueAction}
+            onRecheck={() => setChangeRequest({ refresh: false, cleanup: false })}
             onClose={() => setDeviceModal(undefined)} />
         ) : (
           <ProjectCandidates
@@ -308,7 +338,7 @@ function ConfigurationEditor({
         configuration={config}
         stale={checkedStale}
         busy={busy}
-        onCheck={(refresh) => refresh ? setChangeRequest({ refresh: true, cleanup: false }) : check.mutate(false)}
+        onCheck={(refresh) => refresh ? setChangeRequest({ refresh: true, cleanup: false }) : recheck()}
         onIncludedChange={(next) => draft.commit(next)}
         onChoice={(demandId, selected) => draft.commit({ ...config, accessory_choices: [
           ...(config.accessory_choices ?? []).filter((c) => c.demand_id !== demandId), { demand_id: demandId, selected },
@@ -316,26 +346,7 @@ function ConfigurationEditor({
         onApply={(suggestion, choice) =>
           apply.mutate({ suggestion, choice })
         }
-        onAction={(action) => {
-        if (action.type === 'edit_accessory') { setReviewTab('accessories'); return; }
-        setReviewOpen(false);
-        if (action.type === 'edit_quantity_inputs' && action.quantity_inputs?.length) { setQuantityInputs(action.quantity_inputs); return; }
-        if (action.type === 'edit_resources' && action.requirement_ids?.length) { setResourceRoles(action.requirement_ids); return; }
-        if (action.type === 'assign_device' && action.device_id) { setAssignDevice(action.device_id); return; }
-        if (action.type === 'add_system') { setSystemModal(true); return; }
-        if (action.type === 'add_requirement' && action.system_id) { setRequirementModal({ systemId: action.system_id, requestedRole: requestedRole(action) }); return; }
-        if (action.type === 'edit_price') { setTab('quotation'); return; }
-        if (action.type === 'edit_supply') { setTab('supply'); return; }
-        if (action.type === 'edit_system_inputs') { if (action.system_id) setInputsSystemId(action.system_id); else setInputSystemChoices(action.system_ids ?? []); return; }
-        if (action.type === 'edit_inspection') { openMaintenance({ view: 'inspections', ...(action.profile_id ? { profile: action.profile_id } : {}) }); return; }
-        if (action.type === 'edit_definition') { openMaintenance({ view: 'systems', system: config.systems.find(s => s.id === action.system_id)?.definition_id ?? '' }, { systemId: action.system_id, requirementId: action.requirement_id }); return; }
-        if (action.type === 'edit_knowledge') { openMaintenance(action.rule_id ? { rule: action.rule_id, variant: action.variant_id ?? '' } : { variant: action.variant_id ?? '' }); return; }
-        setTab('list');
-        const role = config.requirements.find((r) => r.id === action.requirement_id);
-        if (['edit_resources', 'edit_requirement'].includes(action.type) && role) setRequirementModal({ systemId: role.system_id, initial: role });
-        else if (role) { setDeviceModal(undefined); setSelectedRequirement(role.id); setSelectedSystem(role.system_id); }
-        else if (action.device_id) { const related = config.requirements.filter((r) => requirementDeviceIds(r).includes(action.device_id!)); if (related.length === 1) setRequirementModal({ systemId: related[0].system_id, initial: related[0] }); else setAssignDevice(action.device_id); }
-      }} />
+        onAction={handleIssueAction} />
       {customInputsSystemId && config.systems.some(s => s.id === customInputsSystemId) ? <SystemInputsForm system={config.systems.find(s => s.id === customInputsSystemId)!} configuration={config} onClose={() => setCustomInputsSystemId(undefined)} onApply={inputs => draft.commit({ ...config, systems: config.systems.map(s => s.id === customInputsSystemId ? { ...s, inputs } : s) })} /> : null}
       {inputsSystemId && config.systems.find((s) => s.id === inputsSystemId) ? <SystemForm
         configuration={config} systemId={inputsSystemId} onClose={() => setInputsSystemId(undefined)} onApply={draft.commit} /> : null}
@@ -382,7 +393,7 @@ function ConfigurationEditor({
       <ProjectImportDialog editor={editor} />
       {changeRequest ? <ProjectChangePanel projectId={projectId} revision={saved.revision} configuration={config}
         refresh={changeRequest.refresh} cleanup={changeRequest.cleanup} current={() => draft.current.current}
-        onClose={() => setChangeRequest(undefined)} onApply={editor.acceptChecked} /> : null}
+        onClose={() => setChangeRequest(undefined)} onApply={editor.persistence.recheck} /> : null}
     </div></DraftPreviewContext.Provider>
   );
 }

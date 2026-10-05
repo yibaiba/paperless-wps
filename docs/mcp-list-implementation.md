@@ -49,7 +49,20 @@
 | `list_save` | 草稿写入信息、项目预期修订、检查指纹 | 项目保存修订、完整网页地址；仍是业务草稿 |
 | `list_export` | project_id、revision、output、operation_id | 文件 ID、校验值、实际路径、下载地址 |
 
-`list_get.view` 支持：`summary`、`requirements`、`devices`、`procurement`、`allocations`、`quotation`、`issues`、`evidence`、`changes`、`template`。报价视图的 `total` 是金额，`total_items` 是明细总数。采用价格和调整依据在逐行 `price_selection` 中。`check_current=false` 表示尚未明确检查当前修订，不能拿旧检查保存或应用配套。
+`list_get.view` 支持：`summary`、`requirements`、`devices`、`device_usages`、`procurement`、`allocations`、`quotation`、`issues`、`evidence`、`changes`、`template`，以及方案和参考案例视图。报价视图的 `total` 是金额，`total_items` 是明细总数。采用价格和调整依据在逐行 `price_selection` 中。`check_current=false` 表示尚未明确检查当前修订或用途计算版本过期，不能拿旧检查保存或应用配套。
+
+### 用途与分配明细
+
+使用 `list_get({"request":{"draft_id":"…","view":"device_usages","device_id":"…","offset":0,"limit":20}})` 读取单个设备或省略 `device_id` 分页读取。保留原消费者字段，兼容增加：
+
+- `quantity_summary`：部署总量、独立分配、共享占量、未分配及超配，采购和客户已有数量仍在供货/采购视图读取。
+- `allocation_groups`：稳定分配组 ID、实际数量、角色/需求/分配记录 ID 和资源承担范围。
+- `role_references`：所有实际承载关系及引用量，不重复占量；`included_satisfactions` 单独记录已含抵扣。
+- `resource_calculations`：需求、实际分配容量、单台/部署口径、单位、合计方式、原文依据及缺口。
+
+摘要 `usage_projection` 返回版本、输入指纹及旧结果的待检查说明，不返回整份知识。检查中的物理分配组使用 `allocation_group_id(s)`，与页面问题合并用的 `group_id` 分开。数量超配、容量不足、单位冲突和分摊依据缺失使用稳定问题代码及处理动作。
+
+历史语义 1/2 保持兼容；当前语义 3 的旧记录没有新版用途明细时，读取保留原记录，显式 `list_check` 后采用当前草稿结果。检查返回 `usage_change_count`，`changes` 视图包含用途差异。网页的重新检查采用使用同一固定版本计算，并保存可撤销草稿检查点，不修改已有保存版本。
 
 ### 草稿写入信息
 

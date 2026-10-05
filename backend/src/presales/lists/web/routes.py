@@ -1,10 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException
-
 from presales.configuration.http import execute
 from presales.configuration.transactions import commit
 from presales.lists.routes import application
 
-from .schemas import CreateDraft, EditDraft, PreviewDraft, RestoreDraft
+from .schemas import CreateDraft, EditDraft, PreviewDraft, RecheckDraft, RestoreDraft
 from .service import WebDrafts
 
 router = APIRouter(prefix="/api/work-drafts")
@@ -44,3 +43,10 @@ def restore(identity: str, data: RestoreDraft, app=Depends(application)):
     if identity != data.draft_id:
         raise HTTPException(status_code=422, detail="草稿标识不一致")
     return execute(lambda: commit(app.session, lambda: WebDrafts(app.lists).restore(data)))
+
+
+@router.post("/{identity}/recheck")
+def recheck(identity: str, data: RecheckDraft, app=Depends(application)):
+    if identity != data.draft_id:
+        raise HTTPException(status_code=422, detail="草稿标识不一致")
+    return execute(lambda: commit(app.session, lambda: WebDrafts(app.lists).recheck(data)))

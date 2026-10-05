@@ -211,6 +211,7 @@ export interface Configuration extends Authored {
   knowledge_snapshot_id?: string | null;
 }
 export interface IssueAction {
+  allocation_group_id?: string; allocation_group_ids?: string[]; demand_ids?: string[]; device_ids?: string[];
   quantity_inputs?: QuantityInputIssue[];
   role_id?: string; role_name?: string; feature?: string;
   system_ids?: string[];
@@ -229,6 +230,9 @@ export interface IncludedAllocationCheck extends Check {
   included_name: string;
 }
 export interface Check {
+  allocation_group_id?: string; allocation_group_ids?: string[];
+  requirement_ids?: string[]; device_ids?: string[]; demand_ids?: string[]; allocated_quantity?: string;
+  capacity_basis?: "unit" | "deployment"; aggregation?: "sum" | "max";
   check_id?: string; group_id?: string; category?: "requirements" | "selection" | "commercial" | "knowledge"; objects?: { kind: string; id: string }[];
   allocation_id?: string;
   responsibility?: "project" | "knowledge";
@@ -290,6 +294,8 @@ export interface Suggestion {
   } | null;
 }
 export interface DeviceConsumer {
+  group_ids?: string[]; allocated_quantity?: string;
+  fulfilled_by_requirement_ids?: string[]; fulfilled_by_demand_ids?: string[];
   requirement_id: string;
   system_id: string;
   system_name: string;
@@ -301,6 +307,11 @@ export interface DeviceConsumer {
   capacity_expected: boolean;
 }
 export interface DeviceUsage {
+  allocation_groups?: import('./projects/usageTypes').UsageGroup[];
+  quantity_summary?: import('./projects/usageTypes').QuantitySummary;
+  role_references?: import('./projects/usageTypes').RoleReference[];
+  resource_calculations?: Check[];
+  included_satisfactions?: IncludedAllocation[];
   device_id: string;
   consumers: DeviceConsumer[];
   allocation_demand_ids: string[];
@@ -371,6 +382,7 @@ export interface ProjectOutput {
   lines: ProjectOutputLine[];
 }
 export interface Checked {
+  usage_projection?: import('./projects/usageTypes').UsageProjectionStatus;
   quotation_output?: import("./quotation/types").QuotationOutput | null;
   version_changes?: {
     kind: string;
@@ -464,6 +476,8 @@ export interface BusinessChange {
   after: unknown;
 }
 export interface ChangePreview {
+  usage_changes?: { device_id: string; previous: import('./projects/usageTypes').UsageState | null; current: import('./projects/usageTypes').UsageState | null }[];
+  check_changes?: { previous: Check | null; current: Check | null }[];
   checked: Checked;
   fingerprint: string;
   changes: BusinessChange[];

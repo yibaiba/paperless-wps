@@ -1,19 +1,24 @@
 import { useState } from 'react';
-import { Alert, Spin } from 'antd';
+import { Alert, Spin, Tabs } from 'antd';
 import { DeploymentForm } from './forms/DeploymentForm';
-import type { Checked, Configuration, Deployment } from '../types';
+import type { Checked, Configuration, Deployment, IssueAction } from '../types';
 import { deviceOperation, type Operation } from './drafts/operations';
+import { DeviceUsagePanel } from './DeviceUsagePanel';
 
 interface Props {
   device: Deployment;
   context: Configuration;
   requiresSupply: boolean;
+  checked?: Checked;
+  stale: boolean;
+  onAction: (action: IssueAction) => void;
+  onRecheck: () => void;
   execute: (operations: Operation[]) => Promise<Checked>;
   onApply: (checked: Checked) => void;
   onClose: () => void;
 }
 
-export function DeviceInspector({ device, context, requiresSupply, execute, onApply, onClose }: Props) {
+export function DeviceInspector({ device, context, requiresSupply, execute, onApply, onClose, checked, stale, onAction, onRecheck }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<{ message: string; context: Configuration }>();
   const apply = async (operation: Operation, close = false) => {
@@ -28,7 +33,7 @@ export function DeviceInspector({ device, context, requiresSupply, execute, onAp
   };
   return <Spin spinning={busy}>
     {error?.context === context ? <Alert type="error" showIcon title={error.message} /> : null}
-    <DeploymentForm device={device} requiresSupply={requiresSupply} onClose={onClose}
+    <Tabs items={[{ key: 'properties', label: '设备属性', children: <DeploymentForm device={device} requiresSupply={requiresSupply} onClose={onClose}
       disabled={busy}
       onApply={value => {
         const operation = deviceOperation(device, value);
@@ -40,6 +45,7 @@ export function DeviceInspector({ device, context, requiresSupply, execute, onAp
         void apply({ action: 'device_clone', source_device_id: device.id, new_device_id: id,
           supply_allocations: supply ? [{ id: crypto.randomUUID(), device_id: id, quantity: device.quantity, ...supply }] : [],
         }, true);
-      }} />
+      }} /> }, { key: 'usage', label: '用途与分配', children: <DeviceUsagePanel deviceId={device.id}
+        configuration={context} checked={checked} stale={stale} onAction={onAction} onRecheck={onRecheck} /> }]} />
   </Spin>;
 }

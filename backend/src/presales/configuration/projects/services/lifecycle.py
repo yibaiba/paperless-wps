@@ -1,9 +1,8 @@
 from uuid import NAMESPACE_URL, uuid5
 
-from sqlalchemy import select
-
 from presales.rules.repository import RuleConflict
 from presales.storage import Project
+from sqlalchemy import select
 
 from ...common import Entities, view
 from ...definitions.service import Definitions
@@ -90,4 +89,27 @@ def procurement_diff(before, after):
             for line in value.get("project_output", {}).get("procurement_lines", [])
         ]
 
-    return collection_diff("procurement", lines(before), lines(after))
+    old, new = lines(before), lines(after)
+    changes = collection_diff(
+        "procurement",
+        [procurement_value(line) for line in old],
+        [procurement_value(line) for line in new],
+    )
+    old_by_id, new_by_id = {line["id"]: line for line in old}, {line["id"]: line for line in new}
+    return [dict(c, before=old_by_id.get(c["id"]), after=new_by_id.get(c["id"])) for c in changes]
+
+
+def procurement_value(line):
+    # Usage diagnostics have their own diff; adding trace fields is not a purchase change.
+    ignored = {"group_ids", "allocated_quantity", "fulfilled_by_demand_ids"}
+    consumers = [
+        {key: value for key, value in consumer.items() if key not in ignored}
+        for consumer in line.get("consumers", [])
+    ]
+    return dict(
+        {key: value for key, value in line.items() if key not in {"quantity_summary", "consumers"}},
+        consumers=sorted(
+            consumers,
+            key=lambda c: (c["requirement_id"], c["via"], c.get("demand_id") or ""),
+        ),
+    )

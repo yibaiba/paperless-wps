@@ -17,13 +17,15 @@ interface Options {
   setChecked: (value: Checked | undefined) => void;
   savedJson: RefObject<string>;
   saveWorkspace: () => Promise<ProjectConfiguration>;
+  onSaved: (historyKey: string) => void;
 }
 export function useProjectRequests(options: Options) {
   const { projectId, draft, checked, setSaved, setChecked, savedJson } = options;
   const { message } = App.useApp(), client = useQueryClient();
-  const capture = () => structuredClone(draft.current.current);
-  const currentMatches = (before: string) => {
-    if (JSON.stringify(draft.current.current) === before) return true;
+  const capture = () => ({ configuration: structuredClone(draft.current.current),
+    before: JSON.stringify(draft.current.current), historyKey: draft.currentHistoryKey.current });
+  const currentMatches = (before: string, historyKey: string) => {
+    if (JSON.stringify(draft.current.current) === before && draft.currentHistoryKey.current === historyKey) return true;
     message.warning("等待期间草稿已有变化，返回结果未覆盖当前修改，请重新操作。");
     return false;
   };
@@ -35,32 +37,33 @@ export function useProjectRequests(options: Options) {
   };
   const drawing = useMutation({
     mutationFn: async ({ next, addIds = [], removeId }: { next: Configuration; addIds?: string[]; removeId?: string }) => {
-      const before = JSON.stringify(capture());
+      const { before, historyKey } = capture();
       const value = await updateDrawing(next, { addIds, removeId });
-      return { before, value };
+      return { before, historyKey, value };
     },
-    onSuccess: ({ before, value }) => { if (currentMatches(before)) draft.commit(value); },
+    onSuccess: ({ before, historyKey, value }) => { if (currentMatches(before, historyKey)) draft.commit(value); },
     onError: (e) => message.error(e.message),
   });
   const check = useMutation({
     mutationFn: async (refresh: boolean) => {
-      const configuration = capture(), before = JSON.stringify(configuration);
+      const { configuration, before, historyKey } = capture();
       const result = await api<Checked>(ROOT + "/check", { method: "POST", body: JSON.stringify({ configuration, refresh_knowledge: refresh, upgrade_calculation: refresh }) });
-      return { before, result, refresh };
+      return { before, historyKey, result, refresh };
     },
-    onSuccess: ({ before, result, refresh }) => { if (currentMatches(before)) acceptChecked(result, refresh); },
+    onSuccess: ({ before, historyKey, result, refresh }) => { if (currentMatches(before, historyKey)) acceptChecked(result, refresh); },
     onError: (e) => message.error(e.message),
   });
   const save = useMutation({
     mutationFn: async () => {
-      const configuration = capture(), before = JSON.stringify(configuration);
+      const { before, historyKey } = capture();
       const result = await options.saveWorkspace();
-      return { before, result };
+      return { before, historyKey, result };
     },
-    onSuccess: ({ before, result }) => {
+    onSuccess: ({ before, historyKey, result }) => {
       setSaved(result); savedJson.current = JSON.stringify(result.configuration);
+      options.onSaved(historyKey);
       client.setQueryData(configurationKeys.project(projectId), result);
-      if (currentMatches(before)) acceptChecked(result, false);
+      if (currentMatches(before, historyKey)) acceptChecked(result, false);
       client.invalidateQueries({ queryKey: ["project", projectId] });
       message.success("项目修订已保存");
     },
@@ -68,7 +71,7 @@ export function useProjectRequests(options: Options) {
   });
   const apply = useMutation({
     mutationFn: async ({ suggestion, choice }: { suggestion: Suggestion; choice: ApplyChoice }) => {
-      const configuration = capture(), before = JSON.stringify(configuration);
+      const { configuration, before, historyKey } = capture();
       if (!checked) throw new Error("请先检查当前配置");
       const result = await api<Checked>(ROOT + "/apply", { method: "POST", body: JSON.stringify({
         configuration, refresh_knowledge: false, fingerprint: checked.fingerprint, suggestion_id: suggestion.id,
@@ -77,9 +80,9 @@ export function useProjectRequests(options: Options) {
       }) });
       const addIds = result.configuration.devices.filter((d) => !configuration.devices.some((old) => old.id === d.id)).map((d) => d.id);
       const withDrawing = await updateDrawing(result.configuration, { addIds });
-      return { before, result: { ...result, configuration: withDrawing } };
+      return { before, historyKey, result: { ...result, configuration: withDrawing } };
     },
-    onSuccess: ({ before, result }) => { if (currentMatches(before)) acceptChecked(result); },
+    onSuccess: ({ before, historyKey, result }) => { if (currentMatches(before, historyKey)) acceptChecked(result); },
     onError: (e) => message.error(e.message),
   });
   const reloadSaved = async () => {

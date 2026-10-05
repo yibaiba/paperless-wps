@@ -9,19 +9,24 @@ import { type Operation, configurationOperations } from './operations';
 import { createSaveTransaction } from './saveTransaction';
 import { mergeDelta, post, writeRequest, type Delta, type Workspace } from './transport';
 
-const key = (config: Configuration) => JSON.stringify(config);
+const key = (config: Configuration, historyKey = '') => JSON.stringify(config) + historyKey;
+export interface RecheckInput {
+  expected_project_revision: number; fingerprint: string; refresh_knowledge: boolean;
+  upgrade_calculation: boolean; upgrade_decisions: boolean; cleanup_allocations: boolean;
+}
 interface Options {
   projectId: string; saved: ProjectConfiguration; configuration: Configuration;
-  initialWorkspace?: Workspace; accept: (checked: Checked) => void; acceptOperation: (checked: Checked) => void;
+  initialWorkspace?: Workspace; historyKey?: string; acceptCheckpoint?: (checked: Checked, key: string) => void; accept: (checked: Checked) => void; acceptOperation: (checked: Checked) => void;
 }
 export function usePersistentDraft(options: Options) {
   const live = useRef(options); live.current = options;
   const [, setParams] = useSearchParams();
   const remote = useRef<Workspace | undefined>(options.initialWorkspace);
-  const synced = useRef(key(options.initialWorkspace?.configuration ?? options.saved.configuration));
-  const checkpoints = useRef(new Map<string, number>(options.initialWorkspace ? [[key(options.initialWorkspace.configuration), options.initialWorkspace.revision]] : []));
+  const synced = useRef(key(options.initialWorkspace?.configuration ?? options.saved.configuration, options.historyKey));
+  const checkpoints = useRef(new Map<string, number>(options.initialWorkspace ? [[key(options.initialWorkspace.configuration, options.historyKey), options.initialWorkspace.revision]] : []));
   const pending = useRef<(() => Promise<Workspace>) | undefined>(undefined);
   const operationPending = useRef(false);
+  const checkpointPending = useRef(false);
   const pendingKey = useRef<string | undefined>(undefined);
   const rejectedProjection = useRef<string | undefined>(undefined);
   const creating = useRef<Promise<Workspace> | undefined>(undefined);
@@ -30,7 +35,7 @@ export function usePersistentDraft(options: Options) {
   const [, render] = useState(0);
   const { modal } = App.useApp();
   const creationId = useRef(crypto.randomUUID());
-  const currentKey = key(options.configuration);
+  const currentKey = key(options.configuration, options.historyKey);
   // An unacknowledged command may not have changed the local projection yet.
   const unsynced = currentKey !== synced.current || Boolean(pending.current);
   const saveTransaction = useRef<ReturnType<typeof createSaveTransaction> | undefined>(undefined);
@@ -56,7 +61,7 @@ export function usePersistentDraft(options: Options) {
   const synchronize = async () => {
     if (running.current) return;
     running.current = true; rejectedProjection.current = undefined; setSyncing(true); setError('');
-    const target = live.current.configuration, targetKey = key(target);
+    const target = live.current.configuration, targetKey = key(target, live.current.historyKey);
     try {
       const workspace = await ensure();
       if (!pending.current) {
@@ -69,7 +74,7 @@ export function usePersistentDraft(options: Options) {
         } else {
           const operations = configurationOperations(workspace.configuration, target);
           if (!operations.length) {
-            if (targetKey !== key(workspace.configuration)) throw new Error("草稿包含未转换为业务操作的变化，尚未同步；请保留页面并核对。");
+            if (targetKey !== key(workspace.configuration, live.current.historyKey)) throw new Error("草稿包含未转换为业务操作的变化，尚未同步；请保留页面并核对。");
             synced.current = targetKey; return;
           }
           const request = writeRequest(workspace, operations);
@@ -78,18 +83,21 @@ export function usePersistentDraft(options: Options) {
       }
       const result = await pending.current();
       const appliedKey = pendingKey.current!;
-      const wasOperation = operationPending.current; operationPending.current = false;
+      const wasOperation = operationPending.current, wasCheckpoint = checkpointPending.current;
+      operationPending.current = false; checkpointPending.current = false;
       pending.current = undefined; pendingKey.current = undefined; remote.current = result;
       if (!wasOperation) checkpoints.current.set(appliedKey, result.revision);
-      checkpoints.current.set(key(result.configuration), result.revision);
+      if (!wasCheckpoint) checkpoints.current.set(key(result.configuration, live.current.historyKey), result.revision);
       synced.current = appliedKey;
-      if (alive.current && key(live.current.configuration) === appliedKey) {
-        synced.current = key(result.configuration);
-        if (wasOperation) live.current.acceptOperation(result.checked); else live.current.accept(result.checked);
+      if (alive.current && key(live.current.configuration, live.current.historyKey) === appliedKey) {
+        synced.current = key(result.configuration, live.current.historyKey);
+        if (wasCheckpoint) acceptCheckpoint(result);
+        else if (wasOperation) live.current.acceptOperation(result.checked);
+        else live.current.accept(result.checked);
       }
     } catch (cause) {
       if (cause instanceof ApiError && cause.status === 422 && !operationPending.current) rejectedProjection.current = pendingKey.current;
-      if (cause instanceof ApiError && (cause.status === 422 || cause.status === 409)) { pending.current = undefined; pendingKey.current = undefined; operationPending.current = false; }
+      if (cause instanceof ApiError && (cause.status === 422 || cause.status === 409)) { pending.current = undefined; pendingKey.current = undefined; operationPending.current = false; checkpointPending.current = false; }
       if (alive.current) setError(cause instanceof Error ? cause.message : String(cause));
     }
     finally { running.current = false; if (alive.current) { setSyncing(false); render((v) => v + 1); } }
@@ -111,60 +119,71 @@ export function usePersistentDraft(options: Options) {
     return () => dialog.destroy();
   }, [blocker.state]);
   const preview = async (operations: EditOperation[], version: number) => {
-    if (running.current || pending.current || key(live.current.configuration) !== synced.current) throw new Error('草稿尚未同步，请先完成同步或重试。');
+    if (running.current || pending.current || key(live.current.configuration, live.current.historyKey) !== synced.current) throw new Error('草稿尚未同步，请先完成同步或重试。');
     const workspace = await ensure();
     const result = await post<Delta & { draft_version: number }>(`/work-drafts/${workspace.id}/preview`, { expected_revision: workspace.revision, draft_version: version, operations });
     return { draft_version: result.draft_version, checked: mergeDelta(workspace, { ...result, revision: workspace.revision }).checked, changes: [] } as EditPreview;
   };
   const save = async () => {
-    if (running.current || pending.current || key(live.current.configuration) !== synced.current) throw new Error('草稿尚未同步，请先重试同步。');
+    if (running.current || pending.current || key(live.current.configuration, live.current.historyKey) !== synced.current) throw new Error('草稿尚未同步，请先重试同步。');
     const workspace = await ensure();
     return saveTransaction.current!.save(workspace);
   };
   const readyWorkspace = async () => {
-    if (running.current || pending.current || key(live.current.configuration) !== synced.current) throw new Error('草稿尚未同步，请完成同步后生成方案。');
+    if (running.current || pending.current || key(live.current.configuration, live.current.historyKey) !== synced.current) throw new Error('草稿尚未同步，请完成同步后生成方案。');
     return ensure();
   };
-  const execute = async (operations: Operation[]) => {
-    if (running.current || pending.current || key(live.current.configuration) !== synced.current) throw new Error('草稿尚未同步，请完成同步后编辑。');
+  const executeWrite = async (operations: Operation[], adoption?: RecheckInput) => {
+    if (running.current || pending.current || key(live.current.configuration, live.current.historyKey) !== synced.current) throw new Error('草稿尚未同步，请完成同步后编辑。');
     // Reserve the draft before ensure() yields to another event handler.
     running.current = true; rejectedProjection.current = undefined; setSyncing(true); setError('');
-    const beforeKey = key(live.current.configuration);
-    pendingKey.current = beforeKey; operationPending.current = true;
+    const beforeKey = key(live.current.configuration, live.current.historyKey);
+    pendingKey.current = beforeKey; operationPending.current = true; checkpointPending.current = Boolean(adoption);
     let workspace: Workspace | undefined;
-    let request: ReturnType<typeof writeRequest> | undefined;
+    let request: Record<string, unknown> | undefined;
     // Keep the command even if creating the work draft loses its response.
     pending.current = async () => {
       workspace ??= await ensure();
-      request ??= writeRequest(workspace, operations);
+      request ??= adoption ? { draft_id: workspace.id, expected_revision: workspace.revision,
+        operation_id: crypto.randomUUID(), ...adoption } : writeRequest(workspace, operations);
       checkpoints.current.set(beforeKey, workspace.revision);
-      return mergeDelta(workspace, await post<Delta>(`/work-drafts/${workspace.id}/edit`, request));
+      return adoption
+        ? post<Workspace>(`/work-drafts/${workspace.id}/recheck`, request)
+        : mergeDelta(workspace, await post<Delta>(`/work-drafts/${workspace.id}/edit`, request));
     };
     try {
       const result = await pending.current();
-      remote.current = result; pending.current = undefined; pendingKey.current = undefined; operationPending.current = false;
-      checkpoints.current.set(key(result.configuration), result.revision);
-      synced.current = key(result.configuration);
-      if (key(live.current.configuration) !== beforeKey) throw new Error('采用期间本地已变化，提案已同步但未覆盖本地编辑，请恢复草稿核对。');
+      remote.current = result; pending.current = undefined; pendingKey.current = undefined; operationPending.current = false; checkpointPending.current = false;
+      if (!adoption) checkpoints.current.set(key(result.configuration, live.current.historyKey), result.revision);
+      synced.current = key(result.configuration, live.current.historyKey);
+      if (key(live.current.configuration, live.current.historyKey) !== beforeKey) throw new Error('采用期间本地已变化，提案已同步但未覆盖本地编辑，请恢复草稿核对。');
+      if (adoption) acceptCheckpoint(result);
       return result.checked;
     } catch (cause) {
-      if (cause instanceof ApiError && (cause.status === 422 || cause.status === 409)) { pending.current = undefined; pendingKey.current = undefined; operationPending.current = false; }
+      if (cause instanceof ApiError && (cause.status === 422 || cause.status === 409)) { pending.current = undefined; pendingKey.current = undefined; operationPending.current = false; checkpointPending.current = false; }
       setError(cause instanceof Error ? cause.message : String(cause)); throw cause;
     } finally { running.current = false; setSyncing(false); render(v => v + 1); }
+  };
+  const acceptCheckpoint = (workspace: Workspace) => {
+    const historyKey = `workspace:${workspace.id}:${workspace.revision}`;
+    synced.current = key(workspace.configuration, historyKey);
+    checkpoints.current.set(synced.current, workspace.revision);
+    live.current.acceptCheckpoint?.(workspace.checked, historyKey);
   };
   const canDiscardRejected = Boolean(remote.current && !running.current && !pending.current &&
     rejectedProjection.current === currentKey && currentKey !== synced.current);
   const discardRejected = () => {
     const workspace = remote.current;
-    if (!workspace || running.current || pending.current || rejectedProjection.current !== key(live.current.configuration)) {
+    if (!workspace || running.current || pending.current || rejectedProjection.current !== key(live.current.configuration, live.current.historyKey)) {
       throw new Error('仅可撤回服务端明确未通过校验、且之后没有继续修改的本地内容。');
     }
     // The server rejected this exact projection; an uncertain response must keep its retry.
     rejectedProjection.current = undefined;
-    synced.current = key(workspace.configuration);
+    synced.current = key(workspace.configuration, live.current.historyKey);
     live.current.accept(workspace.checked);
     setError('');
   };
   return { syncing, unsynced, error, retry: synchronize, canDiscardRejected, discardRejected,
-    preview, save, readyWorkspace, execute, id: remote.current?.id };
+    preview, save, readyWorkspace, execute: (operations: Operation[]) => executeWrite(operations),
+    recheck: (input: RecheckInput) => executeWrite([], input), id: remote.current?.id };
 }

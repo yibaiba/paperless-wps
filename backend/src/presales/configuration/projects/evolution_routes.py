@@ -1,16 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import Field
 from sqlalchemy.orm import Session
 
 from presales.api import session_dependency
 
-from ..common import Text
 from ..http import execute, quantity_engine
 from ..transactions import commit
+from .change_schemas import ApplyPreview, PreviewRequest
 from .edit_schemas import EditPreview
 from .evolution_schemas import ConfirmationInput, RevisionComparison
 from .repository import ProjectConfigurations
-from .schemas import CheckRequest
 from .services.changes import ProjectChanges
 from .services.edit_preview import preview_edits
 from .services.editing import EditError
@@ -39,15 +37,6 @@ def edit_preview(
             raise HTTPException(status_code=422, detail=error.detail) from error
 
     return execute(perform)
-
-
-class PreviewRequest(CheckRequest):
-    expected_revision: int = Field(ge=0)
-    cleanup_allocations: bool = False
-
-
-class ApplyPreview(PreviewRequest):
-    fingerprint: Text
 
 
 @router.post("/{project_id}/confirm")
