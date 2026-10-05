@@ -4,6 +4,7 @@ from presales.rules.repository import RuleConflict
 from presales.storage import identifier
 
 from ..accessory_allocations import demand_quantities
+from ..calculation.usage.models import available_quantity
 from ..schemas import Configuration
 
 
@@ -88,6 +89,11 @@ class AccessoryApplication:
         device = next((item for item in data["devices"] if item["id"] == device_id), None)
         if not device or device["variant_id"] not in suggestion["rule"]["target_variant_ids"]:
             raise ValueError("已有设备不属于该配套需求的候选配置")
+        if data.get("calculation_version") == 3:
+            usage = next(u for u in checked["device_usages"] if u["device_id"] == device_id)
+            if amount > available_quantity(usage, demand=suggestion):
+                raise ValueError("已有设备的可分配数量不足，请核对角色及配套用途")
+            return
         allocations = data.get("accessory_allocations", [])
         demand_rules = {item["id"]: item["rule"] for item in checked["suggestions"]}
         used = sum(

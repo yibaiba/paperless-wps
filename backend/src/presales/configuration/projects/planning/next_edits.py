@@ -310,7 +310,7 @@ def make_option(context, proposed, *, gaps, evidence):
         and fulfillment_devices(checked["configuration"], task=t, demands=checked["suggestions"])
     ]
     fulfilled, fulfillment_gaps = bind_fulfilled_roles(
-        checked["configuration"], tasks=tasks, demands=checked["suggestions"]
+        checked["configuration"], tasks=tasks, demands=checked["suggestions"], context=context
     )
     if fulfilled != checked["configuration"]:
         checked = context.repository.check(Configuration.model_validate(fulfilled))

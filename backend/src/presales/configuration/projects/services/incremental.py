@@ -1,6 +1,5 @@
 """Reuse trusted server checks only when the operation cannot change their inputs."""
 
-from copy import deepcopy
 from decimal import Decimal
 
 from presales.quotation.calculation import adopt_prices, with_quotation
@@ -8,6 +7,7 @@ from presales.rules.calculation import digest
 
 from ..calculation.evaluate import business_input, readiness_v3
 from ..calculation.supply import supply_projection
+from ..calculation.usage.models import PROJECTION_VERSION
 from ..output import output_line
 from .definition_snapshot import project_knowledge, resolve_definitions
 from .editing import edit_configuration
@@ -40,8 +40,11 @@ def edit_check(previous, operations, *, repository):
         return dict(previous, configuration=data.model_dump(mode="json"))
     if data.calculation_version != 3 or not all(projection_only(op) for op in operations):
         return repository.check(data)
-    checked = deepcopy(previous)
-    payload = adopt_prices(data.model_dump(mode="json"))
+    # Unchanged fixed projections are read-only; only affected result branches are replaced.
+    checked = dict(previous)
+    payload = data.model_dump(mode="json")
+    if payload.get("quotation") is not None:
+        payload = adopt_prices(payload)
     from presales.catalog_updates.project_prices import validate_references
 
     validate_references(repository.session, payload)
@@ -70,7 +73,7 @@ def edit_check(previous, operations, *, repository):
     definitions, _ = resolve_definitions(repository.session, payload)
     calculation_input = dict(payload, knowledge_snapshot=project_knowledge(payload, definitions))
     checked["fingerprint"] = digest(
-        [business_input(calculation_input), checked["suggestions"], definitions]
+        [PROJECTION_VERSION, business_input(calculation_input), checked["suggestions"], definitions]
     )
     checked["configuration"] = payload
     from .issue_actions import with_issue_actions

@@ -1,5 +1,6 @@
 from presales.rules.repository import RuleConflict
 
+from ..calculation.usage.differences import check_differences, usage_differences
 from ..projections.comparison import configuration_diff, preview_cleanup, preview_fingerprint
 from ..schemas import Configuration
 from .lifecycle import procurement_diff
@@ -29,6 +30,8 @@ class ProjectChanges:
             changes=configuration_diff(saved["configuration"], proposed),
             proposed_changes=configuration_diff(current, proposed),
             procurement_changes=procurement_diff(saved, checked),
+            usage_changes=usage_differences(saved, checked),
+            check_changes=check_differences(saved, checked),
             fingerprint=preview_fingerprint(
                 current=current, proposed=proposed, baseline_revision=saved["revision"]
             ),

@@ -2,8 +2,9 @@
 
 from decimal import Decimal
 
-from .devices import allocation, available, device_for, put_device, shareable_generated_device
+from .devices import allocation, device_for, put_device, shareable_generated_device
 from .questions import question
+from .usage import branch_usage
 
 
 def locked_accessory(context, data, demand):
@@ -105,8 +106,9 @@ def reusable_accessory(
             context, data, variant=variant, demand=demand, allowed=allowed, source_id=source_id
         )
     )
+    projection = branch_usage(context, data, demands=demands)
     for existing in candidates:
-        amount = min(remaining, available(result, existing, demand, demands))
+        amount = min(remaining, projection.available(existing["id"], demand=demand))
         if amount <= 0:
             continue
         result = allocation(result, demand, existing["id"], quantity=amount)
@@ -168,7 +170,8 @@ def reusable_accessory_options(context, data, **options):
         source_id=options.get("source_id", ""),
     )
     needed = Decimal(options["demand"]["missing"])
-    capacities = [available(data, d, options["demand"], options["demands"]) for d in batches]
+    projection = branch_usage(context, data, demands=options["demands"])
+    capacities = [projection.available(d["id"], demand=options["demand"]) for d in batches]
 
     def selections(start, remaining, chosen):
         if remaining <= 0:

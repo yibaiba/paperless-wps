@@ -70,10 +70,15 @@ class ProjectConfigurations:
             result["configuration"] = Configuration.model_validate(
                 result["configuration"]
             ).model_dump(mode="json")
-            result.setdefault(
-                "device_usages",
-                build_device_usages(result["configuration"], result.get("suggestions", [])),
-            )
+            if "device_usages" not in result:
+                result["device_usages"] = (
+                    []
+                    if result["configuration"]["calculation_version"] == 3
+                    else build_device_usages(result["configuration"], result.get("suggestions", []))
+                )
+            from .calculation.usage.versioning import projection_status
+
+            result = projection_status(result)
             result.setdefault(
                 "readiness",
                 project_readiness(

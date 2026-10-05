@@ -126,7 +126,15 @@ def search_catalog(session, request, *, decisions=None, engine=None):
             evidence=r["evidence"],
             **{
                 field: r[field]
-                for field in ("combination_notice", "combination_checks", "input_checks")
+                for field in (
+                    "combination_notice",
+                    "combination_checks",
+                    "input_checks",
+                    "compatibility_status",
+                    "usage_status",
+                    "usage_checks",
+                    "usage_projection",
+                )
                 if field in r
             },
             sources=[

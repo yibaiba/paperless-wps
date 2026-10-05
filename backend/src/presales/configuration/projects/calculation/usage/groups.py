@@ -21,13 +21,20 @@ def reservation_groups(device, consumers, *, assignments, rules, links):
             group["allocation_ids"].update(a["id"] for a in assignments[consumer["demand_id"]])
         group["requirement_ids"].add(logical_id(consumer))
         group["quantity"] = str(max(Decimal(group["quantity"]), quantity))
-    for demand_id in assignments.keys() - rules.keys():
+    represented = {i for group in groups.values() for i in group["demand_ids"]}
+    for demand_id in assignments.keys() - represented:
         quantity = sum((Decimal(a["quantity"]) for a in assignments[demand_id]), Decimal(0))
-        group = group_base(device["id"], "unresolved:" + demand_id, "unresolved", quantity)
-        group.update(
-            demand_ids={demand_id}, allocation_ids={a["id"] for a in assignments[demand_id]}
+        rule = rules.get(demand_id)
+        mode = rule.get("allocation_mode", "consumable") if rule else "unresolved"
+        shared = mode == "shareable"
+        key = "shared" if shared else "need:" + demand_id
+        group = groups.setdefault(
+            key, group_base(device["id"], key, "shared" if shared else mode, quantity)
         )
-        groups["unresolved:" + demand_id] = group
+        group["quantity"] = str(max(Decimal(group["quantity"]), quantity))
+        group["demand_quantities"][demand_id] = str(quantity)
+        group["demand_ids"].add(demand_id)
+        group["allocation_ids"].update(a["id"] for a in assignments[demand_id])
     return sorted([finalize_group(g) for g in groups.values()], key=group_order)
 
 

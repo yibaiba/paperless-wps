@@ -54,6 +54,21 @@ def accessory_allocation_checks(data, demands):
     return checks
 
 
+def allocation_target_checks(data, demands):
+    """Legacy semantics keep their budgets; current budgets belong to the usage projection."""
+    by_id = {item["id"]: item for item in demands}
+    devices = {item["id"]: item for item in data["devices"]}
+    checks = []
+    for allocation in data.get("accessory_allocations", []):
+        demand = by_id.get(allocation["demand_id"])
+        device = devices.get(allocation["device_id"])
+        if demand is None:
+            checks.append(allocation_check(allocation, "unknown", "配套需求已变化，请重新关联"))
+        elif device is None or device["variant_id"] not in demand["rule"]["target_variant_ids"]:
+            checks.append(allocation_check(allocation, "conflict", "分配设备不属于候选配置"))
+    return checks
+
+
 def demand_quantities(allocations, *, demand_id):
     quantities = defaultdict(Decimal)
     for allocation in allocations:

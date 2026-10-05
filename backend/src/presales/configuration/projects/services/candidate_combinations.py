@@ -5,6 +5,9 @@ from copy import deepcopy
 from ...knowledge.semantics import role_matches
 from ..calculation.combinations import combination_checks, role_definition
 from ..calculation.context import prepare_demands, prepare_roles
+from ..calculation.coverage import coverage_checks
+from ..calculation.usage import build_usage_projection
+from ..calculation.usage.checks import usage_checks
 from ..planning.quantities import role_quantity
 from ..role_allocations import restore_requirement_ids
 from ..schemas import Deployment
@@ -60,17 +63,12 @@ class CandidateCombinations:
         )
 
     def check(self, candidate):
-        relevant = [
-            r
-            for r in self.data["knowledge_snapshot"]
-            if r["kind"] == "combination" and r["status"] != "disabled"
-        ]
-        if not relevant:
-            return candidate
         if self.gap or not self.quantity:
             return dict(
                 candidate,
                 status="conflict" if candidate["status"] == "conflict" else "unknown",
+                compatibility_status=candidate["status"],
+                usage_status="unknown",
                 combination_checks=[],
                 combination_notice="角色数量依据或输入不足，组合检查待确认",
             )
@@ -115,6 +113,22 @@ class CandidateCombinations:
             engine=self.repository.engine,
             decisions=self.decisions,
         )
+        _, policies = coverage_checks(data, self.definitions, variants, demands=suggestions)
+        projection = build_usage_projection(
+            data,
+            demands=[d for d in suggestions if d["selected"]],
+            definitions=self.definitions,
+            policies=policies,
+            inspections=context.policies,
+        )
+        related = [
+            c
+            for c in usage_checks(
+                data, projection.views(), variants=variants, decisions=self.decisions
+            )
+            if c.get("device_id") == identity or c.get("requirement_id") == self.role["id"]
+        ]
+        related = restore_requirement_ids(related, aliases)
         checks = restore_requirement_ids(checks, aliases)
         # The replaced device may remain unassigned. Its unrelated gaps belong to
         # full project checks; retain both constraints triggered by and targeting this role.
@@ -125,14 +139,24 @@ class CandidateCombinations:
             or self.requirement["id"] in check["trigger_requirement_ids"]
             or any(self.requirement["id"] in group["requirement_ids"] for group in check["groups"])
         ]
-        statuses = {c["status"] for c in checks} | {candidate["status"]}
+        statuses = {c["status"] for c in [*checks, *related]} | {candidate["status"]}
         status = (
             "conflict" if "conflict" in statuses else "unknown" if "unknown" in statuses else "pass"
         )
         return dict(
             candidate,
             status=status,
+            compatibility_status=candidate["status"],
+            usage_status=(
+                "conflict"
+                if any(c["status"] == "conflict" for c in related)
+                else "unknown"
+                if any(c["status"] == "unknown" for c in related)
+                else "pass"
+            ),
             combination_checks=checks,
+            usage_checks=related,
+            usage_projection=dict(version=projection.version, fingerprint=projection.fingerprint),
             evidence=[
                 *candidate["evidence"],
                 *[

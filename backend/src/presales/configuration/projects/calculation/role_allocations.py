@@ -1,4 +1,3 @@
-from collections import defaultdict
 from decimal import Decimal
 
 
@@ -7,27 +6,13 @@ def allocation_checks(data, *, definitions, engine, fulfilled_ids=frozenset()):
     packages = {p["id"]: p for p in definitions["packages"]}
     catalog = {d["id"]: d for d in definitions["definitions"]}
     devices = {d["id"]: d for d in data["devices"]}
-    counts, checks = defaultdict(list), []
+    checks = []
     for requirement in data["requirements"]:
         allocations = role_allocations(requirement, devices)
         if not allocations:
             continue
-        # Confirmed aliases refer to accessory allocations, not additional stock use.
         if requirement["id"] in fulfilled_ids:
-            checks.extend(
-                device_allocation_checks(
-                    {
-                        a["device_id"]: [(requirement["id"], Decimal(a["quantity"]))]
-                        for a in allocations
-                    },
-                    devices,
-                )
-            )
             continue
-        for allocation in allocations:
-            counts[allocation["device_id"]].append(
-                (requirement["id"], Decimal(allocation["quantity"]))
-            )
         system = systems[requirement["system_id"]]
         package = packages.get(system.get("knowledge_package_id"))
         definition = (
@@ -47,7 +32,7 @@ def allocation_checks(data, *, definitions, engine, fulfilled_ids=frozenset()):
                 engine=engine,
             )
         )
-    return checks + device_allocation_checks(counts, devices)
+    return checks
 
 
 def role_allocations(requirement, devices):
@@ -74,22 +59,3 @@ def quantity_check(requirement, *, allocations, role, system, data, engine):
         evidence=[evidence] if evidence else [],
         quantity_gap=gap,
     )
-
-
-def device_allocation_checks(counts, devices):
-    checks = []
-    for identity, uses in counts.items():
-        capacity = Decimal(devices[identity]["quantity"])
-        if capacity == 1 and all(amount == 1 for _, amount in uses):
-            continue  # Single-instance reuse still requires the normal sharing checks.
-        if sum((amount for _, amount in uses), Decimal(0)) > capacity:
-            checks.append(
-                dict(
-                    kind="role_allocation",
-                    status="conflict",
-                    device_id=identity,
-                    requirement_ids=[r for r, _ in uses],
-                    message="角色分配总量超过设备数量，不能重复抵扣",
-                )
-            )
-    return checks

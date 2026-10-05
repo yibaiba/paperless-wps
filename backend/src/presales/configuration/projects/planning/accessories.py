@@ -27,7 +27,9 @@ def accessory_branches(context, data, *, tasks, processed=frozenset(), path=()):
         None,
     )
     if demand is None:
-        data, gaps = bind_fulfilled_roles(data, tasks=tasks, demands=checked["suggestions"])
+        data, gaps = bind_fulfilled_roles(
+            data, tasks=tasks, demands=checked["suggestions"], context=context
+        )
         yield data, gaps, []
         return
     next_processed = processed | {demand["id"]}

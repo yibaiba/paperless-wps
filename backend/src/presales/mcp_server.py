@@ -43,6 +43,8 @@ def create_server(*, session_factory, engine, renderer, files, web_origin="http:
             "list_check 后用返回的 check_fingerprint 保存；保存是草稿，不是人工认证。"
             "list_save 的 revision 是草稿修订；导出必须使用 project_revision 项目修订。"
             "用 list_get 的 template/quotation/issues/evidence/changes 视图按需读取。"
+            "用途与容量用 device_usages 视图分页读取，可按 device_id 定位；"
+            "usage_projection.current 为 false 时先显式重新检查，不将历史结果当作当前验证。"
             "价格更新用 price_updates 视图预览，再用 price_versions_adopt 明确采用所选修订。"
         ),
     )
@@ -95,7 +97,7 @@ def create_server(*, session_factory, engine, renderer, files, web_origin="http:
 
     @server.tool(structured_output=True)
     def list_get(request: GetList) -> dict[str, Any]:
-        """分页读取草稿或保存版本的清单、采购、报价、检查、依据及模板要求。"""
+        """分页读取清单、报价、检查及用途；device_usages 视图可用 device_id 筛选。"""
         return call("list_get", request.model_dump(mode="json"))
 
     @server.tool(structured_output=True)

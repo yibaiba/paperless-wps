@@ -60,8 +60,8 @@ def test_alias_deduplication_does_not_hide_actual_overallocation(client, catalog
 
 @pytest.mark.parametrize("confirmed", [True, False])
 def test_only_confirmed_linked_aliases_are_excluded_from_role_stock_count(confirmed):
-    from presales.configuration.projects.calculation.fulfillment import fulfillment_aliases
-    from presales.configuration.projects.calculation.role_allocations import allocation_checks
+    from presales.configuration.projects.calculation.usage import build_usage_projection
+    from presales.configuration.projects.calculation.usage.checks import quantity_checks
 
     data = dict(
         systems=[dict(id="system", definition_id="definition")],
@@ -97,14 +97,17 @@ def test_only_confirmed_linked_aliases_are_excluded_from_role_stock_count(confir
     demands = [
         dict(id="need", need_key="server", consumer_requirement_ids=["parent"], status="pass")
     ]
-    aliases = fulfillment_aliases(data, definitions=definitions, demands=demands)
-    checks = allocation_checks(
-        data, definitions=definitions, engine=None, fulfilled_ids=set(aliases)
-    )
+    data["systems"][0].update(name="隔离", kind="隔离")
+    for r in data["requirements"]:
+        r.update(role=r["role_id"], environment=[], resources=[])
+    for a in data["accessory_allocations"]:
+        a["id"] = "allocation"
+    for d in demands:
+        d["rule"] = {"allocation_mode": "consumable", "need_key": "server"}
+    projection = build_usage_projection(data, definitions=definitions, demands=demands)
+    checks = quantity_checks(projection.views()[0])
     assert any(c["status"] == "conflict" for c in checks) == (not confirmed)
     data["accessory_allocations"] = []
-    aliases = fulfillment_aliases(data, definitions=definitions, demands=demands)
-    checks = allocation_checks(
-        data, definitions=definitions, engine=None, fulfilled_ids=set(aliases)
-    )
+    projection = build_usage_projection(data, definitions=definitions, demands=demands)
+    checks = quantity_checks(projection.views()[0])
     assert any(c["status"] == "conflict" for c in checks)

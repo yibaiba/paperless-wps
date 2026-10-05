@@ -148,8 +148,22 @@ def test_batch_alias_references_allocated_quantity_not_entire_stock(mode, expect
         )
         for identity in ["a", "b", "unrelated"]
     ]
+    from presales.configuration.projects.calculation.usage import build_usage_projection
+
+    data.update(systems=[dict(id="system", name="隔离", kind="隔离")], knowledge_snapshot=[])
+    for r in data["requirements"]:
+        r.update(role=r["role_id"], device_id=None, environment=[], resources=[])
+    for index, a in enumerate(data["accessory_allocations"]):
+        a["id"] = str(index)
+    for d in demands:
+        d["rule"].update(need_key=d["need_key"])
+    projection = build_usage_projection(
+        data, demands=demands, definitions={"definitions": [], "packages": []}
+    )
     before = deepcopy(data)
-    actual = bind_fulfilled_device(data, task=task, identity="stock", demands=demands)
+    actual = bind_fulfilled_device(
+        data, task=task, identities={"stock"}, projection=projection, demands=demands
+    )
     alias = next(r for r in actual["requirements"] if r["id"] == "alias")
     assert alias["device_id"] is None
     assert alias["allocations"][0]["quantity"] == expected

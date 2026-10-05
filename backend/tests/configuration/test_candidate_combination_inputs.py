@@ -118,7 +118,8 @@ def test_candidate_keeps_constraints_triggered_by_other_devices(
         ),
     )
     candidate = next(c for c in candidates if c["variant"]["id"] == catalog["variants"][1]["id"])
-    assert candidate["status"] == expected
+    assert candidate["status"] == ("unknown" if expected == "pass" else expected)
+    assert candidate["compatibility_status"] == "pass"
     check = candidate["combination_checks"][0]
     assert check["device_ids"] == ["device-1"]
     assert check["groups"][0]["requirement_ids"] == ["r2"]

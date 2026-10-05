@@ -9,6 +9,7 @@ from .consumers import resource_usages
 from .groups import quantity_summary, reservation_groups
 from .models import PROJECTION_VERSION, UsageProjection, freeze
 from .references import attach_references, reference_checks
+from .resource_scope import scope_resources
 
 
 def build_usage_projection(data, *, demands, definitions, policies=None, inspections=None):
@@ -30,15 +31,17 @@ def build_usage_projection(data, *, demands, definitions, policies=None, inspect
         )
         for usage in raw
     ]
+    projected = scope_resources(projected)
     fingerprint = digest(
         [
             PROJECTION_VERSION,
             [
-                {
-                    k: v
-                    for k, v in d.items()
-                    if k in {"id", "quantity", "variant_id", "variant_snapshot"}
-                }
+                dict(
+                    id=d["id"],
+                    quantity=d["quantity"],
+                    variant_id=d.get("variant_id"),
+                    variant_revision=(d.get("variant_snapshot") or {}).get("revision"),
+                )
                 for d in sorted(data["devices"], key=lambda d: d["id"])
             ],
             sorted(projected, key=lambda u: u["device_id"]),
@@ -47,7 +50,15 @@ def build_usage_projection(data, *, demands, definitions, policies=None, inspect
             data.get("decision_bundle_id"),
         ]
     )
-    return UsageProjection(devices=tuple(freeze(p) for p in projected), fingerprint=fingerprint)
+    linked, unlinked = set(), set()
+    for requirement in data["requirements"]:
+        target = linked if requirement["id"] in links else unlinked
+        target.add(requirement.get("allocation_parent_id") or requirement["id"])
+    return UsageProjection(
+        devices=tuple(freeze(p) for p in projected),
+        fingerprint=fingerprint,
+        fulfilled_ids=frozenset(linked - unlinked),
+    )
 
 
 def project_device(usage, *, device, data, rules, links, assignments):
@@ -59,7 +70,9 @@ def project_device(usage, *, device, data, rules, links, assignments):
         group["role_references"].sort(key=lambda r: r["requirement_id"])
         group["consumers"].sort(key=consumer_order)
     included = [a for a in data.get("included_allocations", []) if a["device_id"] == device["id"]]
-    consumers = sorted(usage["consumers"], key=consumer_order)
+    refs = {r["requirement_id"]: r for r in references}
+    consumers = [consumer_view(c, groups=groups, refs=refs) for c in usage["consumers"]]
+    consumers.sort(key=consumer_order)
     return dict(
         usage,
         consumers=consumers,
@@ -72,6 +85,23 @@ def project_device(usage, *, device, data, rules, links, assignments):
             sorted(references, key=lambda r: r["requirement_id"]), groups, device_id=device["id"]
         ),
     )
+
+
+def consumer_view(consumer, *, groups, refs):
+    identity = consumer.get("allocation_parent_id") or consumer["requirement_id"]
+    reference = refs.get(identity) if consumer["via"] == "direct" else None
+    result = dict(
+        consumer, group_ids=[g["id"] for g in groups if any(c == consumer for c in g["consumers"])]
+    )
+    if reference:
+        parents = reference["fulfilled_by_requirement_ids"]
+        result.update(
+            group_ids=reference["group_ids"],
+            fulfilled_by_requirement_id=parents[0] if len(parents) == 1 else None,
+            fulfilled_by_requirement_ids=parents,
+            fulfilled_by_demand_ids=reference["demand_ids"],
+        )
+    return result
 
 
 def consumer_order(consumer):

@@ -62,7 +62,7 @@ def test_shared_instance_still_requires_single_device_and_evidence(client, catal
     )
 
 
-def test_direct_use_of_consumable_device_does_not_bypass_sharing(client, catalog, config):
+def test_direct_use_of_consumable_device_cannot_reuse_consumed_quantity(client, catalog, config):
     checked, identity = allocated_project(client, catalog, config)
     data = deepcopy(checked["configuration"])
     data["requirements"].append(
@@ -75,7 +75,9 @@ def test_direct_use_of_consumable_device_does_not_bypass_sharing(client, catalog
     )
     result = post(client, "/check", dict(configuration=data))
     assert any(
-        c["kind"] == "sharing" and c.get("device_id") == identity and c["status"] != "pass"
+        c.get("code") == "device_quantity_overallocated"
+        and c.get("device_id") == identity
+        and c["status"] == "conflict"
         for c in result["checks"]
     )
 

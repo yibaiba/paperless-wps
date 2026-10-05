@@ -2,31 +2,11 @@
 
 from decimal import Decimal
 
+from ..calculation.usage.models import available_quantity
 from ..role_allocations import device_ids
 from .devices import bind_role, device_for, put_device, shareable_generated_device
 from .questions import question
-
-
-def role_available(data, device, *, requirement_id):
-    occupied = Decimal(0)
-    for requirement in data["requirements"]:
-        if requirement["id"] == requirement_id:
-            continue
-        if requirement.get("allocations"):
-            occupied += sum(
-                (
-                    Decimal(a["quantity"])
-                    for a in requirement["allocations"]
-                    if a["device_id"] == device["id"]
-                ),
-                Decimal(0),
-            )
-        elif requirement.get("device_id") == device["id"]:
-            occupied += Decimal(device["quantity"])
-    # Single physical servers remain subject to the shared-use and capacity checks.
-    if Decimal(device["quantity"]) == 1:
-        return Decimal(1)
-    return max(Decimal(device["quantity"]) - occupied, Decimal(0))
+from .usage import branch_usage
 
 
 def reusable_batches(context, data, *, requirement, quantity, variant):
@@ -71,8 +51,16 @@ def compose_role(context, data, *, task, choice, quantity, reused, evidence, ran
     requirement, variant = task["requirement"], choice["variant"]
     remaining, allocations = quantity, []
     gaps = [ranking_gap] if ranking_gap else []
+    projection = branch_usage(context, data, exclude_role=requirement["id"]) if reused else None
     for device in reused:
-        amount = min(remaining, role_available(data, device, requirement_id=requirement["id"]))
+        usage = projection.device(device["id"])
+        demand = {
+            "id": "role:" + requirement["id"],
+            "rule": {
+                "allocation_mode": "shareable" if Decimal(device["quantity"]) == 1 else "consumable"
+            },
+        }
+        amount = min(remaining, available_quantity(usage, demand=demand))
         if amount <= 0:
             continue
         allocations.append(

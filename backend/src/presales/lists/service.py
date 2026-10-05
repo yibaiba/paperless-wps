@@ -1,6 +1,8 @@
 from copy import deepcopy
 
 from presales.configuration.common import Entities, view
+from presales.configuration.projects.calculation.usage.differences import usage_differences
+from presales.configuration.projects.calculation.usage.versioning import current_projection
 from presales.configuration.projects.projections.comparison import configuration_diff
 from presales.configuration.projects.repository import ProjectConfigurations, empty_configuration
 from presales.configuration.projects.schemas import Configuration, ConfigurationSave
@@ -163,6 +165,7 @@ class ListService:
             checked_config_hash=digest(config),
             check_fingerprint=fingerprint,
             changes=configuration_diff(baseline, config),
+            usage_changes=usage_differences(record.payload["checked"], checked),
         )
         result = self.entities.save(
             "list_draft", payload, entity_id=record.id, expected_revision=record.revision
@@ -172,6 +175,7 @@ class ListService:
             issue_count=sum(c["status"] != "pass" for c in checked["checks"])
             + len((checked.get("quotation_output") or {}).get("issues", [])),
             suggestion_count=len(checked["suggestions"]),
+            usage_change_count=len(payload["usage_changes"]),
             next="使用 list_get 的 issues / quotation / changes 视图读取详细结果",
         )
 
@@ -186,9 +190,11 @@ class ListService:
     def _save(self, request):
         record = self.locked(request)
         payload = deepcopy(record.payload)
-        if payload["check_fingerprint"] != request.fingerprint or payload[
-            "checked_config_hash"
-        ] != digest(payload["configuration"]):
+        if (
+            not current_projection(payload["checked"])
+            or payload["check_fingerprint"] != request.fingerprint
+            or payload["checked_config_hash"] != digest(payload["configuration"])
+        ):
             raise RuleConflict("CHECK_STALE：请检查当前草稿后保存")
         if request.expected_project_revision != payload["base_revision"]:
             raise RuleConflict("VERSION_CONFLICT：保存基线不一致")

@@ -31,7 +31,8 @@ def test_candidate_uses_project_environment_without_duplicate_request_fields(
         ),
     )
     candidate = next(c for c in candidates if c["variant"]["id"] == catalog["variants"][0]["id"])
-    assert candidate["status"] == "pass"
+    assert candidate["compatibility_status"] == "pass"
+    assert candidate["status"] == "unknown" and candidate["usage_status"] == "unknown"
     assert candidate["evidence"][0]["conditions"][0]["actual"]["value"] == "Windows"
 
 

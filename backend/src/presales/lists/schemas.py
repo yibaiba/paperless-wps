@@ -69,6 +69,7 @@ class ExportList(Input):
 
 
 class GetList(Page):
+    device_id: str | None = None
     proposal_id: str | None = None
     option_id: str | None = None
     draft_id: str | None = None
@@ -85,6 +86,7 @@ class GetList(Page):
         "summary",
         "price_updates",
         "devices",
+        "device_usages",
         "procurement",
         "quotation",
         "issues",

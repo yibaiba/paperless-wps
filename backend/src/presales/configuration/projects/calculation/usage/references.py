@@ -3,6 +3,7 @@
 from decimal import Decimal
 
 from .groups import logical_id
+from .models import group_reference_quantity
 
 
 def attach_references(groups, consumers, *, links, device):
@@ -17,6 +18,9 @@ def attach_references(groups, consumers, *, links, device):
             requirement_id=logical_id(consumer),
             quantity=str(consumer.get("allocated_quantity") or device["quantity"]),
             group_ids=[g["id"] for g in targets],
+            group_quantities={
+                g["id"]: str(group_reference_quantity(g, demand_ids=demand_ids)) for g in targets
+            },
             demand_ids=sorted(demand_ids),
             fulfilled_by_requirement_ids=sorted({link["requirement_id"] for link in matches}),
             resources=consumer["resources"],
@@ -46,11 +50,13 @@ def reference_checks(references, groups, *, device_id):
     checks = []
     for reference in references:
         targets = [indexed[i] for i in reference["group_ids"]]
-        quantity = sum((Decimal(g["quantity"]) for g in targets), Decimal(0))
+        quantity = sum(
+            (Decimal(reference["group_quantities"][g["id"]]) for g in targets), Decimal(0)
+        )
         base = dict(
             device_id=device_id,
             requirement_id=reference["requirement_id"],
-            group_ids=reference["group_ids"],
+            allocation_group_ids=reference["group_ids"],
             demand_ids=reference["demand_ids"],
         )
         if Decimal(reference["quantity"]) > quantity:

@@ -50,7 +50,7 @@ def group_results(device, items, *, attribute, decisions, partitioned):
     groups = defaultdict(list)
     for item in items:
         key = (
-            item["capacity_partition"]["demand_id"]
+            item["capacity_partition"].get("group_id") or item["capacity_partition"]["demand_id"]
             if accessory_partitions
             else item["requirement_id"]
         )
@@ -67,7 +67,12 @@ def group_results(device, items, *, attribute, decisions, partitioned):
             decisions=decisions,
         )
         if partition:
-            result.update(demand_id=partition["demand_id"], allocated_quantity=assigned)
+            result.update(
+                demand_id=partition["demand_id"],
+                allocated_quantity=assigned,
+                allocation_group_id=partition.get("group_id"),
+                demand_ids=partition.get("demand_ids", []),
+            )
         checks.append(result)
     return checks
 

@@ -177,9 +177,20 @@ def test_locked_and_partially_reusable_accessory_choices():
     variant = dict(id="chosen", source_ids=["source"], product=dict(name="隔离配件"), name="规格")
     generation = dict(supply_source="purchase", supply_evidence="隔离客户确认")
     data = dict(
-        devices=[existing], accessory_allocations=[], supply_allocations=[], generation=generation
+        devices=[existing],
+        accessory_allocations=[],
+        supply_allocations=[],
+        generation=generation,
+        systems=[],
+        requirements=[],
+        knowledge_snapshot=[],
     )
-    context = SimpleNamespace(deployment="independent", configuration=data, proposal_id="proposal")
+    context = SimpleNamespace(
+        deployment="independent",
+        configuration=data,
+        proposal_id="proposal",
+        definitions={"definitions": [], "packages": []},
+    )
     demand["rule"]["output_kind"] = "accessory"
     result, gaps, _ = reusable_accessory(
         context,

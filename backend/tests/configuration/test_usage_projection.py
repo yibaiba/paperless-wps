@@ -198,7 +198,55 @@ def test_unresolved_allocation_is_visible_and_not_reused(scenario):
     assert tuple(group["allocation_ids"]) == ("stale",)
 
 
+def test_known_demand_without_role_consumers_still_reserves_allocated_stock(scenario):
+    _, demands, _ = scenario
+    demands[0]["consumer_requirement_ids"] = []
+    result = projection(scenario)
+    assert result.device("pool")["quantity_summary"]["reserved_quantity"] == "1"
+    assert result.available("pool", demand=demands[0]) == 2
+    assert result.device("pool")["missing_information"]
+
+
 def test_one_direct_user_is_not_reported_as_shared(scenario):
     result = projection(scenario).device("software")
     assert result["quantity_summary"]["shared_quantity"] == "0"
     assert result["quantity_summary"]["independent_quantity"] == "1"
+
+
+def test_one_resource_is_not_copied_to_two_independent_devices(scenario):
+    data, _, _ = scenario
+    data["requirements"][0]["resources"] = [
+        dict(
+            key="memory",
+            amount="150",
+            unit="GB",
+            applies_to="accessory",
+            target_need_key="server",
+        )
+    ]
+    data["devices"].append(dict(data["devices"][0], id="other-pool"))
+    data["accessory_allocations"].append(
+        dict(data["accessory_allocations"][0], id="other", device_id="other-pool")
+    )
+    result = projection(scenario)
+    for identity in ("pool", "other-pool"):
+        usage = result.device(identity)
+        assert any(c["code"] == "resource_split_missing" for c in usage["allocation_checks"])
+        assert all(not c["resources"] for g in usage["allocation_groups"] for c in g["consumers"])
+
+
+def test_reference_does_not_claim_another_shared_needs_quantity(scenario):
+    data, demands, _ = scenario
+    demands[0]["rule"]["allocation_mode"] = "shareable"
+    data["accessory_allocations"][0]["quantity"] = "0.5"
+    demands.append(dict(demands[0], id="other", need_key="backup"))
+    data["accessory_allocations"].append(
+        dict(data["accessory_allocations"][0], id="other-a", demand_id="other", quantity="2")
+    )
+    add_role(data, role_id="server", quantity="1")
+    projected = projection(scenario)
+    assert projected.referenced_quantity("pool", demand_ids={"need"}) == Decimal("0.5")
+    assert any(
+        c["code"] == "role_reference_overallocated"
+        for c in projected.device("pool")["allocation_checks"]
+    )

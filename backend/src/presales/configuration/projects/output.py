@@ -33,9 +33,19 @@ def output_line(device, usage):
                 "system_name": item["system_name"],
                 "role": item["role"],
                 "via": item["via"],
+                **{
+                    key: item[key]
+                    for key in ("group_ids", "allocated_quantity", "fulfilled_by_demand_ids")
+                    if key in item
+                },
             }
             for item in consumers
         ],
+        **(
+            {"quantity_summary": usage["quantity_summary"]}
+            if usage and "quantity_summary" in usage
+            else {}
+        ),
         "source": {
             "id": source.get("id") or device.get("source_id"),
             "import_id": source.get("import_id"),

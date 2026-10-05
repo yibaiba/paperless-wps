@@ -85,7 +85,9 @@ def test_alias_does_not_hide_an_unrelated_direct_use(client, catalog, config):
     )
     checked = post(client, "/check", dict(configuration=data))
     assert any(
-        c["kind"] == "sharing" and c.get("device_id") == "pool" and c["status"] == "conflict"
+        c.get("code") == "device_quantity_overallocated"
+        and c.get("device_id") == "pool"
+        and c["status"] == "conflict"
         for c in checked["checks"]
     )
 
@@ -137,28 +139,50 @@ def test_alias_resources_do_not_leak_to_other_needs_of_the_same_role(client, cat
     )
     checked = post(client, "/check", dict(configuration=data))
     results = memory_checks(checked)
-    assert [(c["required"], c["capacity"], c["status"]) for c in results] == [
-        ("160", "128", "conflict"),
-        ("40", "128", "pass"),
-        ("80", "128", "pass"),
-    ]
-    assert results[-1]["demand_id"] == demand["id"]
+    assert sorted((c["required"], c["capacity"], c["status"]) for c in results) == sorted(
+        [
+            ("160", "128", "conflict"),
+            ("40", "128", "pass"),
+            ("80", "128", "pass"),
+        ]
+    )
+    assert next(c for c in results if c["required"] == "80")["demand_id"] == demand["id"]
 
 
-def test_consumers_of_the_alias_roles_own_accessories_are_not_aliased():
-    from presales.configuration.projects.calculation.fulfillment import alias_consumers
-
-    consumers = [
-        dict(requirement_id="server", via="direct"),
-        dict(requirement_id="server", via="accessory", demand_id="power"),
-    ]
-    aliases = {"server": dict(requirement_id="software", demand_ids=["host"])}
-    before = deepcopy(consumers)
-    usages = alias_consumers([dict(consumers=consumers)], aliases)
-    direct, accessory = usages[0]["consumers"]
-    assert direct["fulfilled_by_demand_ids"] == ["host"]
-    assert "fulfilled_by_requirement_id" not in accessory
-    assert consumers == before
+def test_consumers_of_the_alias_roles_own_accessories_are_not_aliased(client, catalog, config):
+    data, _ = aliased_project(client, catalog, config)
+    rule = modern_rule(
+        client,
+        catalog["variants"][1],
+        kind="accessory",
+        need_key="power",
+        system="",
+        role="",
+        calculation_scope="system",
+        target_variant_ids=[catalog["variants"][0]["id"]],
+        quantity_review="confirmed",
+        quantity_evidence=AUTHOR["evidence"],
+        mode="per_group",
+        factor="1",
+    )
+    checked = post(client, "/check", dict(configuration=data, refresh_knowledge=True))
+    demand = next(d for d in checked["suggestions"] if d["rule"]["id"] == rule["id"])
+    current = checked["configuration"]
+    current["accessory_allocations"].append(
+        dict(
+            id="power",
+            demand_id=demand["id"],
+            device_id="device-1",
+            quantity="1",
+            evidence=AUTHOR["evidence"],
+        )
+    )
+    checked = post(client, "/check", dict(configuration=current))
+    usage = next(u for u in checked["device_usages"] if u["device_id"] == "device-1")
+    assert any(c["via"] == "accessory" for c in usage["consumers"])
+    assert all(
+        not c.get("fulfilled_by_demand_ids") for c in usage["consumers"] if c["via"] == "accessory"
+    )
 
 
 def test_shared_accessory_with_aliases_still_requires_sharing_evidence(client, catalog, config):

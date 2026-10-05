@@ -129,22 +129,6 @@ def allocation(data, demand, device_id, *, quantity):
     )
 
 
-def available(data, device, demand, demands):
-    if demand["rule"]["allocation_mode"] == "shareable":
-        return Decimal(device["quantity"])
-    rules = {s["id"]: s["rule"] for s in demands}
-    used = sum(
-        (
-            Decimal(a["quantity"])
-            for a in data["accessory_allocations"]
-            if a["device_id"] == device["id"]
-            and rules.get(a["demand_id"], {}).get("allocation_mode", "consumable") == "consumable"
-        ),
-        Decimal(0),
-    )
-    return max(Decimal(device["quantity"]) - used, Decimal(0))
-
-
 def shareable_generated_device(data, device):
     return (
         bool(device.get("generated_origin"))

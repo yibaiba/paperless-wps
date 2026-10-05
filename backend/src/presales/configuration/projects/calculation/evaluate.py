@@ -2,28 +2,17 @@ from decimal import Decimal
 
 from presales.rules.calculation import digest
 
-from ...knowledge.evaluator import context_for, scope_matches
-from ...knowledge.semantics import (
-    candidate_check_v3,
-    evaluate_rules_v3,
-    role_capabilities,
-    scope_is_reviewed,
-)
-from ..accessory_allocations import accessory_allocation_checks
-from ..device_usages import (
-    build_device_usages,
-    capacity_checks,
-    requires_shared_instance,
-    unique_consumers,
-)
+from ...knowledge.semantics import candidate_check_v3, role_capabilities
+from ..accessory_allocations import allocation_target_checks
 from ..output import output_line
 from ..readiness import project_readiness
 from .context import prepare_demands, prepare_roles
 from .coverage import coverage_checks
 from .feature_choices import feature_checks
-from .resource_allocations import allocation_quantities, capacity_consumers
-from .resource_review import resource_policy_checks
 from .supply import supply_projection
+from .usage import build_usage_projection
+from .usage.checks import usage_checks
+from .usage.models import PROJECTION_VERSION
 
 
 def evaluate_v3(data, *, variants, catalog_variants, engine, definitions, decisions=None):
@@ -48,21 +37,11 @@ def evaluate_v3(data, *, variants, catalog_variants, engine, definitions, decisi
     )
     checks.extend(included_checks)
     active = [s for s in suggestions if s["selected"]]
-    from .fulfillment import alias_consumers, fulfilled_requirement_ids, fulfillment_aliases
-
-    fulfilled = fulfillment_aliases(data, definitions=definitions, demands=active)
-    allocated_checks = allocation_checks(
-        input_data,
-        definitions=definitions,
-        engine=engine,
-        fulfilled_ids=fulfilled_requirement_ids(data, aliases=aliases, fulfilled=fulfilled),
-    )
-    checks.extend(accessory_allocation_checks(data, active))
+    checks.extend(allocation_target_checks(data, active))
     checks.extend(selection_checks(suggestions))
     coverage, policies = coverage_checks(data, definitions, variants, demands=active)
     checks.extend(coverage)
     checks.extend(inspection_checks)
-    checks.extend(allocated_checks)
     for identity, review in inspection_policies.items():
         previous = policies.get(identity, "unknown")
         if previous != "unknown" and previous != review["selected"]:
@@ -75,9 +54,30 @@ def evaluate_v3(data, *, variants, catalog_variants, engine, definitions, decisi
                 )
             )
         policies[identity] = review["selected"]
-    usages = resource_usages(data, active, policies, inspection_policies=inspection_policies)
-    usages = alias_consumers(usages, fulfilled)
+    projection = build_usage_projection(
+        data,
+        demands=active,
+        definitions=definitions,
+        policies=policies,
+        inspections=inspection_policies,
+    )
+    checks.extend(
+        allocation_checks(
+            input_data,
+            definitions=definitions,
+            engine=engine,
+            fulfilled_ids=projection.fulfilled_ids,
+        )
+    )
+    usages = projection.views()
     checks.extend(usage_checks(data, usages, variants=variants, decisions=decisions))
+    resource_results = {}
+    for check in checks:
+        if check["kind"] == "capacity" and check.get("device_id"):
+            resource_results.setdefault(check["device_id"], []).append(check)
+    usages = [
+        dict(u, resource_calculations=resource_results.get(u["device_id"], [])) for u in usages
+    ]
     from .combinations import combination_checks
 
     checks.extend(
@@ -103,12 +103,13 @@ def evaluate_v3(data, *, variants, catalog_variants, engine, definitions, decisi
         for line in lines
         if Decimal(line["supply"]["purchase"]) > 0
     ]
-    fingerprint = digest([business_input(input_data), suggestions, definitions])
+    fingerprint = digest([PROJECTION_VERSION, business_input(input_data), suggestions, definitions])
     return restore_requirement_ids(
         dict(
             checks=checks,
             suggestions=suggestions,
             device_usages=usages,
+            usage_projection=dict(version=projection.version, fingerprint=projection.fingerprint),
             readiness=readiness,
             project_output=dict(
                 status="draft",
@@ -189,123 +190,14 @@ def selection_checks(suggestions):
 
 
 def resource_usages(data, suggestions, policies, *, inspection_policies=None):
-    usages = build_device_usages(data, suggestions)
-    rules = {s["id"]: s["rule"] for s in suggestions}
-    for usage in usages:
-        for consumer in usage["consumers"]:
-            policy = (
-                policies.get(consumer["requirement_id"], "unknown")
-                if consumer["via"] == "direct"
-                else rules[consumer["demand_id"]].get("resource_policy", "unknown")
-            )
-            review = (inspection_policies or {}).get(consumer["requirement_id"], {})
-            if consumer["via"] == "accessory" and rules[consumer["demand_id"]][
-                "need_key"
-            ] in review.get("needs", set()):
-                consumer["inspection_policy_conflict"] = policy == "not_applicable"
-                policy = "required"
-            consumer["capacity_expected"] = (
-                bool(consumer["resources"]) or policy != "not_applicable"
-            )
-            consumer["resource_policy"] = policy
-            consumer["allocation_mode"] = (
-                rules[consumer["demand_id"]].get("allocation_mode", "consumable")
-                if consumer["via"] == "accessory"
-                else None
-            )
-            consumer["resource_rule_revision"] = (
-                rules[consumer["demand_id"]]["revision"] if consumer["via"] == "accessory" else None
-            )
-            consumer["resource_rule_id"] = (
-                rules[consumer["demand_id"]]["id"] if consumer["via"] == "accessory" else None
-            )
-    return usages
-
-
-def usage_checks(data, usages, *, variants, decisions=None):
-    devices = {d["id"]: d for d in data["devices"]}
-    quantities = allocation_quantities(data)
-    checks = []
-    for usage in usages:
-        device = devices[usage["device_id"]]
-        checks.extend(resource_policy_checks(usage))
-        checks.extend(
-            dict(
-                kind="inspection",
-                status="conflict",
-                device_id=device["id"],
-                requirement_id=c["requirement_id"],
-                rule_id=c["resource_rule_id"],
-                rule_revision=c["resource_rule_revision"],
-                message="配套关系标记无需容量检查，但用途检查指定了资源需求，请核对依据",
-            )
-            for c in usage["consumers"]
-            if c.get("inspection_policy_conflict")
-        )
-        # Unknown applicability is a knowledge task, not a missing project value.
-        capacity_uses = capacity_consumers(usage, quantities=quantities)
-        consumers = unique_consumers(capacity_uses)
-        partitioned = Decimal(device["quantity"]) > 1 and all(
-            c.get("allocated_quantity") is not None and c["via"] == "direct" for c in consumers
-        )
-        checks.extend(
-            capacity_checks(
-                allocated_device(device, consumers),
-                capacity_uses,
-                variant=variants[device["id"]],
-                usage=usage,
-                decisions=decisions,
-                partitioned=partitioned,
-            )
-        )
-        if len(consumers) > 1 and not partitioned and requires_shared_instance(usage):
-            checks.append(
-                sharing(
-                    data, device, consumers, variant=variants[device["id"]], decisions=decisions
-                )
-            )
-    return checks
-
-
-def sharing(data, device, consumers, *, variant, decisions=None):
-    requirements = {r["id"]: r for r in data["requirements"]}
-    systems = {s["id"]: s for s in data["systems"]}
-    from ...knowledge.semantics import shared_roles_match
-
-    uses = [
-        dict(
-            c,
-            system_definition_id=systems[c["system_id"]].get("definition_id"),
-            knowledge_package_id=systems[c["system_id"]].get("knowledge_package_id"),
-            role_id=requirements[c["requirement_id"]].get("role_id"),
-        )
-        for c in consumers
-    ]
-    rules = [
-        r
-        for r in data["knowledge_snapshot"]
-        if r["kind"] == "sharing"
-        and r["status"] == "confirmed"
-        and scope_matches(variant, r["selector"])
-        and shared_roles_match(r, uses)
-    ]
-    results = [
-        evaluate_rules_v3(rules, context_for(variant, c["environment"]), decisions=decisions)
-        for c in consumers
-    ]
-    states = {r["status"] for r in results}
-    status = "conflict" if "conflict" in states else "unknown" if "unknown" in states else "pass"
-    if status == "pass" and any(not scope_is_reviewed(r, variant) for r in rules):
-        status = "unknown"
-    if Decimal(device["quantity"]) != 1:
-        status = "conflict"
-    return dict(
-        kind="sharing",
-        device_id=device["id"],
-        status=status,
-        message="缺少已确认共用依据" if not rules else "按设备实例核对共享条件",
-        evidence=[e for r in results for e in r["evidence"]],
-    )
+    # Historical internal imports delegate to the current projection, never another kernel.
+    return build_usage_projection(
+        data,
+        demands=suggestions,
+        definitions={"definitions": [], "packages": []},
+        policies=policies,
+        inspections=inspection_policies,
+    ).views()
 
 
 def readiness_v3(data, checks, active, coverage):
@@ -335,12 +227,3 @@ def combine_status(checks):
         if not states or "unknown" in states
         else "pass"
     )
-
-
-def allocated_device(device, consumers):
-    if consumers and all(
-        c.get("allocated_quantity") is not None and c["via"] == "direct" for c in consumers
-    ):
-        quantity = sum((Decimal(c["allocated_quantity"]) for c in consumers), Decimal(0))
-        return dict(device, quantity=str(min(quantity, Decimal(device["quantity"]))))
-    return device

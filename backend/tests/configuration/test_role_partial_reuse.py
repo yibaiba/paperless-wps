@@ -263,11 +263,15 @@ def test_accessory_reuse_preserves_ranking_gap():
 
     gap = dict(code="recommendation_missing", message="隔离缺少推荐依据")
     data = dict(
-        devices=[dict(id="existing", variant_id="v", quantity="1")], accessory_allocations=[]
+        devices=[dict(id="existing", variant_id="v", quantity="1")],
+        accessory_allocations=[],
+        systems=[],
+        requirements=[],
+        knowledge_snapshot=[],
     )
     demand = dict(id="demand", missing="1", explanation={}, rule=dict(allocation_mode="consumable"))
     result = reusable_accessory(
-        SimpleNamespace(deployment="independent"),
+        SimpleNamespace(deployment="independent", definitions={"definitions": [], "packages": []}),
         data,
         variant=dict(id="v"),
         demand=demand,

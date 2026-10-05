@@ -1,3 +1,4 @@
+from presales.configuration.projects.calculation.usage.versioning import current_projection
 from presales.rules.calculation import digest
 
 from .queries import page
@@ -19,7 +20,9 @@ def summary(record):
         requirement_count=len(data["requirements"]),
         check_fingerprint=record.get("check_fingerprint"),
         calculation_fingerprint=checked.get("fingerprint"),
-        check_current=(
+        usage_projection=checked.get("usage_projection"),
+        check_current=current_projection(checked)
+        and (
             record.get("checked_config_hash") == digest(data)
             if "checked" in record
             else bool(record.get("fingerprint"))
@@ -38,6 +41,11 @@ def read_view(record, request):
     if request.view == "summary":
         return result
     checked = record.get("checked") or record
+    if request.view == "device_usages":
+        items = checked.get("device_usages", [])
+        if request.device_id:
+            items = [u for u in items if u["device_id"] == request.device_id]
+        return dict(result, **page(items, request))
     if request.view == "quotation":
         output = checked.get("quotation_output") or {}
         pagination = page(output.get("lines", []), request)
@@ -73,7 +81,11 @@ def read_view(record, request):
             result, **page(record["configuration"].get("knowledge_snapshot") or [], request)
         )
     if request.view == "changes":
-        return dict(result, **page(record.get("changes", []), request))
+        usages = [
+            dict(kind="device_usage", id=c["device_id"], before=c["previous"], after=c["current"])
+            for c in record.get("usage_changes", [])
+        ]
+        return dict(result, **page([*record.get("changes", []), *usages], request))
     key = "procurement_lines" if request.view == "procurement" else "lines"
     devices = {d["id"]: d for d in record["configuration"]["devices"]}
     items = [

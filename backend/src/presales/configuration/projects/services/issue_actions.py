@@ -49,7 +49,13 @@ def with_issue_actions(checked, *, annotate_only=False):
             input_key=check.get("input_key"),
             variant_id=device.get("variant_id"),
             requirement_ids=affected_requirements(check, usages=usages, demands=demands),
-            missing_fields=[check["input_key"]]
+            allocation_group_id=check.get("allocation_group_id"),
+            allocation_group_ids=check.get("allocation_group_ids", []),
+            demand_ids=check.get("demand_ids", []),
+            device_ids=check.get("device_ids", []),
+            missing_fields=check["missing_fields"]
+            if "missing_fields" in check
+            else [check["input_key"]]
             if check.get("input_key")
             else [check["resource"]]
             if check.get("resource")

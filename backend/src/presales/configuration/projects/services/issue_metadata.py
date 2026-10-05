@@ -31,6 +31,17 @@ def annotate_issues(checks):
             item = dict(kind="requirement", id=identity)
             if item not in objects:
                 objects.append(item)
+        for kind, field in (
+            ("allocation_group", "allocation_group_ids"),
+            ("device", "device_ids"),
+            ("demand", "demand_ids"),
+        ):
+            for identity in action.get(field, []):
+                item = dict(kind=kind, id=identity)
+                if item not in objects:
+                    objects.append(item)
+        if action.get("allocation_group_id"):
+            objects.append(dict(kind="allocation_group", id=action["allocation_group_id"]))
         if check["kind"] == "interpretation":
             objects.extend(
                 [
