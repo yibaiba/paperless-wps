@@ -138,9 +138,11 @@ def unique_consumers(consumers):
 def requires_shared_instance(usage):
     # A consumable allocation divides a quantity pool; it does not reuse one instance.
     # Inspect every use before role deduplication so mixed direct/shared uses are retained.
+    # Confirmed fulfillment aliases only name an existing accessory use.
     return any(
         c["via"] != "accessory" or c.get("allocation_mode") != "consumable"
         for c in usage["consumers"]
+        if not (c["via"] == "direct" and c.get("fulfilled_by_demand_ids"))
     )
 
 

@@ -11,6 +11,11 @@ from .test_accessory_capacity_partitions import memory_checks, pooled_project
 
 def test_seed_optional_capacity_database(client, catalog, config, tmp_path):
     data, _ = pooled_project(client, catalog, config)
+    target = Path(os.environ.get("CAPACITY_BROWSER_FIXTURE", str(tmp_path / "capacity.sqlite")))
+    seed_capacity_database(client, data, target=target)
+
+
+def seed_capacity_database(client, data, *, target):
     projects = {}
     for channel in ("browser", "protocol"):
         project = client.post(
@@ -27,7 +32,6 @@ def test_seed_optional_capacity_database(client, catalog, config, tmp_path):
             ("128", "pass"),
         ]
         projects[channel] = project["id"]
-    target = Path(os.environ.get("CAPACITY_BROWSER_FIXTURE", str(tmp_path / "capacity.sqlite")))
     assert not target.exists(), "不能覆盖已有验收数据库"
     target.parent.mkdir(parents=True, exist_ok=True)
     with client.app.state.session_factory() as session:

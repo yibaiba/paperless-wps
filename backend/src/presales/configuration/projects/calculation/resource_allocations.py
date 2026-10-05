@@ -24,7 +24,9 @@ def capacity_consumers(usage, *, quantities):
         return unique_consumers(consumers)
     by_demand = defaultdict(list)
     for consumer in consumers:
-        by_demand[consumer["demand_id"]].append(consumer)
+        demand_ids = consumer.get("fulfilled_by_demand_ids") or [consumer["demand_id"]]
+        for demand_id in demand_ids:
+            by_demand[demand_id].append(consumer)
     # All roles served by one need share its assigned quantity, counted once.
     return [
         dict(

@@ -16,24 +16,39 @@ def fulfillment_aliases(data, *, definitions, demands):
             binding = roles.get(requirement.get("role_id"), {}).get("fulfilled_by")
             if not binding or binding["status"] != "confirmed" or not requirement["device_id"]:
                 continue
-            parents = [
-                r
-                for r in requirements
-                if r["system_id"] == system["id"] and r["role_id"] == binding["role_id"]
-            ]
-            for parent in parents:
-                matches = {
-                    d["id"]
-                    for d in demands
-                    if d["need_key"] == binding["need_key"]
-                    and parent["id"] in d["consumer_requirement_ids"]
-                    and d["status"] == "pass"
-                }
-                if any(
-                    a["demand_id"] in matches and a["device_id"] == requirement["device_id"]
-                    for a in data["accessory_allocations"]
-                ):
-                    result[requirement["id"]] = parent.get("allocation_parent_id", parent["id"])
+            link = fulfillment_link(requirement, binding=binding, data=data, demands=demands)
+            if link:
+                result[requirement["id"]] = link
+    return result
+
+
+def fulfillment_link(requirement, *, binding, data, demands):
+    parents = [
+        r
+        for r in data["requirements"]
+        if r["system_id"] == requirement["system_id"] and r["role_id"] == binding["role_id"]
+    ]
+    result = None
+    for parent in parents:
+        matches = {
+            d["id"]
+            for d in demands
+            if d["need_key"] == binding["need_key"]
+            and parent["id"] in d["consumer_requirement_ids"]
+            and d["status"] == "pass"
+        }
+        linked = list(
+            dict.fromkeys(
+                a["demand_id"]
+                for a in data["accessory_allocations"]
+                if a["demand_id"] in matches and a["device_id"] == requirement["device_id"]
+            )
+        )
+        if linked:
+            result = dict(
+                requirement_id=parent.get("allocation_parent_id", parent["id"]),
+                demand_ids=linked,
+            )
     return result
 
 
@@ -47,8 +62,18 @@ def fulfilled_requirement_ids(data, *, aliases, fulfilled):
 
 
 def alias_consumers(usages, aliases):
-    for usage in usages:
-        for consumer in usage["consumers"]:
-            if consumer["requirement_id"] in aliases:
-                consumer["fulfilled_by_requirement_id"] = aliases[consumer["requirement_id"]]
-    return usages
+    return [
+        dict(usage, consumers=[alias_consumer(c, aliases) for c in usage["consumers"]])
+        for usage in usages
+    ]
+
+
+def alias_consumer(consumer, aliases):
+    link = aliases.get(consumer["requirement_id"])
+    if not link or consumer["via"] != "direct":
+        return consumer
+    return dict(
+        consumer,
+        fulfilled_by_requirement_id=link["requirement_id"],
+        fulfilled_by_demand_ids=link["demand_ids"],
+    )
