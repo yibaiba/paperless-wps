@@ -165,11 +165,13 @@ class WorkbookSync:
         }
 
     def _operations(self, request, state, *, preserved_device_ids=frozenset()):
+        lines = [*request.lines, *request.removed_lines]
+        variant_ids = {line.variant_id for line in lines}
         variants = {
             variant["id"]: variant
             for variant in DraftCatalog(
                 self.session, state["draft"].payload["catalog_snapshot_id"]
-            ).variants()
+            ).variants(ids=variant_ids)
         }
         raw = []
         if state["configuration"].get("quotation") is None:
@@ -181,12 +183,13 @@ class WorkbookSync:
             )
         current_ids, line_bindings = set(), []
         managed = set(state["binding"].payload.get("managed_device_ids", []))
-        existing_ids = {d["id"] for d in state["configuration"]["devices"]}
+        existing = {d["id"]: d for d in state["configuration"]["devices"]}
+        existing_ids = set(existing)
         allowed_ids = managed | existing_ids if request.schema_version == 2 else managed
         visible_ids = {line.line_id for line in request.lines}
         removed_ids = set()
         seen_ids = set()
-        for line in [*request.lines, *request.removed_lines]:
+        for line in lines:
             device_id = self._device_id(request.binding_id, line)
             local_id = str(
                 uuid5(NAMESPACE_URL, f"presales-wps-device:{request.binding_id}:{line.line_id}")
@@ -208,9 +211,7 @@ class WorkbookSync:
                 raise ValueError("同一设备不能重复绑定到两个产品行，请用用途分配表达共享")
             seen_ids.add(device_id)
             raw.extend(self._line_operations(line, device_id, variant))
-            previous = next(
-                (d for d in state["configuration"]["devices"] if d["id"] == device_id), None
-            )
+            previous = existing.get(device_id)
             if (
                 request.schema_version == 2
                 and line.price is None

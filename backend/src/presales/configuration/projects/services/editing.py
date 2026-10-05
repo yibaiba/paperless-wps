@@ -1,10 +1,11 @@
 from copy import deepcopy
 
-from presales.configuration.projects.drawing import project_drawing
+from presales.configuration.projects.drawing import project_device_sequence, project_drawing
 from presales.configuration.projects.schemas import Configuration, SuggestionApply
 from presales.quotation.schemas import Quotation
 
 from .device_removal import remove_devices
+from .drawing_batch import DRAWING_INDEPENDENT_ACTIONS, DeviceDrawingBatch, DrawingBatchError
 from .manual_edits import mark, prune
 from .quotation_editing import edit_quote_device
 
@@ -29,11 +30,23 @@ class EditError(ValueError):
 
 def edit_configuration(configuration, operations, *, repository):
     data = deepcopy(configuration)
+    drawing = DeviceDrawingBatch(put_device=put, project_sequence=project_device_sequence)
     for index, operation in enumerate(operations):
         try:
+            if operation.action == "device_put":
+                data = drawing.apply(data, operation=operation, index=index)
+                continue
+            if operation.action not in DRAWING_INDEPENDENT_ACTIONS:
+                drawing.flush(data)
             data = apply_operation(data, operation=operation, repository=repository)
+        except DrawingBatchError as error:
+            raise EditError(error.index, error.operation, str(error)) from error
         except ValueError as error:
             raise EditError(index, operation, str(error)) from error
+    try:
+        drawing.flush(data)
+    except DrawingBatchError as error:
+        raise EditError(error.index, error.operation, str(error)) from error
     return Configuration.model_validate(prune(data))
 
 
@@ -142,10 +155,14 @@ def apply_operation(data, *, operation, repository):
     return data
 
 
-def put(data, operation):
+def put(data, operation, *, update_drawing=True, device_index=None):
     collection = PUT_COLLECTIONS[operation.action]
     value = operation.value.model_dump(mode="json")
-    previous = next((i for i in data[collection] if i["id"] == value["id"]), None)
+    previous = (
+        device_index.find(data[collection], value["id"])
+        if device_index is not None
+        else next((i for i in data[collection] if i["id"] == value["id"]), None)
+    )
     if collection == "requirements" and any(
         (previous or {}).get(k) != value.get(k) for k in ("device_id", "allocations")
     ):
@@ -164,8 +181,11 @@ def put(data, operation):
         if all(previous[k] == value[k] for k in ("variant_id", "source_id")):
             for key in ("variant_snapshot", "source_snapshot", "origin_suggestion"):
                 value[key] = previous.get(key)
-    data[collection] = replace_item(data[collection], value)
-    if collection == "devices":
+    if device_index is not None:
+        device_index.replace(data[collection], value)
+    else:
+        data[collection] = replace_item(data[collection], value)
+    if collection == "devices" and update_drawing:
         data["drawing_xml"] = project_drawing(
             data["drawing_xml"], devices=data["devices"], add_ids=[] if previous else [value["id"]]
         )

@@ -227,12 +227,19 @@ def normalized_identities(option, *, request, projection):
         for d in option["configuration"]["devices"]
         if d["id"] not in existing
     }
+    memo = {}
 
     def remap(value):
+        if isinstance(value, (dict, list)) and id(value) in memo:
+            return memo[id(value)]
         if isinstance(value, dict):
-            return {key: remap(item) for key, item in value.items()}
+            result = {key: remap(item) for key, item in value.items()}
+            memo[id(value)] = result
+            return result
         if isinstance(value, list):
-            return [remap(item) for item in value]
+            result = [remap(item) for item in value]
+            memo[id(value)] = result
+            return result
         return identities.get(value, value) if isinstance(value, str) else value
 
     result = remap(option)
