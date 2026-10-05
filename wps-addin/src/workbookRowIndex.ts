@@ -11,6 +11,11 @@ export class WorkbookRowIndex {
   private pendingChanges = new Map<number, PendingChange>();
   private edits = new Map<number, { before: SheetRow; after: SheetRow; order: number; historyKey: string }>();
   private editOrder = 0;
+  private revision = 0;
+  private generation = 0;
+  private sortedRows?: SheetRow[];
+  private fingerprints = new Map<number, string>();
+  private rowRevisions = new Map<number, number>();
   private readonly host: Pick<HostAdapter, 'readRows' | 'readRow'>;
   private readonly profile: TemplateProfile;
   constructor(host: Pick<HostAdapter, 'readRows' | 'readRow'>, profile: TemplateProfile) {
@@ -20,7 +25,8 @@ export class WorkbookRowIndex {
     if (event.sheet !== this.profile.sheet_selector) return;
     if (event.structural) {
       this.rows = undefined; this.observedRows.clear(); this.staleRows.clear();
-      this.pendingChanges.clear(); this.edits.clear(); return;
+      this.pendingChanges.clear(); this.edits.clear(); this.sortedRows = undefined;
+      this.fingerprints.clear(); this.rowRevisions.clear(); this.generation++; return;
     }
     if (!this.rows) return;
     // Invalidate the entire host range before IO: a failed first read must not
@@ -51,6 +57,7 @@ export class WorkbookRowIndex {
   refresh(row: number) {
     this.staleRows.add(row);
     const value = this.host.readRow(this.profile, row);
+    this.track(value);
     this.recordChange(value);
     this.pendingChanges.delete(row);
     this.observedRows.set(row, value);
@@ -58,6 +65,20 @@ export class WorkbookRowIndex {
     else this.rows?.delete(row);
     this.staleRows.delete(row);
     return value;
+  }
+  private track(row: SheetRow) {
+    const fingerprint = JSON.stringify([row.values, row.formula_fields, row.merged_fields]);
+    if (this.fingerprints.get(row.row) === fingerprint) return;
+    this.fingerprints.set(row.row, fingerprint);
+    this.rowRevisions.set(row.row, ++this.revision);
+    this.sortedRows = undefined;
+  }
+  snapshot() {
+    const rows = this.read();
+    return { rows, revision: this.revision, generation: this.generation };
+  }
+  changedRowsSince(revision: number) {
+    return [...this.rowRevisions].filter(([, version]) => version > revision).map(([row]) => row);
   }
   peek(row: number) {
     if (this.staleRows.has(row)) return this.refresh(row);
@@ -73,10 +94,11 @@ export class WorkbookRowIndex {
   read() {
     if (!this.rows) {
       this.rows = new Map(this.host.readRows(this.profile).map((row) => [row.row, row]));
+      this.rows.forEach((row) => this.track(row));
       this.rows.forEach((row, number) => this.observedRows.set(number, row));
       this.staleRows.clear();
     }
     this.staleRows.forEach((row) => this.refresh(row));
-    return [...this.rows.values()].sort((a, b) => a.row - b.row);
+    return this.sortedRows ??= [...this.rows.values()].sort((a, b) => a.row - b.row);
   }
 }

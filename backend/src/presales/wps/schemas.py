@@ -34,8 +34,20 @@ DiagnosticEventType = Literal[
     "completion_undone",
     "completion_replaced",
     "completion_retained",
+    "phase_timing",
 ]
-CompletionPhase = Literal["typing", "loading", "ghost", "ambiguous", "list", "no-match", "error"]
+CompletionPhase = Literal[
+    "typing",
+    "loading",
+    "ghost",
+    "ambiguous",
+    "list",
+    "no-match",
+    "error",
+    "context-build",
+    "preview",
+    "journal-apply",
+]
 
 
 class PairingExchange(Input):

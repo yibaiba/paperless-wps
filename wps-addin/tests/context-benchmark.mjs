@@ -1,5 +1,6 @@
 // Generated 1,000-row load test, not real WPS host latency or business accuracy.
 import { contextWorkload } from './context-workload.mjs';
+import { completionRowCache } from '../src/businessWorkbook.ts';
 
 const workload = contextWorkload();
 const samples = 50;
@@ -15,4 +16,4 @@ const edit = Array.from({ length: samples }, (_, i) => measure(() => {
 const p95 = (values) => [...values].sort((a, b) => a - b)[Math.ceil(values.length * .95) - 1];
 console.log(JSON.stringify({ workload: 'generated-1000-rows', host_verified: false,
   cold_ms: cold, warm_p95_ms: p95(warm), edited_p95_ms: p95(edit), samples,
-  ...workload.metrics }, null, 2));
+  parsed_rows: completionRowCache(workload.index).parsedRows, ...workload.metrics }, null, 2));

@@ -1,13 +1,15 @@
 import type { NextEditSuggestion, RecentBusinessEdit, WorkbookEditJournal } from './businessTypes';
-import type { WorkbookMetadata } from './types';
+import type { LineBinding, SheetRow, WorkbookMetadata } from './types';
 import type { WorkbookRowIndex } from './workbookRowIndex';
 import { bindingForRow } from './workbook.ts';
 
-export function observedQuantityEdits(index: WorkbookRowIndex, metadata: WorkbookMetadata): RecentBusinessEdit[] {
+export function observedQuantityEdits(index: WorkbookRowIndex, metadata: WorkbookMetadata, options: {
+  resolveBinding?: (row: SheetRow) => LineBinding | undefined;
+} = {}): RecentBusinessEdit[] {
   const sequence = nextEditSequence(metadata.business?.recent_edits ?? []);
   return index.recentChanges().flatMap(({ before, after, order, historyKey }, offset) => {
     if (historyKey !== recentHistoryKey(metadata)) return [];
-    const binding = bindingForRow(after, metadata.line_bindings);
+    const binding = options.resolveBinding ? options.resolveBinding(after) : bindingForRow(after, metadata.line_bindings);
     if (!binding?.device_id || !binding.confirmed_values) return [];
     const quantity = after.values.quantity;
     // Only host-committed quantities with a confirmed identity are business events.

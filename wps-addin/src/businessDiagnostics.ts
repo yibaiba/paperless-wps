@@ -6,9 +6,10 @@ interface DiagnosticHost {
 }
 
 export function businessDiagnostic(host: DiagnosticHost, event: DiagnosticEventInput) {
-  try { host.recordDiagnostic?.(event); }
+  const report = (reason: unknown) => host.reportBackgroundError?.(`业务编辑诊断入队失败：${String(reason)}`);
+  try { void Promise.resolve(host.recordDiagnostic?.(event)).catch(report); }
   catch (reason) {
     // Diagnostics are outside the write transaction. Failure is surfaced in the task pane.
-    host.reportBackgroundError?.(`业务编辑诊断入队失败：${String(reason)}`);
+    report(reason);
   }
 }

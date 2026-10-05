@@ -69,7 +69,7 @@ export type DiagnosticEventType = 'inline_open' | 'focus_lost' | 'query_start'
   | 'query_success' | 'query_error' | 'no_match' | 'tab_register' | 'tab_restore'
   | 'tab_accept' | 'tab_expand' | 'accept_success' | 'accept_error'
   | 'completion_shown' | 'completion_accepted' | 'completion_undone'
-  | 'completion_replaced' | 'completion_retained';
+  | 'completion_replaced' | 'completion_retained' | 'phase_timing';
 
 export interface DiagnosticEventPayload {
   event_id: string;
@@ -80,7 +80,8 @@ export interface DiagnosticEventPayload {
   host_os: string;
   host_version: string;
   event_type: DiagnosticEventType;
-  completion_phase?: 'typing' | 'loading' | 'ghost' | 'ambiguous' | 'list' | 'no-match' | 'error';
+  completion_phase?: 'typing' | 'loading' | 'ghost' | 'ambiguous' | 'list' | 'no-match' | 'error'
+    | 'context-build' | 'preview' | 'journal-apply';
   duration_ms?: number;
   candidate_count?: number;
   completion_ready?: boolean;

@@ -277,12 +277,12 @@ export function App() {
     if (!token) return undefined;
     const flush = async () => {
       if (diagnosticsInFlight.current) return;
+      diagnosticsInFlight.current = true;
       try {
-        const pending = host.pendingDiagnostics().slice(0, 50);
+        const pending = await host.pendingDiagnostics();
         if (!pending.length) return;
-        diagnosticsInFlight.current = true;
         await api.diagnostics(pending);
-        host.removeDiagnostics(pending.map((event) => event.event_id));
+        await host.removeDiagnostics(pending.map((event) => event.event_id));
       } catch (reason) {
         const message = reason instanceof Error ? reason.message : String(reason);
         setError(`WPS 诊断上传失败：${message}`);

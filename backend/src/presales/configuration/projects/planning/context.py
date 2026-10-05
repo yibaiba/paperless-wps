@@ -47,10 +47,13 @@ class PlanningContext:
             self.candidate_cache[key] = candidate_results(
                 request,
                 session=self.repository.session,
-                catalog=self.repository.catalog,
+                catalog=self.candidate_catalog(),
                 decisions=self.repository.decisions,
             )
         return self.candidate_cache[key]
+
+    def candidate_catalog(self):
+        return self.repository.catalog
 
     def preference(self, requirement_id):
         return next(

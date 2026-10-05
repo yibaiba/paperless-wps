@@ -57,6 +57,11 @@ export function BusinessPanel({ api, host, profile, metadata, onChanged, resolut
     finally { setBusy(false); }
   }
 
+  function refreshAfterChange(value: WorkbookMetadata) {
+    setResult(undefined); onChanged(value);
+    void preview();
+  }
+
   const currentContext = context && { ...context, configuration: result?.configuration ?? localSettings(context, metadata) };
   return <section className="panel-section" aria-label="下一步业务编辑">
     <h2>下一步业务编辑</h2>
@@ -69,10 +74,10 @@ export function BusinessPanel({ api, host, profile, metadata, onChanged, resolut
     </p>)}
     {context?.knowledge_summary && <KnowledgeDetails items={context.knowledge_summary} focused={resolution?.kind === 'review_knowledge'} />}
     {!metadata.binding && <p>先绑定项目，再确认业务区。旧版基本补全继续保留。</p>}
-    {context && <BusinessSettings context={currentContext!} host={host} metadata={metadata} profile={profile} resolution={resolution} onSaved={onChanged} />}
+    {context && <BusinessSettings context={currentContext!} host={host} metadata={metadata} profile={profile} resolution={resolution} onSaved={refreshAfterChange} />}
     {metadata.business && context && <>
-      <BusinessRowPanel api={api} host={host} profile={profile} metadata={metadata} context={currentContext!} resolution={resolution} onChanged={onChanged} />
-      <JournalPanel host={host} onChanged={(value) => { setResult(undefined); onChanged(value); }} />
+      <BusinessRowPanel api={api} host={host} profile={profile} metadata={metadata} context={currentContext!} resolution={resolution} onChanged={refreshAfterChange} />
+      <JournalPanel host={host} onChanged={refreshAfterChange} />
       <button disabled={busy} onClick={() => preview()}>{busy ? '计算受影响的需求…' : '预览当前业务区下一步'}</button>
       <button disabled={busy} onClick={() => preview('remove')}>预览移除当前产品（不删工作表行）</button>
     </>}
@@ -86,7 +91,7 @@ export function BusinessPanel({ api, host, profile, metadata, onChanged, resolut
       try {
         const next = inWorkbookSession(host, { session,
           run: () => applyNextEdit({ host, suggestion: item, operationId: crypto.randomUUID() }) });
-        onChanged(next); setResult(undefined);
+        refreshAfterChange(next);
       } catch (reason) { setError(String(reason)); }
     }} />)}
   </section>;

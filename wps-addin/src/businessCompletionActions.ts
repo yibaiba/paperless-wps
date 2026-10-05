@@ -4,6 +4,7 @@ import type { InlineEditorContext, WorkbookMetadata } from './types';
 import type { RequestAttempt } from './latestRequest';
 import { applyNextEdit, restoreJournal, type JournalHost } from './editJournal.ts';
 import { assertInlineSession } from './workbookSession.ts';
+import { businessDiagnostic } from './businessDiagnostics.ts';
 
 export class AppliedCompletionRefreshError extends Error {
   constructor(cause: unknown) {
@@ -15,7 +16,10 @@ export function applyBusinessCompletion(options: {
   host: JournalHost; suggestion: NextEditSuggestion; operationId: string;
   afterApply: (metadata: WorkbookMetadata) => void;
 }) {
+  const started = performance.now();
   const metadata = applyNextEdit(options);
+  businessDiagnostic(options.host, { event_type: 'phase_timing', completion_phase: 'journal-apply',
+    duration_ms: Math.round(performance.now() - started), outcome: 'success' });
   // A refresh failure cannot turn a durable, successful journal into a failed write.
   try { options.afterApply(metadata); }
   catch (reason) { throw new AppliedCompletionRefreshError(reason); }

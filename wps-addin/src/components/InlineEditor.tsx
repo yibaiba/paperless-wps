@@ -80,7 +80,7 @@ export function InlineEditor() {
     };
   }, [baseWorkbookContext, context, query]);
   const diagnose = useCallback((value: DiagnosticEventInput) => {
-    try { host.recordDiagnostic(value); }
+    try { void host.recordDiagnostic(value).catch((reason) => host.reportBackgroundError(`诊断入队失败：${String(reason)}`)); }
     catch (reason) {
       const message = reason instanceof Error ? reason.message : String(reason);
       host.reportBackgroundError(`WPS 诊断记录失败：${message}`);

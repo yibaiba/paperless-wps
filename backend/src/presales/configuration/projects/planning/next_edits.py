@@ -76,6 +76,11 @@ class NextEditContext(PlanningContext):
             if self.matches(item["variant"])
         ]
 
+    def candidate_catalog(self):
+        # Only suitability search is narrowed. The repository still retains the
+        # complete fixed catalog for accessory, shared-use and project checks.
+        return CandidateCatalog(tuple(v for v in self.variants.values() if self.matches(v)))
+
     def matches(self, variant):
         if self.exact_variant_ids and variant["id"] not in self.exact_variant_ids:
             return False
@@ -99,6 +104,14 @@ class NextEditContext(PlanningContext):
             preference,
             reusable_device_ids=sorted(reusable | set(preference.get("reusable_device_ids", []))),
         )
+
+
+@dataclass(frozen=True)
+class CandidateCatalog:
+    items: tuple
+
+    def variants(self):
+        return list(self.items)
 
 
 def scoped_roles(context):

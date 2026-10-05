@@ -7,6 +7,7 @@ import type { WorkbookEditJournal } from './businessTypes';
 import { MetadataRecords, readMetadataRecords, writeMetadataRecords } from './metadataRecords.ts';
 import { sheetChange, subscribeHostEvent, type SheetChange } from './hostEvents.ts';
 import { DiagnosticRecorder } from './diagnostics.ts';
+import { IndexedDbDiagnosticStore } from './diagnosticStore.ts';
 import { enqueueFeedback, parseFeedbackOutbox, removeFeedback } from './feedbackOutbox.ts';
 import { InlineDialogManager } from './inlineDialog.ts';
 import type { InlineLayoutOptions, InlineLayoutResult } from './inlineLayout.ts';
@@ -63,9 +64,9 @@ export interface HostAdapter {
   interceptTab(sessionId: string, revision: string): boolean;
   claimTab(sessionId: string): string | null;
   restoreNativeTab(sessionId?: string): boolean;
-  recordDiagnostic(value: DiagnosticEventInput): DiagnosticEventPayload;
-  pendingDiagnostics(): DiagnosticEventPayload[];
-  removeDiagnostics(eventIds: string[]): void;
+  recordDiagnostic(value: DiagnosticEventInput): Promise<DiagnosticEventPayload>;
+  pendingDiagnostics(): Promise<DiagnosticEventPayload[]>;
+  removeDiagnostics(eventIds: string[]): Promise<void>;
   layoutInlineEditor(
     options: Omit<InlineLayoutOptions, 'anchorWidth' | 'anchorHeight'>,
   ): InlineLayoutResult;
@@ -96,6 +97,8 @@ export class WpsHostAdapter implements HostAdapter {
   private readonly inlineDialog: InlineDialogManager;
   private readonly tabCoordinator: WpsTabCoordinator;
   private recordStores = new Map<string, MetadataRecords>();
+  private readonly sheetChangeListeners = new Set<(event: SheetChange) => void>();
+  private releaseSheetChanges?: () => void;
 
   constructor() {
     this.app = window.Application ?? window.wps?.EtApplication?.();
@@ -124,6 +127,11 @@ export class WpsHostAdapter implements HostAdapter {
         if (!persistent) throw new Error('当前 WPS 缺少诊断本地存储能力');
         persistent.setItem(key, value);
       },
+      remove: (key) => {
+        if (!persistent) throw new Error('当前 WPS 缺少诊断本地存储能力');
+        persistent.removeItem(key);
+      },
+      store: new IndexedDbDiagnosticStore({ factory: () => window.indexedDB }),
       installationId: () => this.credentials.installationId(),
       hostOs: () => String(window.navigator?.platform ?? 'unknown'),
       hostVersion: () => text(this.app?.Build ?? this.app?.Version) || 'unknown',
@@ -368,7 +376,7 @@ export class WpsHostAdapter implements HostAdapter {
 
   pendingDiagnostics() { return this.diagnostics.pending(); }
 
-  removeDiagnostics(eventIds: string[]) { this.diagnostics.remove(eventIds); }
+  removeDiagnostics(eventIds: string[]) { return this.diagnostics.remove(eventIds); }
 
   layoutInlineEditor(options: Omit<InlineLayoutOptions, 'anchorWidth' | 'anchorHeight'>) {
     return this.inlineDialog.layout(options);
@@ -417,7 +425,7 @@ export class WpsHostAdapter implements HostAdapter {
   }
 
   onSheetChange(callback: (event: SheetChange) => void) {
-    return this.event('SheetChange', (sheet: unknown, target: unknown) => {
+    if (!this.releaseSheetChanges) this.releaseSheetChanges = this.event('SheetChange', (sheet: unknown, target: unknown) => {
       const change = sheetChange(sheet, target);
       if (change.sheet === META_SHEET) return;
       this.stateSet(this.editKey(), Number(this.stateGet(this.editKey()) || 0) + 1);
@@ -430,8 +438,14 @@ export class WpsHostAdapter implements HostAdapter {
             business: { ...metadata.business, unresolved_line_ids: ids } });
         }
       }
-      callback(change);
+      this.sheetChangeListeners.forEach((listener) => listener(change));
     });
+    this.sheetChangeListeners.add(callback);
+    return () => {
+      this.sheetChangeListeners.delete(callback);
+      if (this.sheetChangeListeners.size) return;
+      this.releaseSheetChanges?.(); this.releaseSheetChanges = undefined;
+    };
   }
 
   onSelectionChange(callback: () => void) { return this.event('SheetSelectionChange', callback); }
