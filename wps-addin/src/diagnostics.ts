@@ -3,7 +3,7 @@ import type { DiagnosticEventStore } from './diagnosticStore';
 
 export const DIAGNOSTIC_OUTBOX_KEY = 'presales_diagnostic_outbox';
 export const DIAGNOSTIC_SESSION_KEY = 'presales_diagnostic_session_id';
-const PLUGIN_VERSION = '0.1.0';
+const PLUGIN_VERSION = '0.1.1';
 const EVENT_TYPES = new Set([
   'inline_open', 'focus_lost', 'query_start', 'query_success', 'query_error', 'no_match',
   'tab_register', 'tab_restore', 'tab_accept', 'tab_expand', 'accept_success', 'accept_error',
