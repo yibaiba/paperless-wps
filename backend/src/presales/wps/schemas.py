@@ -243,8 +243,39 @@ class SyncCommit(SyncPreview):
     operation_id: Text
 
 
+class UnresolvedRow(Input):
+    sheet: Text
+    row: int = Field(ge=1)
+    line_id: str | None = None
+    device_id: str | None = None
+    system_id: str | None = None
+    reason_code: Text
+    confirmed_line: WorkbookLine | None = None
+
+
 class CompletionPreview(SyncPreview, CompletionLocation):
     schema_version: Literal[2] = 2
     selected_variant_id: str | None = None
     selected_source_id: str | None = None
     intent: Literal["next", "remove"] = "next"
+    unresolved_rows: list[UnresolvedRow] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def unresolved_identities(self):
+        positions = {(line.sheet, line.row) for line in [*self.lines, *self.removed_lines]}
+        identities = {line.line_id for line in [*self.lines, *self.removed_lines]}
+        for row in self.unresolved_rows:
+            if (row.sheet, row.row) in positions or (row.line_id and row.line_id in identities):
+                raise ValueError("已解析、未解析和删除行不能重复")
+            positions.add((row.sheet, row.row))
+            if row.line_id:
+                identities.add(row.line_id)
+            line = row.confirmed_line
+            if line and (line.sheet, line.row, line.line_id, line.device_id) != (
+                row.sheet,
+                row.row,
+                row.line_id,
+                row.device_id,
+            ):
+                raise ValueError("未解析行的旧确认快照身份不一致")
+        return self

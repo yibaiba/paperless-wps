@@ -164,7 +164,7 @@ class WorkbookSync:
             "configuration": draft.payload["configuration"],
         }
 
-    def _operations(self, request, state):
+    def _operations(self, request, state, *, preserved_device_ids=frozenset()):
         variants = {
             variant["id"]: variant
             for variant in DraftCatalog(
@@ -234,7 +234,7 @@ class WorkbookSync:
             if line.line_id in visible_ids:
                 line_bindings.append(self._line_binding(line, device_id))
         raw.extend(op.model_dump(mode="json") for op in request.business_operations)
-        for device_id in sorted((managed | removed_ids) - current_ids):
+        for device_id in sorted((managed | removed_ids) - current_ids - preserved_device_ids):
             raw.append({"action": "remove", "collection": "devices", "id": device_id})
         return OPERATIONS.validate_python(raw), line_bindings
 

@@ -4,12 +4,13 @@ from uuid import NAMESPACE_URL, uuid5
 
 from presales.configuration.projects.planning.dependency_scope import (
     DependencyScope,
-    operation_references,
 )
 from presales.configuration.projects.services.definition_snapshot import resolve_definitions
 from presales.configuration.projects.services.editing import edit_configuration
 from presales.lists.catalog_snapshot import DraftCatalog
 from presales.rules.calculation import digest
+
+from .unresolved_rows import projection_input
 
 
 def context_versions(draft):
@@ -49,15 +50,13 @@ def binding_context(sync, binding_id):
 
 def workbook_projection(sync, request):
     state = sync._state(request)
-    operations, bindings = sync._operations(request, state)
+    projected_request, preserved = projection_input(request, state)
+    operations, bindings = sync._operations(
+        projected_request, state, preserved_device_ids=preserved
+    )
     repository = sync.lists.repository
     repository = repository.scoped(
-        DependencyScope(
-            request.scope.system_id,
-            operation_references(
-                [op.model_dump(mode="json") for op in request.business_operations]
-            ),
-        ),
+        DependencyScope(request.scope.system_id),
         before=state["configuration"],
     )
     repository.catalog = DraftCatalog(sync.session, state["draft"].payload["catalog_snapshot_id"])

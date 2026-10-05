@@ -6,11 +6,28 @@ from presales.quotation.calculation import unit_price
 from presales.rules.calculation import digest
 
 PRODUCT_FIELDS = ("model", "name", "description", "unit", "brand", "price")
+SNAPSHOT_FIELDS = {"variant_snapshot", "source_snapshot"}
+
+
+def business_changes(changes):
+    # A previously unassigned stock item gets its fixed snapshots when linked.
+    # Hydration is evidence, not an instruction to rewrite its worksheet cells.
+    return [
+        change
+        for change in changes
+        if not (
+            change["kind"] == "devices"
+            and change["before"]
+            and change["after"]
+            and {k: v for k, v in change["before"].items() if k not in SNAPSHOT_FIELDS}
+            == {k: v for k, v in change["after"].items() if k not in SNAPSHOT_FIELDS}
+        )
+    ]
 
 
 def project_next_edit(option, *, request, profile, projection):
     option = normalized_identities(option, request=request, projection=projection)
-    changes = option["changes"]
+    changes = business_changes(option["changes"])
     devices = [c for c in changes if c["kind"] == "devices"]
     patches, bindings, errors, used = [], [], [], set()
     removed_lines = []

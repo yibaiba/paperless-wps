@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { CompletionContextSummary, KnowledgeSummary } from '../businessTypes';
 import { issueText } from '../businessContextPresentation';
 import './businessContext.css';
@@ -15,6 +15,9 @@ export function BusinessContextDetails({ summary }: { summary?: CompletionContex
       <p>{summary.room?.name ?? '未绑定房间'} / {summary.system.name} · {summary.scope.sheet} {summary.scope.start_row}–{summary.scope.end_row} 行</p>
       <p>目录：{summary.catalog_scope.sheet} · 批次 {summary.catalog_scope.import_id}</p>
       <p>未同步业务变化：{summary.local_changes.length} 项。这里只解释临时方案，不保存项目。</p>
+      {summary.unresolved_rows?.map((row) => <p className="issue" key={`${row.sheet}:${row.row}`}>
+        {row.sheet} · 第 {row.row} 行：未解析（{row.reason_code}）。原身份 {row.line_id ?? '尚未确认'} 保留，旧数量不是本次有效依据。
+      </p>)}
       {summary.rows.map((row) => <div className="change" key={row.id}>
         <strong>{row.sheet && row.row ? `${row.sheet} · 第 ${row.row} 行` : '项目基线设备'}：{row.name} × {row.quantity}</strong>
         <p>{PARTICIPATION[row.participation]}；{row.supply_allocations.length
@@ -29,16 +32,22 @@ export function BusinessContextDetails({ summary }: { summary?: CompletionContex
   </details>;
 }
 
-export function KnowledgeDetails({ items }: { items: KnowledgeSummary[] }) {
+export function KnowledgeDetails({ items, focused = false }: { items: KnowledgeSummary[]; focused?: boolean }) {
   const [open, setOpen] = useState(false);
-  return <details className="business-context" onToggle={(event) => setOpen(event.currentTarget.open)}>
+  const panel = useRef<HTMLDetailsElement>(null);
+  useEffect(() => { if (focused && panel.current) { panel.current.open = true; panel.current.focus(); } }, [focused]);
+  return <details ref={panel} tabIndex={-1} className="business-context" onToggle={(event) => setOpen(event.currentTarget.open)}>
     <summary>固定知识版本与资料缺口</summary>
     {open && items.map((item) => <div key={item.system_id}>
       <strong>{item.system_name}</strong>
       <p>{item.package ? `${item.package.name} · r${item.package.revision}` : '没有采用已发布的知识包'}</p>
       <p>{item.definition ? `${item.definition.name} · r${item.definition.revision}` : '固定版本中没有系统定义'}</p>
       <p>以下为资料盘点，不等于当前方案检查失败；未启用分支和共享资料不自动阻止独立部署。</p>
-      {item.gaps.length ? item.gaps.map((gap, i) => <p className="issue" key={i}>{issueText(gap)}</p>) : <p>资料盘点无缺口；兼容性仍以本次业务检查为准。</p>}
+      {item.gaps.length ? item.gaps.map((gap, i) => <details className="issue" key={i}>
+        <summary>{issueText(gap)}</summary>
+        <pre>{JSON.stringify(gap, null, 2)}</pre>
+        <p>这里只核对固定版本、资料位置和待确认项；不会确认或发布规则。</p>
+      </details>) : <p>资料盘点无缺口；兼容性仍以本次业务检查为准。</p>}
     </div>)}
   </details>;
 }

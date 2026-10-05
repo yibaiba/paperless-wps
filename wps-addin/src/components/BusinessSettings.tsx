@@ -1,12 +1,13 @@
-import { useState } from 'react';
-import type { BusinessOperation, WorkbookBusinessContext } from '../businessTypes';
+import { useEffect, useRef, useState } from 'react';
+import type { BusinessOperation, ResolutionAction, WorkbookBusinessContext } from '../businessTypes';
 import type { HostAdapter } from '../host';
 import type { TemplateProfile, WorkbookMetadata } from '../types';
 import { assertWorkbookSession, captureWorkbookSession } from '../workbookSession';
 
-export function BusinessSettings({ context, host, metadata, profile, onSaved }: {
+export function BusinessSettings({ context, host, metadata, profile, onSaved, resolution }: {
   context: WorkbookBusinessContext; host: HostAdapter; metadata: WorkbookMetadata;
   profile: TemplateProfile; onSaved: (value: WorkbookMetadata) => void;
+  resolution?: ResolutionAction;
 }) {
   const [systemId, setSystemId] = useState('');
   const [roomId, setRoomId] = useState('');
@@ -21,6 +22,16 @@ export function BusinessSettings({ context, host, metadata, profile, onSaved }: 
   const [evidence, setEvidence] = useState('');
   const [error, setError] = useState('');
   const [session] = useState(() => captureWorkbookSession(host));
+  const panel = useRef<HTMLDetailsElement>(null);
+  useEffect(() => {
+    if (resolution?.kind !== 'edit_business') return;
+    const scope = metadata.business?.scopes.find((s) => s.sheet === resolution.sheet
+      && s.start_row <= resolution.row && s.end_row >= resolution.row);
+    setSystemId(scope?.system_id ?? ''); setInputs({});
+    setFirst(String(scope?.start_row ?? resolution.row)); setLast(String(scope?.end_row ?? resolution.row));
+    setFeatures(context.configuration.systems.find((s) => s.id === scope?.system_id)?.features ?? []);
+    if (panel.current) { panel.current.open = true; panel.current.focus(); }
+  }, [resolution]);
   const packages = context.definitions.packages;
   const existingSystem = context.configuration.systems.find((s) => s.id === systemId);
   const selected = packages.find((p) => p.id === (existingSystem?.knowledge_package_id ?? packageId));
@@ -99,7 +110,7 @@ export function BusinessSettings({ context, host, metadata, profile, onSaved }: 
     } catch (reason) { setError(String(reason)); }
   }
 
-  return <details className="business-settings" open={!metadata.business?.scopes.length}>
+  return <details ref={panel} tabIndex={-1} className="business-settings" open={!metadata.business?.scopes.length || resolution?.kind === 'edit_business'}>
     <summary>业务区与固定系统版本</summary>
     <p>保存仅更新本地设置；设备行数量不等于房间人数。空参数将明确保持待确认。</p>
     <label>已有系统<select value={systemId} onChange={(e) => {

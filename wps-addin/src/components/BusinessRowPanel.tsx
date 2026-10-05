@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { WpsApi } from '../api';
-import type { NextEditSuggestion, ProductKind, WorkbookBusinessContext } from '../businessTypes';
+import type { NextEditSuggestion, ProductKind, ResolutionAction, WorkbookBusinessContext } from '../businessTypes';
 import { rowBusinessOperations } from '../businessRowOperations';
 import { assertWorkbookSession, captureWorkbookSession, inWorkbookSession } from '../workbookSession';
 import { applyNextEdit } from '../editJournal';
@@ -11,9 +11,10 @@ import { businessSyncRequest } from '../businessWorkbook';
 import { scanWorkbook } from '../workbook';
 import { NextEditPreview } from './NextEditPreview';
 
-export function BusinessRowPanel({ api, host, profile, metadata, context, onChanged }: {
+export function BusinessRowPanel({ api, host, profile, metadata, context, onChanged, resolution }: {
   api: WpsApi; host: HostAdapter; profile: TemplateProfile; metadata: WorkbookMetadata;
   context: WorkbookBusinessContext; onChanged: (value: WorkbookMetadata) => void;
+  resolution?: ResolutionAction;
 }) {
   const [cell, setCell] = useState(() => host.activeCell());
   const [candidates, setCandidates] = useState<Candidate[]>([]);
@@ -29,6 +30,12 @@ export function BusinessRowPanel({ api, host, profile, metadata, context, onChan
   const [busy, setBusy] = useState(false);
   const [preview, setPreview] = useState<NextEditSuggestion>();
   const [session] = useState(() => captureWorkbookSession(host));
+  const panel = useRef<HTMLDetailsElement>(null);
+  useEffect(() => {
+    if (resolution?.kind !== 'confirm_identity') return;
+    setCell(host.activeCell()); setPreview(undefined); setSelected(''); setCandidates([]);
+    if (panel.current) { panel.current.open = true; panel.current.focus(); }
+  }, [host, resolution]);
   useEffect(() => host.onSelectionChange(() => {
     setCell(host.activeCell()); setCandidates([]); setSelected(''); setKind(''); setRole('');
     setDeviceId(''); setSupply(''); setPreview(undefined);
@@ -132,7 +139,7 @@ export function BusinessRowPanel({ api, host, profile, metadata, context, onChan
     finally { setBusy(false); }
   }
 
-  return <details><summary>确认当前行产品 / 用途：{cell.sheet} · {cell.row}</summary>
+  return <details ref={panel} tabIndex={-1}><summary>确认当前行产品 / 用途：{cell.sheet} · {cell.row}</summary>
     <p>手填旧行不会自动绑定。重复型号、多个来源均须明确选择。</p>
     <button onClick={identify} disabled={busy}>解析当前行产品身份</button>
     <label>配置与来源<select value={selected} onChange={(e) => setSelected(e.target.value)}><option value="">{old ? '保留已确认产品' : '请选择'}</option>

@@ -37,6 +37,7 @@ export interface HostAdapter {
   account(): string | null;
   saveAccount(value: string): void;
   requestedAction(): string | null;
+  openTaskPaneAction(action: string): void;
   clearRequestedAction(): void;
   activeCell(): ActiveCell;
   sheetNames(): string[];
@@ -145,6 +146,16 @@ export class WpsHostAdapter implements HostAdapter {
   saveAccount(value: string) { this.credentials.saveAccount(value); }
 
   requestedAction() { return this.stateGet('presales_requested_action'); }
+
+  openTaskPaneAction(action: string) {
+    const id = this.storeGet('presales_taskpane_id');
+    const pane = id ? this.app.GetTaskPane(id) : this.app.CreateTaskPane(new URL('taskpane.html', window.location.href).href);
+    if (!pane) throw new Error('WPS 未返回任务窗格，请重新打开助手');
+    if (!id) this.storeSet('presales_taskpane_id', text(pane.ID));
+    this.stateSet('presales_requested_action', action);
+    pane.DockPosition = 2;
+    pane.Visible = true;
+  }
 
   clearRequestedAction() { this.stateSet('presales_requested_action', ''); }
 

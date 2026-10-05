@@ -89,6 +89,18 @@ export interface CompletionPreviewResult {
   next_target?: NextEditTarget | null;
   context_summary?: CompletionContextSummary;
 }
+export interface UnresolvedWorkbookRow {
+  sheet: string; row: number; line_id?: string; device_id?: string;
+  system_id?: string | null; reason_code: string;
+  confirmed_line?: WorkbookLine;
+}
+export interface ResolutionAction {
+  kind: 'locate_row' | 'confirm_identity' | 'check_source' | 'edit_business' | 'review_knowledge';
+  label: string; sheet: string; row: number; column: number;
+  requirement_id?: string | null; device_id?: string | null;
+  expected_local_revision: number; context_fingerprint: string;
+  binding_id: string; template_profile_revision: number;
+}
 export interface KnowledgeSummary {
   system_id: string; system_name: string;
   definition: { id: string; revision: number; name: string; status: string } | null;
@@ -112,6 +124,7 @@ export interface CompletionContextSummary {
     supply_allocations: Array<{ source: string; quantity: string }>;
     uses: Array<{ requirement_id: string; system_id: string; role: string }>;
   }>;
+  unresolved_rows?: UnresolvedWorkbookRow[];
   local_changes: Array<{ kind: string; id: string }>;
   knowledge: KnowledgeSummary[]; issues: unknown[];
 }

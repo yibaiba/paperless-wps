@@ -9,7 +9,9 @@ from .context_summary import completion_context_summary
 from .edit_decision import added_purchase, decision_for, next_target
 from .edit_identity import action_context, is_dismissed, with_identity
 from .next_edit_projection import project_next_edit
+from .resolution_actions import with_resolution_actions
 from .templates import TemplateProfiles
+from .unresolved_rows import row_issues
 
 
 def completion_preview(sync, request):
@@ -59,7 +61,10 @@ def completion_preview(sync, request):
         selected_source_id=request.selected_source_id or "",
         system_id=scope.system_id,
     )
-    if request.intent == "remove":
+    unresolved = row_issues(request, checked)
+    if any(issue["blocking"] for issue in unresolved):
+        options, questions = [], unresolved
+    elif request.intent == "remove":
         line = next(
             (
                 line
@@ -71,7 +76,7 @@ def completion_preview(sync, request):
         if not line or not line.device_id:
             raise ValueError("请先确认要移除的产品行身份")
         options = [removal_option(context, checked, device_id=line.device_id)]
-        questions = []
+        questions = unresolved
     else:
         options, questions = next_edit_options(
             context,
@@ -80,6 +85,7 @@ def completion_preview(sync, request):
             requirement_id=scope.requirement_id,
             recent_requirement_id=recent_requirement(request, checked),
         )
+        questions = [*questions, *unresolved]
     items = [
         project_next_edit(option, request=request, profile=profile, projection=projection)
         for option in options
@@ -96,11 +102,16 @@ def completion_preview(sync, request):
     suppressed = len(filtered) != len(items)
     items = sorted(filtered, key=lambda item: (not item["applicable"], added_purchase(item)))
     issues = [
-        dict(q, sheet=request.active_cell.sheet, row=request.active_cell.row)
+        dict(
+            q,
+            sheet=q.get("sheet", request.active_cell.sheet),
+            row=q.get("row", request.active_cell.row),
+        )
         if q.get("origin") in {"catalog_data", "catalog_scope", "knowledge", "business_context"}
         else q
         for q in questions
     ] + sync._issues(checked)
+    issues = with_resolution_actions(issues, request=request, fingerprint=projection["fingerprint"])
     primary, decision = decision_for(
         items, query=request.query, issues=issues, suppressed=suppressed
     )

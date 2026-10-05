@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { WpsApi } from '../api';
-import type { CompletionPreviewResult, NextEditSuggestion } from '../businessTypes';
+import type { CompletionPreviewResult, NextEditSuggestion, ResolutionAction } from '../businessTypes';
 import { completionRequest } from '../businessWorkbook';
 import { businessDiagnostic } from '../businessDiagnostics';
 import { BusinessPrefetch, businessPrefetchKey } from '../businessPrefetch';
@@ -24,8 +24,11 @@ import { NextEditPreview, issueText } from './NextEditPreview';
 import { NextEditNotice } from './NextEditNotice';
 import { BusinessCandidateList } from './BusinessCandidateList';
 import { decisionText } from '../businessContextPresentation';
+import { navigateResolution } from '../resolutionActions';
+import { IssueActions } from './IssueActions';
 
 const POSITION_POLL_MS = 300;
+const ISSUE_ACTION_STATUS_ROWS = 3;
 
 export function BusinessInlineEditor({ host: suppliedHost, api: suppliedApi }: {
   host?: WpsHostAdapter; api?: Pick<WpsApi, 'completionPreview'>;
@@ -260,7 +263,7 @@ export function BusinessInlineEditor({ host: suppliedHost, api: suppliedApi }: {
       const statusRows = (notice && !expanded ? NEXT_EDIT_NOTICE_ROWS : 0)
         + Number(Boolean(error)) * INLINE_ERROR_STATUS_ROWS
         + Number(Boolean(writeError)) * INLINE_ERROR_STATUS_ROWS
-        + Number(!error && Boolean(result?.issues.length));
+        + Number(!error && Boolean(result?.issues.length)) * ISSUE_ACTION_STATUS_ROWS;
       try { setPlacement(host.layoutInlineEditor({ candidateCount: preview ? 4 : result?.items.length ?? 0,
         listVisible: expanded || preview, showStatus: statusRows > 0 || Boolean(result?.decision),
         statusRows: statusRows + Number(Boolean(result?.decision && !preview)),
@@ -278,6 +281,13 @@ export function BusinessInlineEditor({ host: suppliedHost, api: suppliedApi }: {
     composing, explicit: true, count: 1,
     target: result?.primary_suggestion_id === item?.id ? result?.next_target : undefined });
   const closePreview = () => setPreview(false);
+  const resolveIssue = (action: ResolutionAction) => {
+    try {
+      assertInlineSession(host, context);
+      requests.current.cancel(); prefetch.current.clear();
+      navigateResolution({ host, action, fingerprint: result!.context_fingerprint });
+    } catch (reason) { setError(String(reason)); }
+  };
   return <div className={`inline-editor ${placement}`}>
     <div className="inline-input-row"><div className="inline-query">
       {!expanded && ghost && <div className="inline-ghost" aria-hidden="true"><span>{ghost.prefix}</span>{ghost.suffix}</div>}
@@ -341,7 +351,9 @@ export function BusinessInlineEditor({ host: suppliedHost, api: suppliedApi }: {
         if (operationId) dispatch({ action: 'preview', suggestion: item, operationId, result });
       }}>查看依据</button>}
     </div>}
-    {!error && Boolean(result?.issues.length) && <div className="inline-status" title={result!.issues.map(issueText).join('；')}>{issueText(result!.issues[0])}</div>}
+    {!error && Boolean(result?.issues.length) && <div className="inline-status" title={result!.issues.map(issueText).join('；')}>
+      <IssueActions issue={result!.issues[0]} onResolve={resolveIssue} />
+    </div>}
     {expanded && !preview && <BusinessCandidateList items={result?.items ?? []} selected={selected}
       column={context.cell.column} ready={ready}
       onChoose={(candidate, i) => { setSelected(i); void choose(candidate); }} />}

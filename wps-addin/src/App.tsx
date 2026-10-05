@@ -17,6 +17,8 @@ import { matchingProfile } from './template';
 import { suggestionContext } from './suggestionContext';
 import { isProductInputCell } from './productInput';
 import { completionMode } from './businessContextPresentation';
+import type { ResolutionAction } from './businessTypes';
+import { requestedResolution, assertResolutionCurrent } from './resolutionActions';
 import type {
   ActiveCell, Candidate, TemplateProfile,
   WorkbookMetadata,
@@ -36,6 +38,7 @@ export function App() {
   const [profiles, setProfiles] = useState<TemplateProfile[]>([]);
   const [profile, setProfile] = useState<TemplateProfile>();
   const [view, setView] = useState<View>('suggestions');
+  const [resolution, setResolution] = useState<ResolutionAction>();
   const [cell, setCell] = useState<ActiveCell>();
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [busy, setBusy] = useState(false);
@@ -226,7 +229,17 @@ export function App() {
         host.clearBackgroundError();
       }
       const action = host.requestedAction();
-      if (!action || !views[action]) return;
+      if (!action) return;
+      try {
+        const target = requestedResolution(action);
+        if (target) {
+          assertResolutionCurrent({ action: target, metadata: host.readMetadata(), revision: host.businessRevision() });
+          setResolution(target); setView(target.kind === 'check_source' ? 'mapping' : 'business');
+          host.clearRequestedAction(); return;
+        }
+      } catch (reason) { setError(String(reason)); host.clearRequestedAction(); return; }
+      if (!views[action]) return;
+      setResolution(undefined);
       setView(views[action]);
       host.clearRequestedAction();
       if (action === 'open' || action === 'mapping') {
@@ -369,7 +382,8 @@ export function App() {
     </section> : null}
     {view === 'suggestions' && profile && metadata.schema_version !== 2 ? <SuggestionPanel cell={cell} candidates={candidates} busy={busy} error={error} onAccept={accept} /> : null}
     {((view === 'suggestions' && metadata.schema_version === 2) || view === 'business') && profile
-      ? <BusinessPanel key={host.workbookKey()} api={api} host={host} profile={profile} metadata={metadata} onChanged={setMetadata} /> : null}
+      ? <BusinessPanel key={host.workbookKey()} api={api} host={host} profile={profile} metadata={metadata}
+        resolution={resolution} onChanged={setMetadata} /> : null}
     {view === 'suggestions' && !profile ? <div className="empty">请先完成模板映射，才能识别产品列</div> : null}
     {view === 'mapping' ? <MappingPanel key={host.workbookKey()} host={host} api={api} profiles={profiles}
       profile={profile} onSelected={selectProfile} onSaved={saveProfile} /> : null}

@@ -113,6 +113,10 @@ def completion_context_summary(projection, *, request, profile, context, issues)
         local_revision=request.local_revision,
         catalog_scope=profile["catalog_scope"],
         input_resolution=context.input_resolution,
+        unresolved_rows=[
+            row.model_dump(mode="json", exclude={"confirmed_line"})
+            for row in request.unresolved_rows
+        ],
         rows=context_rows(projection, request, allowed_sources=context.allowed_sources or {}),
         local_changes=[
             {key: change[key] for key in ("kind", "id")}

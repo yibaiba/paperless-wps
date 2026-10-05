@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { WpsApi } from '../api';
-import type { CompletionPreviewResult, WorkbookBusinessContext } from '../businessTypes';
+import type { CompletionPreviewResult, ResolutionAction, WorkbookBusinessContext } from '../businessTypes';
 import { completionRequest } from '../businessWorkbook';
 import { recentHistoryKey } from '../recentBusinessEdits';
 import { applyNextEdit } from '../editJournal';
@@ -9,15 +9,18 @@ import type { TemplateProfile, WorkbookMetadata } from '../types';
 import { WorkbookRowIndex } from '../workbookRowIndex';
 import { BusinessSettings } from './BusinessSettings';
 import { JournalPanel } from './JournalPanel';
-import { NextEditPreview, issueText } from './NextEditPreview';
+import { NextEditPreview } from './NextEditPreview';
+import { IssueActions } from './IssueActions';
+import { navigateResolution } from '../resolutionActions';
 import { BusinessRowPanel } from './BusinessRowPanel';
 import { BusinessContextDetails, KnowledgeDetails } from './BusinessContextDetails';
 import { completionMode, decisionText } from '../businessContextPresentation';
 import { assertWorkbookSession, captureWorkbookSession, inWorkbookSession } from '../workbookSession';
 
-export function BusinessPanel({ api, host, profile, metadata, onChanged }: {
+export function BusinessPanel({ api, host, profile, metadata, onChanged, resolution }: {
   api: WpsApi; host: HostAdapter; profile: TemplateProfile; metadata: WorkbookMetadata;
   onChanged: (value: WorkbookMetadata) => void;
+  resolution?: ResolutionAction;
 }) {
   const [context, setContext] = useState<WorkbookBusinessContext>();
   const [result, setResult] = useState<CompletionPreviewResult>();
@@ -64,17 +67,20 @@ export function BusinessPanel({ api, host, profile, metadata, onChanged }: {
     {currentContext && metadata.business?.scopes.map((scope) => <p key={`${scope.sheet}:${scope.start_row}`}>
       {scope.sheet} {scope.start_row}–{scope.end_row} 行 · {currentContext.configuration.rooms.find((r) => r.id === scope.room_id)?.name ?? '房间未确认'} / {currentContext.configuration.systems.find((s) => s.id === scope.system_id)?.name ?? scope.system_id}
     </p>)}
-    {context?.knowledge_summary && <KnowledgeDetails items={context.knowledge_summary} />}
+    {context?.knowledge_summary && <KnowledgeDetails items={context.knowledge_summary} focused={resolution?.kind === 'review_knowledge'} />}
     {!metadata.binding && <p>先绑定项目，再确认业务区。旧版基本补全继续保留。</p>}
-    {context && <BusinessSettings context={currentContext!} host={host} metadata={metadata} profile={profile} onSaved={onChanged} />}
+    {context && <BusinessSettings context={currentContext!} host={host} metadata={metadata} profile={profile} resolution={resolution} onSaved={onChanged} />}
     {metadata.business && context && <>
-      <BusinessRowPanel api={api} host={host} profile={profile} metadata={metadata} context={currentContext!} onChanged={onChanged} />
+      <BusinessRowPanel api={api} host={host} profile={profile} metadata={metadata} context={currentContext!} resolution={resolution} onChanged={onChanged} />
       <JournalPanel host={host} onChanged={(value) => { setResult(undefined); onChanged(value); }} />
       <button disabled={busy} onClick={() => preview()}>{busy ? '计算受影响的需求…' : '预览当前业务区下一步'}</button>
       <button disabled={busy} onClick={() => preview('remove')}>预览移除当前产品（不删工作表行）</button>
     </>}
     {error && <div className="error" role="alert">{error}</div>}
-    {result?.issues.map((issue, i) => <div className="issue" key={i}>{issueText(issue)}</div>)}
+    {result?.issues.map((issue, i) => <IssueActions key={i} issue={issue} onResolve={(action) => {
+      try { assertWorkbookSession(host, session); navigateResolution({ host, action, fingerprint: result.context_fingerprint }); }
+      catch (reason) { setError(String(reason)); }
+    }} />)}
     {result && <><p role="status">{decisionText(result.decision)}</p><BusinessContextDetails summary={result.context_summary} /></>}
     {result?.items.map((item) => <NextEditPreview key={item.id} suggestion={item} contextSummary={result.context_summary} onApply={() => {
       try {
