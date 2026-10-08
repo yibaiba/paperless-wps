@@ -1,6 +1,8 @@
 from copy import deepcopy
 from uuid import NAMESPACE_URL, uuid4, uuid5
 
+from presales.wps.next_edit_projection import deferred_combination
+
 from .conftest import AUTHOR, post
 from .test_proposal_generation import published
 from .test_wps_business_context import entity_versions, setup_workbook
@@ -69,9 +71,7 @@ def preview(client, headers, body):
 
 def combination_completion_body(client, catalog, *, mode="require_all"):
     terminal, addon = catalog["variants"][:2]
-    quantity = dict(
-        status="confirmed", scope="system", mode="per_group", factor="1", **AUTHOR
-    )
+    quantity = dict(status="confirmed", scope="system", mode="per_group", factor="1", **AUTHOR)
     definition = post(
         client,
         "/definitions",
@@ -464,6 +464,7 @@ def test_confirmed_software_role_requires_its_hardware_not_catalog_adjacency(cli
 def test_zen_combination_is_the_next_incremental_edit_after_trigger(client, catalog):
     headers, body = combination_completion_body(client, catalog)
     terminal = preview(client, headers, body)["items"][0]
+    assert terminal["applicable"], terminal["issues"]
     body = accept(body, terminal)
 
     result = preview(client, headers, body)
@@ -473,6 +474,17 @@ def test_zen_combination_is_the_next_incremental_edit_after_trigger(client, cata
     assert addon["line_bindings"][0]["variant_id"] == catalog["variants"][1]["id"]
     assert any(e.get("planning_origin") == "zen_combination" for e in addon["evidence"])
     assert any(c["kind"] == "requirements" for c in addon["changes"])
+    completed = preview(client, headers, accept(body, addon))
+    assert not completed["items"]
+
+
+def test_only_confirmed_generatable_combinations_are_deferred_to_the_next_tab():
+    base = {"kind": "combination", "code": "combination_require_all"}
+    assert deferred_combination({**base, "status": "conflict", "generation_enabled": True})
+    assert not deferred_combination({**base, "status": "unknown", "generation_enabled": False})
+    assert not deferred_combination(
+        {**base, "code": "combination_exclude", "status": "conflict", "generation_enabled": True}
+    )
 
 
 def test_replacement_cannot_carry_an_unmanaged_old_price_into_new_identity(client, catalog):

@@ -45,6 +45,12 @@ def test_review_does_not_confirm_rules_or_invent_accepted_trajectories():
     assert result["pinned_rules"] == [rule]
     assert result["scored_trajectories"] == 0
     assert not result["acceptance_verified"]
+    zen = result["zen_combination_review"]
+    assert zen["mode"] == "review_only"
+    assert zen["draft_rules"][0]["payload"]["status"] == "draft"
+    assert zen["draft_rules"][0]["payload"]["combination"]["mode"] == "require_all"
+    assert zen["blocked_items"][0]["id"] == "redshield.windows.server-hardware"
+    assert "Windows" in zen["blocked_items"][0]["reason"]
     assert not result["pilot_readiness"]["ready_for_pilot"]
     assert any("30" in blocker for blocker in result["pilot_readiness"]["blockers"])
     for card in result["trajectory_cards"]:

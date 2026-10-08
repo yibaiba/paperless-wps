@@ -1,4 +1,7 @@
-"""Generate evidence review and unscored trajectory cards; never publish or save project changes."""
+"""Generate evidence review and unscored trajectory cards.
+
+Never publish knowledge or save project changes.
+"""
 
 import argparse
 import json
@@ -6,10 +9,12 @@ import os
 from collections import Counter
 from datetime import UTC, datetime
 from pathlib import Path
+from uuid import NAMESPACE_URL, uuid5
 
 from dotenv import load_dotenv
 from paperless_review.maintenance import apply_plan
 from presales.configuration.catalog.service import CatalogService
+from presales.configuration.knowledge.schemas import KnowledgeInput
 from presales.configuration.models import Entity, SourceLink
 from presales.rules.calculation import digest
 from presales.storage import CatalogImport, ProductRecord
@@ -74,6 +79,106 @@ EXCERPT_TERMS = (
     "最多",
     "需另外",
 )
+COMBINATION_ID = str(
+    uuid5(NAMESPACE_URL, "presales:redshield-windows:microphone-lift-combination")
+)
+
+
+def zen_combination_review(*, sources, package):
+    evidence_rows = [*range(41, 48)]
+    evidence_refs = combination_evidence(sources, rows=evidence_rows)
+    payload = combination_payload(sources, package=package, evidence_refs=evidence_refs)
+    retained = [
+        rule["id"]
+        for rule in package["rules"]
+        if rule.get("need_key")
+        in {"redshield.windows.client-software", "redshield.windows.server-software"}
+    ]
+    draft = {
+        "id": COMBINATION_ID,
+        "expected_revision": 0,
+        "payload": payload,
+        "evidence_hash": digest(evidence_refs),
+        "source_guards": {
+            sources[row][1]["id"]: digest(sources[row][1]) for row in evidence_rows
+        },
+        "review_required": [
+            "会议主机数量、容量及级联公式",
+            "主席与代表模块的分配口径",
+        ],
+    }
+    return combination_report(package, retained=retained, draft=draft)
+
+
+def combination_evidence(sources, *, rows):
+    return [
+        {
+            "source_id": sources[row][1]["id"],
+            "locator": f"{SHEET}!第{row}行/note+specification",
+            "quote": sources[row][1].get("note")
+            or sources[row][1].get("specification", "")[:240],
+        }
+        for row in rows
+    ]
+
+
+def combination_payload(sources, *, package, evidence_refs):
+    lifts = [sources[row] for row in range(41, 45)]
+    pinned = {rule.get("need_key"): rule for rule in package["rules"]}
+    module = pinned.get("redshield.microphone.unit-module")
+    host = pinned.get("redshield.microphone.conference-host")
+    return KnowledgeInput.model_validate(
+        {
+            "schema_version": 2,
+            "name": "红盾带话筒升降器 · 模块与会议主机组合",
+            "kind": "combination",
+            "status": "draft",
+            "selector": {"variant_ids": [variant["id"] for variant, _ in lifts]},
+            "combination": {
+                "mode": "require_all",
+                "scope": "system",
+                "targets": [
+                    {
+                        "id": "microphone-module",
+                        "name": "话筒单元模块",
+                        "need_key": "redshield.microphone.unit-module",
+                        "variant_ids": (module or {}).get("target_variant_ids", []),
+                    },
+                    {
+                        "id": "conference-host",
+                        "name": "数字会议主机",
+                        "need_key": "redshield.microphone.conference-host",
+                        "variant_ids": (host or {}).get("target_variant_ids", []),
+                    },
+                ],
+            },
+            "evidence_refs": evidence_refs,
+            "actor": "红盾 ZEN 组合维护预览",
+            "evidence": "来源行确认需同时配模块和会议主机；数量与容量仍待业务确认。",
+        }
+    ).model_dump(mode="json")
+
+
+def combination_report(package, *, retained, draft):
+    return {
+        "mode": "review_only",
+        "package_id": package["id"],
+        "expected_package_revision": package["revision"],
+        "classifications": {
+            "retain_accessory": retained,
+            "draft_combination": [COMBINATION_ID],
+            "blocked": ["redshield.windows.server-hardware"],
+        },
+        "draft_rules": [draft],
+        "blocked_items": [
+            {
+                "id": "redshield.windows.server-hardware",
+                "reason": "Windows 服务端软件与目录 Ubuntu 主机环境冲突",
+                "required_confirmation": "实际部署操作系统、版本、虚拟化条件及容量选型",
+                "source_rows": [6, 7, 8],
+            }
+        ],
+    }
 
 
 def topic_review(topic, *, sources, rules):
@@ -147,6 +252,14 @@ def review_bundle(plan, *, variants, imports):
         topic_review(topic, sources=sources, rules=rules) for topic in REVIEW_TOPICS
     ]
     cards = [trajectory_card(topic) for topic in topics]
+    combination_review = zen_combination_review(
+        sources=sources,
+        package={
+            "id": package["id"],
+            "revision": package["expected_revision"],
+            **current,
+        },
+    )
     return {
         "schema_version": 1,
         "generated_at": datetime.now(UTC).isoformat(),
@@ -175,6 +288,7 @@ def review_bundle(plan, *, variants, imports):
         "pilot_readiness": pilot_report(cards, []),
         "scored_trajectories": 0,
         "acceptance_verified": False,
+        "zen_combination_review": combination_review,
     }
 
 

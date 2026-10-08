@@ -184,6 +184,7 @@ def project_next_edit(option, *, request, profile, projection):
         i
         for i in issues
         if isinstance(i, dict)
+        and not deferred_combination(i)
         and (
             i.get("status") == "conflict"
             or (
@@ -218,6 +219,14 @@ def project_next_edit(option, *, request, profile, projection):
         else "preview",
         context_fingerprint=projection["fingerprint"],
         local_revision=request.local_revision,
+    )
+
+
+def deferred_combination(issue):
+    return (
+        issue.get("kind") == "combination"
+        and issue.get("generation_enabled") is True
+        and issue.get("code") in {"combination_require_all", "combination_require_any"}
     )
 
 

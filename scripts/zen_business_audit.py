@@ -35,7 +35,8 @@ def summarize(records):
     kind_counts = Counter(r["payload"].get("kind", "unknown") for r in knowledge)
     status_counts = Counter(r["payload"].get("status", "unknown") for r in knowledge)
     runtime_counts = Counter(
-        configuration_for(r).get("decision_runtime", "python-v3") for r in configurations
+        configuration_for(record).get("decision_runtime", "python-v3")
+        for record in configurations
     )
     package_rows = []
     for record in packages:
@@ -47,7 +48,9 @@ def summarize(records):
                 "name": record["payload"].get("name", ""),
                 "status": record["payload"].get("status", "unknown"),
                 "rule_count": len(rules),
-                "combination_count": sum(rule.get("kind") == "combination" for rule in rules),
+                "combination_count": sum(
+                    rule.get("kind") == "combination" for rule in rules
+                ),
             }
         )
     project_rows = []
