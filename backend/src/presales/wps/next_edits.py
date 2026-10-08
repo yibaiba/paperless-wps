@@ -62,7 +62,27 @@ def completion_preview(sync, request):
         system_id=scope.system_id,
     )
     unresolved = row_issues(request, checked)
-    if any(issue["blocking"] for issue in unresolved):
+    legacy_contextual = (
+        checked["configuration"].get("decision_runtime", "python-v3") != "zen-v1"
+        and not request.query
+        and request.intent == "next"
+    )
+    if legacy_contextual:
+        options, questions = (
+            [],
+            [
+                {
+                    "code": "zen_upgrade_required",
+                    "status": "unknown",
+                    "message": (
+                        "此项目尚未启用 ZEN 决策；"
+                        "空白行只恢复原生 Tab，请在同步面板预览升级"
+                    ),
+                    "origin": "business_context",
+                }
+            ],
+        )
+    elif any(issue["blocking"] for issue in unresolved):
         options, questions = [], unresolved
     elif request.intent == "remove":
         line = next(

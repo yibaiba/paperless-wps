@@ -16,8 +16,7 @@ def business_changes(changes):
     return [
         change
         for change in changes
-        if change["kind"] not in DERIVED_CHANGE_KINDS
-        and not hydration_only(change)
+        if change["kind"] not in DERIVED_CHANGE_KINDS and not hydration_only(change)
     ]
 
 
@@ -208,6 +207,7 @@ def project_next_edit(option, *, request, profile, projection):
         ),
         changes=changes,
         evidence=[*option["evidence"], {"fixed_versions": projection["versions"]}],
+        planning=option.get("planning", {"origin": "project_planning"}),
         issues=issues,
         applicable=not errors and not option["questions"] and not blocking,
         acceptance="inline"

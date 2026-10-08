@@ -68,6 +68,8 @@ export interface NextEditSuggestion {
   confirmed_identity_ids?: string[];
   changes: Array<{ kind: string; id: string; before: unknown; after: unknown }>;
   evidence: unknown[]; issues: unknown[]; applicable: boolean;
+  planning?: { origin: string; check_id?: string; rule_id?: string; rule_revision?: number;
+    scope?: string; scope_id?: string; target_id?: string };
   acceptance: 'inline' | 'preview'; context_fingerprint: string; local_revision: number;
   semantic_action_id?: string; business_context_fingerprint?: string;
 }
@@ -109,6 +111,12 @@ export interface KnowledgeSummary {
 }
 export interface CompletionContextSummary {
   mode: 'business'; project_id: string; scope: BusinessScope;
+  calculation_version: number; decision_runtime: 'python-v3' | 'zen-v1';
+  decision_bundle_id: string | null;
+  decision: { runtime: string; bundle_id?: string; hash?: string };
+  combination_rule_count: number;
+  combination_checks: Array<{ check_id: string; rule_id: string; rule_revision: number;
+    code: string; status: string; message: string }>;
   detail: 'inline' | 'panel'; row_count: number; rows_omitted: number;
   system: { id: string; name: string; kind: string };
   room: { id: string; name: string } | null;

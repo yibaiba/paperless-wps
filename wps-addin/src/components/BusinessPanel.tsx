@@ -67,7 +67,11 @@ export function BusinessPanel({ api, host, profile, metadata, onChanged, resolut
   const currentContext = context && { ...context, configuration: result?.configuration ?? localSettings(context, metadata) };
   return <section className="panel-section" aria-label="下一步业务编辑">
     <h2>下一步业务编辑</h2>
-    <p>当前模式：{completionMode(metadata.schema_version)}</p>
+    <p>当前模式：{context?.versions.decision_runtime === 'zen-v1'
+      ? 'ZEN 业务推荐'
+      : completionMode(metadata.schema_version)}</p>
+    {context?.versions.decision_runtime !== 'zen-v1' && metadata.schema_version === 2
+      && <p className="issue">此项目尚未启用 ZEN；可继续按型号/名称补全，空白行不会直接写入业务搭配。</p>}
     {metadata.schema_version !== 2 && <p>在下方确认业务区与固定系统版本后，升级为业务上下文推荐；保留原绑定和产品身份。</p>}
     <p>项目：{metadata.binding?.project_id ?? '未绑定'} · 基线 v{metadata.binding?.base_revision ?? '未绑定'}</p>
     <p>目录：{profile.catalog_scope ? `${profile.catalog_scope.sheet} · ${profile.catalog_scope.import_id}` : '来源范围尚未确认'}</p>

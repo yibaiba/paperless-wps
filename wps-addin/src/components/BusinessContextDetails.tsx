@@ -12,6 +12,9 @@ export function BusinessContextDetails({ summary }: { summary?: CompletionContex
   return <details className="business-context" onToggle={(event) => setOpen(event.currentTarget.open)}>
     <summary>本次读取的上下文 · {summary.rows.length}/{summary.row_count} 个产品 · 本地修订 {summary.local_revision}</summary>
     {open && <>
+      <p>决策：{summary.decision_runtime === 'zen-v1' ? 'ZEN 业务推荐' : '基础产品补全'}
+        {summary.decision_bundle_id ? ` · 固定包 ${summary.decision_bundle_id}` : ' · 尚无固定决策包'}
+        {' · '}组合规则 {summary.combination_rule_count} 条</p>
       {summary.rows_omitted > 0 && <p>内联响应省略 {summary.rows_omitted} 个与当前建议无直接关系的业务行；任务窗格可查看完整上下文。</p>}
       <p>{summary.room?.name ?? '未绑定房间'} / {summary.system.name} · {summary.scope.sheet} {summary.scope.start_row}–{summary.scope.end_row} 行</p>
       <p>目录：{summary.catalog_scope.sheet} · 批次 {summary.catalog_scope.import_id}</p>
@@ -28,6 +31,10 @@ export function BusinessContextDetails({ summary }: { summary?: CompletionContex
       </div>)}
       <details><summary>未同步对象与固定版本</summary><pre>{JSON.stringify({ changes: summary.local_changes, versions: summary.versions }, null, 2)}</pre></details>
       <KnowledgeDetails items={summary.knowledge} />
+      {summary.combination_checks.map((check) => <details key={check.check_id} className="change">
+        <summary>{check.message}</summary>
+        <p>{check.code} · {check.status} · 规则 {check.rule_id} r{check.rule_revision}</p>
+      </details>)}
       {summary.issues.map((issue, i) => <p className="issue" key={i}>{issueText(issue)}</p>)}
     </>}
   </details>;

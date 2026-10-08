@@ -100,9 +100,7 @@ def context_rows(projection, request, *, allowed_sources):
 
 def referenced_device_ids(items, issues):
     identities = {
-        binding.get("device_id")
-        for item in items
-        for binding in item.get("line_bindings", [])
+        binding.get("device_id") for item in items for binding in item.get("line_bindings", [])
     }
     identities.update(
         change.get("id")
@@ -151,15 +149,28 @@ def completion_context_summary(projection, *, request, profile, context, issues,
     ]
     if request.response_detail == "inline":
         visible_ids = {row["id"] for row in visible_rows}
-        visible_ids.update(
-            change["id"] for item in items for change in item.get("changes", [])
-        )
+        visible_ids.update(change["id"] for item in items for change in item.get("changes", []))
         visible_changes = [change for change in local_changes if change["id"] in visible_ids]
     else:
         visible_changes = local_changes
+    combination_checks = relevant_combination_checks(
+        projection["checked"], detail=request.response_detail, items=items
+    )
     # PlanningContext already loaded this immutable definition snapshot for the request.
     return dict(
         mode="business",
+        calculation_version=configuration.get("calculation_version"),
+        decision_runtime=configuration.get("decision_runtime", "python-v3"),
+        decision_bundle_id=configuration.get("decision_bundle_id"),
+        decision=projection["checked"].get("decision", {"runtime": "python-v3"}),
+        combination_rule_count=len(
+            {
+                check["rule_id"]
+                for check in projection["checked"]["checks"]
+                if check["kind"] == "combination"
+            }
+        ),
+        combination_checks=combination_checks,
         detail=request.response_detail,
         row_count=len(rows),
         rows_omitted=len(rows) - len(visible_rows),
@@ -182,3 +193,15 @@ def completion_context_summary(projection, *, request, profile, context, issues,
         knowledge=knowledge_summary(configuration, context.definitions, system_ids={system["id"]}),
         issues=issues,
     )
+
+
+def relevant_combination_checks(checked, *, detail, items):
+    checks = [check for check in checked["checks"] if check["kind"] == "combination"]
+    if detail == "panel":
+        return checks
+    identities = {
+        item.get("planning", {}).get("check_id")
+        for item in items
+        if item.get("planning", {}).get("check_id")
+    }
+    return [check for check in checks if check["check_id"] in identities]
