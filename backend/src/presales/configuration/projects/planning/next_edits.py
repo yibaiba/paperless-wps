@@ -7,6 +7,7 @@ from decimal import Decimal
 from ..projections.comparison import configuration_diff
 from ..schemas import Configuration
 from .accessories import accessory_options, apply_included, demand_gap, manual_allocation_gap
+from .combination_steps import combination_step_branches
 from .context import PlanningContext
 from .devices import put_device
 from .fulfillment import bind_fulfilled_roles, fulfillment_devices
@@ -138,6 +139,16 @@ def next_edit_options(
             context, data, tasks=tasks, checked=checked, requirement_id=requirement_id
         )
         return options, [*questions, *issues]
+    combination, combination_issues = combination_steps(
+        context,
+        data,
+        checked=checked,
+        tasks=tasks,
+        system_id=system_id,
+        recent_requirement_id=recent_requirement_id,
+    )
+    if combination or combination_issues:
+        return combination, [*questions, *combination_issues]
     recent = next((t for t in tasks if t["requirement"]["id"] == priority), None)
     if recent and (
         recent["requirement"].get("device_id") or recent["requirement"].get("allocations")
@@ -155,6 +166,27 @@ def next_edit_options(
             return changed, questions
         questions.extend(gaps)
     return [], questions
+
+
+def combination_steps(context, data, *, checked, tasks, system_id, recent_requirement_id):
+    branches, issues = combination_step_branches(
+        context,
+        data,
+        checked=checked,
+        tasks=tasks,
+        system_id=system_id,
+        recent_requirement_id=recent_requirement_id,
+    )
+    return [
+        make_option(
+            context,
+            branch["proposed"],
+            gaps=branch["gaps"],
+            evidence=branch["evidence"],
+            planning=branch["planning"],
+        )
+        for branch in branches
+    ], issues
 
 
 def typed_step(context, data, *, tasks, checked, requirement_id):
@@ -300,7 +332,7 @@ def typed_options(context, data, task):
             yield make_option(context, result, gaps=[], evidence=choice["evidence"])
 
 
-def make_option(context, proposed, *, gaps, evidence):
+def make_option(context, proposed, *, gaps, evidence, planning=None):
     checked = context.repository.check(Configuration.model_validate(deepcopy(proposed)))
     _, tasks, _ = scoped_roles(context)
     tasks = [
@@ -320,6 +352,7 @@ def make_option(context, proposed, *, gaps, evidence):
         "changes": configuration_diff(context.configuration, checked["configuration"]),
         "questions": [*gaps, *fulfillment_gaps],
         "evidence": evidence,
+        "planning": planning or {"origin": "project_planning"},
     }
 
 
@@ -334,4 +367,5 @@ def removal_option(context, checked, *, device_id):
         changes=configuration_diff(context.configuration, result["configuration"]),
         questions=[],
         evidence=[dict(reason="用户明确预览移除此产品及其用途分配", device_id=device_id)],
+        planning={"origin": "explicit_removal"},
     )

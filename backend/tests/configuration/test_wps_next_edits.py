@@ -1,6 +1,7 @@
 from copy import deepcopy
 from uuid import NAMESPACE_URL, uuid4, uuid5
 
+from .conftest import AUTHOR, post
 from .test_proposal_generation import published
 from .test_wps_business_context import entity_versions, setup_workbook
 
@@ -64,6 +65,146 @@ def preview(client, headers, body):
     response = client.post("/api/wps/completion/preview", headers=headers, json=body)
     assert response.status_code == 200, response.text
     return response.json()
+
+
+def combination_completion_body(client, catalog, *, mode="require_all"):
+    terminal, addon = catalog["variants"][:2]
+    quantity = dict(
+        status="confirmed", scope="system", mode="per_group", factor="1", **AUTHOR
+    )
+    definition = post(
+        client,
+        "/definitions",
+        dict(
+            name="ZEN 下一步编辑",
+            status="confirmed",
+            roles=[
+                dict(id="terminal", name="终端", required=True, quantity_basis=quantity),
+                dict(id="addon", name="配套", required=False, quantity_basis=quantity),
+            ],
+            **AUTHOR,
+        ),
+    )
+    rules = [
+        post(
+            client,
+            "/knowledge",
+            dict(
+                name=name,
+                kind="suitability",
+                status="confirmed",
+                system_definition_id=definition["id"],
+                role_id=role,
+                selector=dict(variant_ids=[variant["id"]]),
+                **AUTHOR,
+            ),
+        )
+        for name, role, variant in (
+            ("终端适用", "terminal", terminal),
+            ("配套适用", "addon", addon),
+        )
+    ]
+    rules.append(
+        post(
+            client,
+            "/knowledge",
+            dict(
+                schema_version=2,
+                name="终端组合要求",
+                kind="combination",
+                status="confirmed",
+                selector=dict(variant_ids=[terminal["id"]]),
+                combination=dict(
+                    mode=mode,
+                    scope="system",
+                    targets=[
+                        dict(
+                            id="addon",
+                            name="配套",
+                            system_definition_id=definition["id"],
+                            role_id="addon",
+                            variant_ids=[addon["id"]],
+                        )
+                    ],
+                ),
+                **AUTHOR,
+            ),
+        )
+    )
+    package = post(
+        client,
+        "/knowledge-packages",
+        dict(
+            name="ZEN 下一步编辑包",
+            branch="Windows",
+            system_definition_id=definition["id"],
+            definition_revision=definition["revision"],
+            status="published",
+            members=[dict(id=rule["id"], revision=rule["revision"]) for rule in rules],
+            coverage=[
+                dict(
+                    role_id=role,
+                    selector=dict(variant_ids=[variant["id"]]),
+                    accessories="none",
+                    resources="not_applicable",
+                    evidence=AUTHOR["evidence"],
+                )
+                for role, variant in (("terminal", terminal), ("addon", addon))
+            ],
+            recommendations=[
+                dict(
+                    role_id=role,
+                    variant_ids=[variant["id"]],
+                    status="confirmed",
+                    **AUTHOR,
+                )
+                for role, variant in (("terminal", terminal), ("addon", addon))
+            ],
+            **AUTHOR,
+        ),
+    )
+    headers, _, _, body = setup_workbook(client, catalog)
+    body.update(
+        lines=[],
+        local_revision=0,
+        query="",
+        scope=dict(
+            sheet="报价表",
+            start_row=3,
+            end_row=50,
+            room_id="room",
+            system_id="system",
+            requirement_id=None,
+        ),
+        active_cell=dict(sheet="报价表", row=3, column=2, values={}),
+        target_cells=[dict(sheet="报价表", row=4, column=2, values={})],
+        business_operations=[
+            {
+                "action": "system_setup",
+                "features_confirmed": True,
+                "new_room": {"id": "room", "name": "ZEN 会议室"},
+                "system": {
+                    "id": "system",
+                    "name": "ZEN 系统",
+                    "kind": "ZEN 下一步编辑",
+                    "room_id": "room",
+                    "definition_id": definition["id"],
+                    "knowledge_package_id": package["id"],
+                    "inputs": [],
+                },
+                "role_ids": ["terminal"],
+            },
+            {
+                "action": "requirements_patch",
+                "generation": {
+                    "features_confirmed": ["system"],
+                    "supply_source": "purchase",
+                    "supply_evidence": "隔离测试",
+                },
+            },
+        ],
+    )
+    return headers, body
 
 
 def accept(body, item):
@@ -318,6 +459,20 @@ def test_confirmed_software_role_requires_its_hardware_not_catalog_adjacency(cli
     assert hardware["line_bindings"][0]["kind"] == "hardware"
     assert hardware["line_bindings"][0]["variant_id"] == catalog["variants"][1]["id"]
     assert any(op["action"] == "accessory_link" for op in hardware["business_operations"])
+
+
+def test_zen_combination_is_the_next_incremental_edit_after_trigger(client, catalog):
+    headers, body = combination_completion_body(client, catalog)
+    terminal = preview(client, headers, body)["items"][0]
+    body = accept(body, terminal)
+
+    result = preview(client, headers, body)
+
+    assert result["items"]
+    addon = result["items"][0]
+    assert addon["line_bindings"][0]["variant_id"] == catalog["variants"][1]["id"]
+    assert any(e.get("planning_origin") == "zen_combination" for e in addon["evidence"])
+    assert any(c["kind"] == "requirements" for c in addon["changes"])
 
 
 def test_replacement_cannot_carry_an_unmanaged_old_price_into_new_identity(client, catalog):
