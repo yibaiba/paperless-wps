@@ -1,4 +1,4 @@
-import { Alert, Button, Card, List, Space } from 'antd';
+import { Alert, Button, Card, Space, Table } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { useRef, useState, type ReactNode } from 'react';
@@ -23,9 +23,10 @@ export function DraftRecovery({ projectId, children }: { projectId: string; chil
   if (!dismissed && query.error) return <Alert type="error" title={query.error.message} action={<Button onClick={() => query.refetch()}>重试读取草稿</Button>} />;
   if (!dismissed && query.data?.length) return <Card title="发现可恢复的工作草稿">
     <Alert type="info" title="请选择要继续的草稿，或从已保存项目建立独立草稿。不会自动合并其他窗口或 Agent 的修改。" />
-    <List dataSource={query.data} renderItem={(item) => <List.Item actions={[<Button key="restore" onClick={() => setParams({ draft: item.id })}>恢复此草稿</Button>]}>
-      <Space>{item.origin === 'web' ? '网页' : 'Agent'} · 基线 v{item.base_revision} · 草稿 r{item.revision} · {new Date(item.updated_at).toLocaleString()}</Space>
-    </List.Item>} />
+    <Table rowKey="id" size="small" showHeader={false} pagination={false} dataSource={query.data} columns={[
+      { render: (_, item) => <Space>{item.origin === 'web' ? '网页' : 'Agent'} · 基线 v{item.base_revision} · 草稿 r{item.revision} · {new Date(item.updated_at).toLocaleString()}</Space> },
+      { width: 120, align: 'right', render: (_, item) => <Button onClick={() => setParams({ draft: item.id })}>恢复此草稿</Button> },
+    ]} />
     <Button onClick={() => setDismissed(true)}>从已保存版本开始</Button>
   </Card>;
   entered.current = {};
