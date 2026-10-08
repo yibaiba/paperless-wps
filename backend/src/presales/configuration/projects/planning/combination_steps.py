@@ -14,11 +14,17 @@ def relevant_checks(checked, *, system_id, recent_requirement_id=None):
     ]
     if recent_requirement_id:
         checks.sort(
-            key=lambda check: recent_requirement_id
-            not in {
-                *check.get("trigger_requirement_ids", []),
-                *(identity for group in check["groups"] for identity in group["requirement_ids"]),
-            }
+            key=lambda check: (
+                recent_requirement_id
+                not in {
+                    *check.get("trigger_requirement_ids", []),
+                    *(
+                        identity
+                        for group in check["groups"]
+                        for identity in group["requirement_ids"]
+                    ),
+                }
+            )
         )
     return checks
 
@@ -34,13 +40,10 @@ def combination_step_branches(
     check = checks[0]
     if check["code"] == "combination_exclude" or not check["generation_enabled"]:
         return [], [combination_question(check)]
-    groups = [group for group in check["groups"] if group["state"] != "pass"]
-    selected = groups if check["code"] == "combination_require_any" else groups[:1]
+    selected = selected_groups(check, variant_id=getattr(context, "selected_variant_id", ""))
     branches = []
     for group in selected:
-        for proposed, gaps, decisions, _ in group_branches(
-            context, data, group=group, tasks=tasks
-        ):
+        for proposed, gaps, decisions, _ in group_branches(context, data, group=group, tasks=tasks):
             if len(selected) > 1:
                 gaps = [*gaps, alternative_question(check)]
             branches.append(
@@ -54,6 +57,14 @@ def combination_step_branches(
     if branches:
         return branches, []
     return [], [combination_question(check)]
+
+
+def selected_groups(check, *, variant_id=""):
+    groups = [group for group in check["groups"] if group["state"] != "pass"]
+    if check["code"] != "combination_require_any":
+        return groups[:1]
+    matching = [group for group in groups if variant_id in group["target"]["variant_ids"]]
+    return matching or groups
 
 
 def combination_evidence(check, group):

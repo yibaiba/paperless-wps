@@ -1,6 +1,7 @@
 from copy import deepcopy
 from uuid import NAMESPACE_URL, uuid4, uuid5
 
+from presales.configuration.projects.planning.combination_steps import selected_groups
 from presales.wps.next_edit_projection import deferred_combination
 
 from .conftest import AUTHOR, post
@@ -485,6 +486,16 @@ def test_only_confirmed_generatable_combinations_are_deferred_to_the_next_tab():
     assert not deferred_combination(
         {**base, "code": "combination_exclude", "status": "conflict", "generation_enabled": True}
     )
+
+
+def test_explicit_variant_selects_one_require_any_branch():
+    groups = [
+        {"state": "fail", "target": {"variant_ids": ["a"]}},
+        {"state": "fail", "target": {"variant_ids": ["b"]}},
+    ]
+    check = {"code": "combination_require_any", "groups": groups}
+    assert selected_groups(check) == groups
+    assert selected_groups(check, variant_id="b") == [groups[1]]
 
 
 def test_replacement_cannot_carry_an_unmanaged_old_price_into_new_identity(client, catalog):
