@@ -20,6 +20,10 @@ function scenario({ conflictAt, rejectionStatus = 409, raceAfterSave = false }) 
   const slots = []; let cursor = 0;
   const react = {
     useRef(value) { const i = cursor++; return slots[i] ??= { current: value }; },
+    useReducer(reducer, initial) {
+      const i = cursor++; if (!(i in slots)) slots[i] = initial;
+      return [slots[i], action => { slots[i] = reducer(slots[i], action); }];
+    },
     useState(value) {
       const i = cursor++; if (!(i in slots)) slots[i] = value;
       return [slots[i], v => { slots[i] = typeof v === 'function' ? v(slots[i]) : v; }];
@@ -68,7 +72,8 @@ function scenario({ conflictAt, rejectionStatus = 409, raceAfterSave = false }) 
     react, 'react-router-dom': { useBlocker: () => ({ state: 'unblocked' }), useSearchParams: () => [null, () => {}] },
     antd: { App: { useApp: () => ({ modal: {} }) } }, '../../../../shared/api': { api, ApiError },
     './operations': { configurationOperations: () => { throw new Error('Unexpected edit'); } },
-    './transport': { post }, './saveTransaction': load('saveTransaction', {}),
+    './transport': { post }, '../configurationIdentity': { configurationKey: JSON.stringify },
+    './saveTransaction': load('saveTransaction', {}),
   });
   return { writes: () => writes, local: () => options.configuration,
     render() { cursor = 0; return usePersistentDraft(options); },

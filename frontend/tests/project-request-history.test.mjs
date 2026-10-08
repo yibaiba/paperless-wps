@@ -14,6 +14,7 @@ function scenario() {
     commit: value => received.replacements.push(value), replaceCurrent: value => received.replacements.push(value) };
   const options = { projectId: 'project', draft, savedJson: { current: '' },
     saveWorkspace: async () => { await waiting; return result; },
+    checkWorkspace: async () => { await waiting; return result; },
     setSaved: value => received.saved.push(value), setChecked: value => received.checks.push(value),
     onSaved: key => received.savedKeys.push(key) };
   const modules = {
@@ -22,6 +23,7 @@ function scenario() {
     antd: { App: { useApp: () => ({ message: { warning: value => received.warnings.push(value), success() {} } }) } },
     '../../../shared/api': { api: async () => { await waiting; return result; } },
     '../shared': { ROOT: '/api/configuration' }, '../queryKeys': { configurationKeys: { project: id => [id] } },
+    './configurationIdentity': { configurationKey: JSON.stringify },
   };
   const source = readFileSync(new URL('../src/features/configuration/projects/useProjectRequests.ts', import.meta.url), 'utf8');
   const js = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;
@@ -43,12 +45,12 @@ test('saving acknowledges the originating check checkpoint without replacing a l
   assert.equal(s.received.warnings.length, 1);
 });
 
-test('a complete check response cannot replace a later check with unchanged configuration', async () => {
+test('project requests delegate checks to the persistent workspace without a second adoption', async () => {
   const s = scenario();
   const pending = s.requests.check.mutationFn(false);
   s.draft.currentHistoryKey.current = 'later';
   s.release();
-  s.requests.check.onSuccess(await pending);
+  await pending;
   assert.equal(s.received.checks.length, 0);
   assert.equal(s.received.replacements.length, 0);
 });

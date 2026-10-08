@@ -102,3 +102,35 @@ def test_device_usage_details_are_bound_to_the_draft_revision(client, catalog):
         params=dict(revision=draft["revision"], device_id="server"),
     )
     assert stale.status_code == 409
+
+
+def test_web_check_persists_full_traces_and_returns_summary_delta(client, catalog):
+    draft = start(client, saved_project(client, catalog))
+    operation_id = str(uuid4())
+    response = client.post(
+        f"/api/work-drafts/{draft['id']}/check",
+        json=dict(
+            draft_id=draft["id"],
+            expected_revision=draft["revision"],
+            operation_id=operation_id,
+        ),
+    )
+    assert response.status_code == 200, response.text
+    delta = response.json()
+    assert delta["revision"] == draft["revision"] + 1
+    full = client.get("/api/work-drafts/" + draft["id"]).json()
+    assert full["checked"]["device_usages"][0].get("allocation_groups") is not None
+    summary = delta["checked_patch"]
+    assert "fields" in summary
+    usage_patch = summary["fields"]["device_usages"]["items"]["0"]
+    assert "allocation_groups" in usage_patch["removed"]
+    retried = client.post(
+        f"/api/work-drafts/{draft['id']}/check",
+        json=dict(
+            draft_id=draft["id"],
+            expected_revision=draft["revision"],
+            operation_id=operation_id,
+        ),
+    )
+    assert retried.status_code == 200, retried.text
+    assert retried.json() == delta

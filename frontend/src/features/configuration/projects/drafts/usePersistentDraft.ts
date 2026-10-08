@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useReducer, useRef, useState } from 'react';
 import { useBlocker, useSearchParams } from 'react-router-dom';
 import { App } from 'antd';
 import { api, ApiError } from '../../../../shared/api';
@@ -8,8 +8,20 @@ import type { EditOperation } from '../../quotation/sheet/model';
 import { type Operation, configurationOperations } from './operations';
 import { createSaveTransaction } from './saveTransaction';
 import { mergeDelta, post, writeRequest, type Delta, type Workspace } from './transport';
+import { configurationKey } from '../configurationIdentity';
 
-const key = (config: Configuration, historyKey = '') => JSON.stringify(config) + historyKey;
+const key = (config: Configuration, historyKey = '') => configurationKey(config) + historyKey;
+type SyncPhase = 'idle' | 'creating' | 'syncing' | 'failed' | 'conflict';
+interface SyncState { phase: SyncPhase; error: string }
+type SyncAction =
+  | { type: 'start'; creating: boolean }
+  | { type: 'success' }
+  | { type: 'failure'; error: string; conflict: boolean };
+const syncReducer = (_state: SyncState, action: SyncAction): SyncState => {
+  if (action.type === 'start') return { phase: action.creating ? 'creating' : 'syncing', error: '' };
+  if (action.type === 'success') return { phase: 'idle', error: '' };
+  return { phase: action.conflict ? 'conflict' : 'failed', error: action.error };
+};
 export interface RecheckInput {
   expected_project_revision: number; fingerprint: string; refresh_knowledge: boolean;
   upgrade_calculation: boolean; upgrade_decisions: boolean; cleanup_allocations: boolean;
@@ -31,7 +43,9 @@ export function usePersistentDraft(options: Options) {
   const rejectedProjection = useRef<string | undefined>(undefined);
   const creating = useRef<Promise<Workspace> | undefined>(undefined);
   const running = useRef(false), alive = useRef(true);
-  const [error, setError] = useState(''), [syncing, setSyncing] = useState(false);
+  const [syncState, dispatchSync] = useReducer(syncReducer, { phase: 'idle', error: '' });
+  const { error, phase } = syncState;
+  const syncing = phase === 'creating' || phase === 'syncing';
   const [, render] = useState(0);
   const { modal } = App.useApp();
   const creationId = useRef(crypto.randomUUID());
@@ -60,7 +74,8 @@ export function usePersistentDraft(options: Options) {
   };
   const synchronize = async () => {
     if (running.current) return;
-    running.current = true; rejectedProjection.current = undefined; setSyncing(true); setError('');
+    running.current = true; rejectedProjection.current = undefined;
+    dispatchSync({ type: 'start', creating: !remote.current });
     const target = live.current.configuration, targetKey = key(target, live.current.historyKey);
     try {
       const workspace = await ensure();
@@ -75,7 +90,9 @@ export function usePersistentDraft(options: Options) {
           const operations = configurationOperations(workspace.configuration, target);
           if (!operations.length) {
             if (targetKey !== key(workspace.configuration, live.current.historyKey)) throw new Error("草稿包含未转换为业务操作的变化，尚未同步；请保留页面并核对。");
-            synced.current = targetKey; return;
+            synced.current = targetKey;
+            dispatchSync({ type: 'success' });
+            return;
           }
           const request = writeRequest(workspace, operations);
           pending.current = async () => mergeDelta(workspace, await post<Delta>(`/work-drafts/${workspace.id}/edit`, request));
@@ -95,12 +112,14 @@ export function usePersistentDraft(options: Options) {
         else if (wasOperation) live.current.acceptOperation(result.checked);
         else live.current.accept(result.checked);
       }
+      if (alive.current) dispatchSync({ type: 'success' });
     } catch (cause) {
       if (cause instanceof ApiError && cause.status === 422 && !operationPending.current) rejectedProjection.current = pendingKey.current;
       if (cause instanceof ApiError && (cause.status === 422 || cause.status === 409)) { pending.current = undefined; pendingKey.current = undefined; operationPending.current = false; checkpointPending.current = false; }
-      if (alive.current) setError(cause instanceof Error ? cause.message : String(cause));
+      if (alive.current) dispatchSync({ type: 'failure', error: cause instanceof Error ? cause.message : String(cause),
+        conflict: cause instanceof ApiError && cause.status === 409 });
     }
-    finally { running.current = false; if (alive.current) { setSyncing(false); render((v) => v + 1); } }
+    finally { running.current = false; if (alive.current) render((v) => v + 1); }
   };
   useEffect(() => {
     if (unsynced && !syncing && !error) void synchronize();
@@ -136,7 +155,8 @@ export function usePersistentDraft(options: Options) {
   const executeWrite = async (operations: Operation[], adoption?: RecheckInput) => {
     if (running.current || pending.current || key(live.current.configuration, live.current.historyKey) !== synced.current) throw new Error('草稿尚未同步，请完成同步后编辑。');
     // Reserve the draft before ensure() yields to another event handler.
-    running.current = true; rejectedProjection.current = undefined; setSyncing(true); setError('');
+    running.current = true; rejectedProjection.current = undefined;
+    dispatchSync({ type: 'start', creating: !remote.current });
     const beforeKey = key(live.current.configuration, live.current.historyKey);
     pendingKey.current = beforeKey; operationPending.current = true; checkpointPending.current = Boolean(adoption);
     let workspace: Workspace | undefined;
@@ -158,11 +178,64 @@ export function usePersistentDraft(options: Options) {
       synced.current = key(result.configuration, live.current.historyKey);
       if (key(live.current.configuration, live.current.historyKey) !== beforeKey) throw new Error('采用期间本地已变化，提案已同步但未覆盖本地编辑，请恢复草稿核对。');
       if (adoption) acceptCheckpoint(result);
+      dispatchSync({ type: 'success' });
       return result.checked;
     } catch (cause) {
       if (cause instanceof ApiError && (cause.status === 422 || cause.status === 409)) { pending.current = undefined; pendingKey.current = undefined; operationPending.current = false; checkpointPending.current = false; }
-      setError(cause instanceof Error ? cause.message : String(cause)); throw cause;
-    } finally { running.current = false; setSyncing(false); render(v => v + 1); }
+      dispatchSync({ type: 'failure', error: cause instanceof Error ? cause.message : String(cause),
+        conflict: cause instanceof ApiError && cause.status === 409 });
+      throw cause;
+    } finally { running.current = false; render(v => v + 1); }
+  };
+  const check = async (refreshKnowledge: boolean) => {
+    if (running.current || pending.current || key(live.current.configuration, live.current.historyKey) !== synced.current) {
+      throw new Error('草稿尚未同步，请完成同步后检查。');
+    }
+    running.current = true;
+    rejectedProjection.current = undefined;
+    dispatchSync({ type: 'start', creating: !remote.current });
+    const beforeKey = key(live.current.configuration, live.current.historyKey);
+    pendingKey.current = beforeKey;
+    let workspace: Workspace | undefined;
+    let request: Record<string, unknown> | undefined;
+    pending.current = async () => {
+      workspace ??= await ensure();
+      request ??= {
+        draft_id: workspace.id,
+        expected_revision: workspace.revision,
+        operation_id: crypto.randomUUID(),
+        refresh_knowledge: refreshKnowledge,
+        upgrade_calculation: false,
+        upgrade_decisions: false,
+      };
+      checkpoints.current.set(beforeKey, workspace.revision);
+      return mergeDelta(workspace, await post<Delta>(`/work-drafts/${workspace.id}/check`, request));
+    };
+    try {
+      const result = await pending.current();
+      remote.current = result;
+      pending.current = undefined;
+      pendingKey.current = undefined;
+      checkpoints.current.set(key(result.configuration, live.current.historyKey), result.revision);
+      synced.current = key(result.configuration, live.current.historyKey);
+      if (key(live.current.configuration, live.current.historyKey) !== beforeKey) {
+        throw new Error('检查期间本地已变化，检查结果已保存但未覆盖本地编辑，请恢复草稿核对。');
+      }
+      live.current.accept(result.checked);
+      dispatchSync({ type: 'success' });
+      return result.checked;
+    } catch (cause) {
+      if (cause instanceof ApiError && (cause.status === 422 || cause.status === 409)) {
+        pending.current = undefined;
+        pendingKey.current = undefined;
+      }
+      dispatchSync({ type: 'failure', error: cause instanceof Error ? cause.message : String(cause),
+        conflict: cause instanceof ApiError && cause.status === 409 });
+      throw cause;
+    } finally {
+      running.current = false;
+      render((value) => value + 1);
+    }
   };
   const acceptCheckpoint = (workspace: Workspace) => {
     const historyKey = `workspace:${workspace.id}:${workspace.revision}`;
@@ -181,9 +254,10 @@ export function usePersistentDraft(options: Options) {
     rejectedProjection.current = undefined;
     synced.current = key(workspace.configuration, live.current.historyKey);
     live.current.accept(workspace.checked);
-    setError('');
+    dispatchSync({ type: 'success' });
   };
-  return { syncing, unsynced, error, retry: synchronize, canDiscardRejected, discardRejected,
+  return { phase, syncing, unsynced, error, retry: synchronize, canDiscardRejected, discardRejected,
     preview, save, readyWorkspace, execute: (operations: Operation[]) => executeWrite(operations),
-    recheck: (input: RecheckInput) => executeWrite([], input), id: remote.current?.id };
+    recheck: (input: RecheckInput) => executeWrite([], input), check,
+    id: remote.current?.id, revision: remote.current?.revision };
 }

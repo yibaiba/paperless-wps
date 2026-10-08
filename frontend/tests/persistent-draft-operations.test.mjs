@@ -25,6 +25,10 @@ function scenario(failure) {
   };
   const react = {
     useRef(value) { const i = cursor++; return slots[i] ??= { current: value }; },
+    useReducer(reducer, initial) {
+      const i = cursor++; if (!(i in slots)) slots[i] = initial;
+      return [slots[i], action => { slots[i] = reducer(slots[i], action); }];
+    },
     useState(value) {
       const i = cursor++; if (!(i in slots)) slots[i] = value;
       return [slots[i], v => { slots[i] = typeof v === 'function' ? v(slots[i]) : v; }];
@@ -58,7 +62,7 @@ function scenario(failure) {
       if (failure === 'create-ack-lost' && creationAttempts === 1) throw new Error(failure);
       return structuredClone(workspace);
     }
-    assert.ok(['/edit', '/restore', '/recheck'].some(suffix => path.endsWith(suffix)), path);
+    assert.ok(['/edit', '/restore', '/recheck', '/check'].some(suffix => path.endsWith(suffix)), path);
     attempt++;
     if (failure === 'offline' && attempt === 1) throw new Error('offline');
     if (['rejected', 'conflict'].includes(failure) && attempt === 1) throw new ApiError(failure === 'rejected' ? 422 : 409);
@@ -85,6 +89,7 @@ function scenario(failure) {
     './operations': { configurationOperations: (_, after) => [{ action: 'device_patch', note: after.note }] },
     './transport': { post, mergeDelta: (_, delta) => delta,
       writeRequest: (state, operations) => ({ draft_id: state.id, expected_revision: state.revision, operation_id: crypto.randomUUID(), operations }) },
+    '../configurationIdentity': { configurationKey: JSON.stringify },
     './saveTransaction': load('saveTransaction', {}, window),
   }, window);
   return {
@@ -139,6 +144,23 @@ for (const failure of ['offline', 'ack-lost']) {
     assert.equal(s.revision(), 2);
     assert.equal(s.applied(), 1);
     assert.equal(s.options.configuration.note, 'new');
+  });
+}
+
+for (const failure of [undefined, 'ack-lost']) {
+  test(`workspace check persists and adopts the summary projection (${failure ?? 'success'})`, async () => {
+    const s = scenario(failure);
+    const first = s.render();
+    if (failure) {
+      await assert.rejects(first.check(false), /ack-lost/);
+      await s.render().retry();
+    } else {
+      await first.check(false);
+    }
+    const checkedRequest = s.sent.find(request => 'refresh_knowledge' in request);
+    assert.equal(checkedRequest.refresh_knowledge, false);
+    assert.equal(s.render().unsynced, false);
+    assert.equal(s.revision(), 2);
   });
 }
 

@@ -18,11 +18,9 @@ import { useProjectRequests } from "./useProjectRequests";
 import type { SupplyChoice } from "./NewSupplyDialog";
 import { usePersistentDraft } from "./drafts/usePersistentDraft";
 import type { Workspace } from "./drafts/transport";
-export function businessKey(c: Configuration) {
-  const { drawing_xml, ...data } = c;
-  void drawing_xml;
-  return JSON.stringify(data);
-}
+import { businessKey, configurationKey } from "./configurationIdentity";
+
+export { businessKey } from "./configurationIdentity";
 
 export function useProjectEditor({
   projectId,
@@ -39,9 +37,9 @@ export function useProjectEditor({
   const draft = useConfigurationDraft(workspace?.configuration ?? initial.configuration, initialHistoryKey),
     config = draft.present;
   const [saved, setSaved] = useState(initial);
-  const savedJson = useRef(JSON.stringify(initial.configuration));
+  const savedJson = useRef(configurationKey(initial.configuration));
   const savedHistoryKey = useRef('');
-  const serialized = useMemo(() => JSON.stringify(config), [config]);
+  const serialized = useMemo(() => configurationKey(config), [config]);
   const dirty = serialized !== savedJson.current || draft.historyKey !== savedHistoryKey.current;
   const checkedKey = (value: Configuration, historyKey = draft.historyKey) => businessKey(value) + historyKey;
   const [checkHistory, setCheckHistory] = useState<{ latest?: Checked; results: Map<string, Checked> }>(() => ({
@@ -71,7 +69,7 @@ export function useProjectEditor({
     }>(),
     [importOpen, setImportOpen] = useState(false),
     [topologyId, setTopologyId] = useState<string>();
-  const [tab, setTab] = useState("list");
+  const [tab, setTab] = useState(params.get("view") || (params.get("requirement") ? "list" : "requirements"));
   const { message } = App.useApp();
   const navigate = useNavigate();
   const topologies = useQuery({
@@ -87,6 +85,7 @@ export function useProjectEditor({
   });
   const { drawing, check, save, apply, acceptChecked, reloadSaved } = useProjectRequests({
     projectId, draft, saved, checked, setSaved, setChecked, savedJson, saveWorkspace: persistence.save,
+    checkWorkspace: persistence.check,
     onSaved: (historyKey) => { savedHistoryKey.current = historyKey; },
   });
   const importing = useMutation({

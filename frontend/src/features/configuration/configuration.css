@@ -9,6 +9,8 @@
 .project-toolbar-heading > div { min-width: 0; }
 .project-secondary-actions { min-width: 210px; }
 .project-secondary-actions .ant-btn { width: 100%; text-align: left; }
+.project-stage-nav { display: grid; gap: 8px; padding: 12px 16px; border: 1px solid #e3e9e5; border-radius: 10px; background: #fff; }
+.project-stage-views { display: flex; gap: 8px; flex-wrap: wrap; }
 .project-device-model { display: block; overflow-wrap: anywhere; font-size: 12px; margin-top: 4px; }
 .project-consumer-tag { white-space: normal; line-height: 1.5; padding-block: 3px; }
 .project-inspector { min-width: 0; }

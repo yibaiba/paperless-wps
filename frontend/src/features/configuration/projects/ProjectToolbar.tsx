@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { Button, Popover, Space, Typography } from "antd";
+import { Button, Drawer, Space, Typography } from "antd";
 import { ProjectHistory } from "./ProjectHistory";
 
 export function ProjectToolbar({
@@ -55,7 +55,8 @@ export function ProjectToolbar({
       {proposalAction}
       <Button disabled={!canUndo || busy} onClick={onUndo}>撤销</Button>
       <Button disabled={!canRedo || busy} onClick={onRedo}>重做</Button>
-      <Popover open={moreOpen} onOpenChange={setMoreOpen} trigger="click" placement="bottomRight" title="项目管理" content={
+      <Button onClick={() => setMoreOpen(true)}>高级与维护</Button>
+      <Drawer open={moreOpen} onClose={() => setMoreOpen(false)} placement="right" title="高级与维护">
         <Space orientation="vertical" className="project-secondary-actions" onClick={() => setMoreOpen(false)}>
           <Button onClick={onAuthor}>维护信息</Button>
           <ProjectHistory entityId={entityId} projectId={projectId} />
@@ -64,7 +65,7 @@ export function ProjectToolbar({
           <Button onClick={() => onView("output")}>设备与采购明细</Button>
           {secondaryActions}
         </Space>
-      }><Button>更多操作</Button></Popover>
+      </Drawer>
       <Button type="primary" onClick={onSave} loading={saving} disabled={busy}>
         保存版本
       </Button>

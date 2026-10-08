@@ -35,7 +35,10 @@ function usagePanel() {
   const source = readFileSync(new URL('../src/features/configuration/projects/DeviceUsagePanel.tsx', import.meta.url), 'utf8');
   const js = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText;
   const modules = {
+    '@tanstack/react-query': { useQuery: () => ({}) },
     antd: { Alert: 'alert', Button: 'button' },
+    '../../../shared/api': { api: async () => { throw new Error('unexpected usage request'); } },
+    '../queryKeys': { configurationKeys: { draftDeviceUsage: () => [] } },
     '../shared': { useAttributeDefinitions: () => ({ data: [] }) },
     './usageDetails': { deviceChecks, usageDetails },
     './checkLabels': {}, '../EvidenceDetails': {},

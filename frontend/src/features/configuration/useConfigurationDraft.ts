@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import type { Configuration } from "./types";
+import { configurationKey } from "./projects/configurationIdentity";
 
 export function useConfigurationDraft(initial: Configuration, initialHistoryKey = '') {
   type Entry = { configuration: Configuration; historyKey: string };
@@ -17,7 +18,7 @@ export function useConfigurationDraft(initial: Configuration, initialHistoryKey 
     setVersion((v) => v + 1);
   };
   const commit = (next: Configuration, nextHistoryKey = currentHistoryKey.current) => {
-    if (JSON.stringify(next) === JSON.stringify(current.current) && nextHistoryKey === currentHistoryKey.current) return;
+    if (configurationKey(next) === configurationKey(current.current) && nextHistoryKey === currentHistoryKey.current) return;
     past.current.push({ configuration: current.current, historyKey: currentHistoryKey.current });
     future.current = [];
     replaceCurrent(next, nextHistoryKey);

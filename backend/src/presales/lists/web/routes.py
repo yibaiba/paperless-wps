@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from presales.configuration.http import execute
 from presales.configuration.transactions import commit
 from presales.lists.routes import application
-from presales.lists.schemas import GetList
+from presales.lists.schemas import CheckList, GetList
 from presales.rules.repository import RuleConflict
 
 from .schemas import CreateDraft, EditDraft, PreviewDraft, RecheckDraft, RestoreDraft
@@ -79,3 +79,10 @@ def recheck(identity: str, data: RecheckDraft, app=Depends(application)):
     if identity != data.draft_id:
         raise HTTPException(status_code=422, detail="草稿标识不一致")
     return execute(lambda: commit(app.session, lambda: WebDrafts(app.lists).recheck(data)))
+
+
+@router.post("/{identity}/check")
+def check(identity: str, data: CheckList, app=Depends(application)):
+    if identity != data.draft_id:
+        raise HTTPException(status_code=422, detail="草稿标识不一致")
+    return execute(lambda: commit(app.session, lambda: WebDrafts(app.lists).check(data)))

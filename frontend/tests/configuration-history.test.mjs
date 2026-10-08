@@ -16,7 +16,7 @@ test('unchanged business facts can adopt, undo and redo a distinct calculation c
   const file = new URL('../src/features/configuration/useConfigurationDraft.ts', import.meta.url);
   const js = ts.transpileModule(readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;
   const exports = {};
-  vm.runInNewContext(js, { exports, require: () => react });
+  vm.runInNewContext(js, { exports, require: name => name === 'react' ? react : { configurationKey: JSON.stringify } });
   const config = { devices: [{ id: 'same' }] };
   const render = () => { cursor = 0; return exports.useConfigurationDraft(config); };
   render().commit(config, 'recheck');

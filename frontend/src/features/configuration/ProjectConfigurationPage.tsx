@@ -40,6 +40,8 @@ import { ProjectConfirmation } from "./projects/ProjectConfirmation";
 import { QuotationPanel } from "./quotation/QuotationPanel";
 import { requestedRole } from "./projects/definitionSelection";
 import { SystemInputsForm } from "./projects/forms/SystemInputsForm";
+import { ProjectStageNav, type ProjectStage } from "./projects/ProjectStageNav";
+import { ProjectRequirementsOverview } from "./projects/ProjectRequirementsOverview";
 
 export default function ProjectConfigurationPage() {
   const { projectId } = useParams();
@@ -121,8 +123,11 @@ function ConfigurationEditor({
     if (outdatedUsage) setChangeRequest({ refresh: false, cleanup: false });
     else check.mutate(false);
   };
-  const selecting = tab === "list" || tab === "drawing";
-  const showInspector = selecting && (!!requirement || !!editingDevice);
+  const stage: ProjectStage = tab === "requirements" ? "requirements"
+    : tab === "quotation" || tab === "output" ? "quotation" : "configuration";
+  const selectStage = (next: ProjectStage) => setTab(next === "requirements" ? "requirements" : next === "quotation" ? "quotation" : "list");
+  const selecting = stage !== "quotation";
+  const showInspector = stage === "configuration" && (tab === "list" || tab === "drawing") && (!!requirement || !!editingDevice);
   const openMaintenance = (query: Record<string, string>, context?: { systemId?: string; requirementId?: string }) => navigate('/knowledge?' + new URLSearchParams({ ...query,
     return_project: projectId, return_draft: editor.persistence.id ?? '', return_system: context?.systemId ?? selectedSystem ?? '',
     return_requirement: context?.requirementId ?? requirement?.id ?? '' }));
@@ -149,11 +154,12 @@ function ConfigurationEditor({
   };
   return (
     <DraftPreviewContext.Provider value={editor.persistence.preview}><div className="configuration-page">
-      {editor.persistence.error ? <Alert type="error" title={editor.persistence.error} action={<Space>
+      {editor.persistence.error ? <Alert type="error" title={editor.persistence.phase === 'conflict' ? '草稿版本冲突' : editor.persistence.error}
+        description={editor.persistence.phase === 'conflict' ? editor.persistence.error : undefined} action={<Space>
         {editor.persistence.canDiscardRejected ? <Button onClick={editor.persistence.discardRejected}>撤回未通过校验的修改</Button> : null}
         <Button onClick={editor.persistence.retry}>重试同步</Button>
       </Space>} /> : <Typography.Text type="secondary" role="status">
-        {editor.persistence.syncing || editor.persistence.unsynced ? "草稿同步中…" : editor.persistence.id ? "工作草稿已同步；保存版本后可导出" : "修改会自动保存为工作草稿"}
+        {editor.persistence.phase === 'creating' ? "正在建立工作草稿…" : editor.persistence.syncing || editor.persistence.unsynced ? "草稿同步中…" : editor.persistence.id ? "工作草稿已同步；保存版本后可导出" : "修改会自动保存为工作草稿"}
       </Typography.Text>}
       {returnParams.get('from_knowledge') ? <Alert type="info" title="已返回原项目草稿，维护后的资料尚未应用" action={<Button onClick={() => setChangeRequest({ refresh: true, cleanup: false })}>预览资料升级差异</Button>} /> : null}
       {assignDevice && config.devices.some((d) => d.id === assignDevice) ? <AssignDeviceDialog deviceId={assignDevice} configuration={config} onApply={draft.commit} onClose={() => setAssignDevice(undefined)} /> : null}
@@ -190,6 +196,12 @@ function ConfigurationEditor({
           <ProjectConfirmation projectId={projectId} saved={saved} dirty={dirty} onConfirmed={editor.reloadSaved} />
         </>}
       />
+      <ProjectStageNav value={stage} onChange={selectStage} onPreloadQuotation={preloadQuotationSheet} />
+      {stage === 'configuration' ? <div className="project-stage-views">
+        <Button type={tab === 'list' ? 'primary' : 'default'} onClick={() => setTab('list')}>产品清单</Button>
+        <Button type={tab === 'supply' ? 'primary' : 'default'} onClick={() => setTab('supply')}>供货分配</Button>
+        <Button type={tab === 'drawing' ? 'primary' : 'default'} onClick={() => setTab('drawing')}>拓扑图纸</Button>
+      </div> : null}
       {initial.legacy_items && !saved.revision ? (
         <Alert
           type="warning"
@@ -241,15 +253,14 @@ function ConfigurationEditor({
         /> : null}
         <Card>
           <Tabs
-            onMouseOver={(event) => {
-              if ((event.target as HTMLElement).closest('[role="tab"]')?.id.endsWith('-tab-quotation')) preloadQuotationSheet();
-            }}
-            onFocus={(event) => {
-              if ((event.target as HTMLElement).closest('[role="tab"]')?.id.endsWith('-tab-quotation')) preloadQuotationSheet();
-            }}
+            tabBarStyle={{ display: 'none' }}
             activeKey={tab}
             onChange={setTab}
             items={[
+              { key: "requirements", label: "需求与系统", children: <ProjectRequirementsOverview
+                configuration={config} selectedSystemId={selectedSystem}
+                onEditInputs={setInputsSystemId}
+                onAddRequirement={(systemId) => setRequirementModal({ systemId })} /> },
               { key: "quotation", label: "报价与导出", children: <QuotationPanel configuration={config} output={checked?.quotation_output ?? saved.quotation_output} saved={saved} dirty={dirty} stale={checkedStale} busy={busy || sheetPending} checking={check.isPending} onApply={draft.commit} onCheck={recheck} sheetControls={{ configuration: config, saved, draftVersion: draft.version,
                 onChecked: editor.acceptChecked, onPending: setSheetPending, onUndo: draft.undo, onRedo: draft.redo, canUndo: draft.canUndo, canRedo: draft.canRedo,
               }} /> },
@@ -288,7 +299,6 @@ function ConfigurationEditor({
               {
                 key: "drawing",
                 label: "拓扑图纸",
-                forceRender: true,
                 children: (
                   <ConfigurationDrawing
                     xml={config.drawing_xml}
@@ -308,8 +318,7 @@ function ConfigurationEditor({
                   />
                 ),
               },
-            ].filter((item) => !["definitions", "output"].includes(item.key) || item.key === tab)
-              .sort((a, b) => ["list", "supply", "quotation", "drawing", "definitions", "output"].indexOf(a.key) - ["list", "supply", "quotation", "drawing", "definitions", "output"].indexOf(b.key))}
+            ]}
           />
         </Card>
         {showInspector ? <aside className="project-inspector" aria-label="选型与产品属性">
@@ -317,6 +326,7 @@ function ConfigurationEditor({
         {editingDevice ? (
           <DeviceInspector device={editingDevice} context={config} requiresSupply={config.calculation_version === 3}
             execute={editor.persistence.execute} onApply={editor.acceptChecked}
+            draftId={editor.persistence.id} draftRevision={editor.persistence.revision}
             checked={checked} stale={checkedStale} onAction={handleIssueAction}
             onRecheck={() => setChangeRequest({ refresh: false, cleanup: false })}
             onClose={() => setDeviceModal(undefined)} />

@@ -5,6 +5,7 @@ from copy import deepcopy
 from sqlalchemy import select
 
 from presales.configuration.models import Entity, Revision
+from presales.configuration.projects.calculation.usage.response import usage_response
 from presales.configuration.projects.calculation.usage.versioning import projection_status
 from presales.configuration.projects.schemas import Configuration
 from presales.configuration.projects.services.incremental import edit_check
@@ -177,6 +178,26 @@ class WebDrafts:
             namespace="web_draft_recheck",
             request=request,
             perform=lambda: adopt_recheck(self, request),
+        )
+
+    def check(self, request):
+        return once(
+            self.session,
+            namespace="web_draft_check",
+            request=request,
+            perform=lambda: self._check(request),
+        )
+
+    def _check(self, request):
+        before = self.entities.get(request.draft_id, kind="list_draft").payload
+        self.lists._check(request)
+        current_record = self.entities.get(request.draft_id, kind="list_draft")
+        current = current_record.payload
+        checked = usage_response(current["checked"], detail="summary")
+        return dict(
+            id=request.draft_id,
+            revision=current_record.revision,
+            **response_delta(before["configuration"], checked, previous=before["checked"]),
         )
 
     def _restore(self, request):

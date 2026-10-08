@@ -10,6 +10,8 @@ interface Props {
   context: Configuration;
   requiresSupply: boolean;
   checked?: Checked;
+  draftId?: string;
+  draftRevision?: number;
   stale: boolean;
   onAction: (action: IssueAction) => void;
   onRecheck: () => void;
@@ -18,7 +20,7 @@ interface Props {
   onClose: () => void;
 }
 
-export function DeviceInspector({ device, context, requiresSupply, execute, onApply, onClose, checked, stale, onAction, onRecheck }: Props) {
+export function DeviceInspector({ device, context, requiresSupply, execute, onApply, onClose, checked, draftId, draftRevision, stale, onAction, onRecheck }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<{ message: string; context: Configuration }>();
   const apply = async (operation: Operation, close = false) => {
@@ -46,6 +48,7 @@ export function DeviceInspector({ device, context, requiresSupply, execute, onAp
           supply_allocations: supply ? [{ id: crypto.randomUUID(), device_id: id, quantity: device.quantity, ...supply }] : [],
         }, true);
       }} /> }, { key: 'usage', label: '用途与分配', children: <DeviceUsagePanel deviceId={device.id}
-        configuration={context} checked={checked} stale={stale} onAction={onAction} onRecheck={onRecheck} /> }]} />
+        configuration={context} checked={checked} draftId={draftId} draftRevision={draftRevision}
+        stale={stale} onAction={onAction} onRecheck={onRecheck} /> }]} />
   </Spin>;
 }
