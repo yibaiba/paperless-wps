@@ -45,9 +45,12 @@ def test_review_does_not_confirm_rules_or_invent_accepted_trajectories():
     assert result["pinned_rules"] == [rule]
     assert result["scored_trajectories"] == 0
     assert not result["acceptance_verified"]
+    assert not result["pilot_readiness"]["ready_for_pilot"]
+    assert any("30" in blocker for blocker in result["pilot_readiness"]["blockers"])
     for card in result["trajectory_cards"]:
         assert card["reviewed_by"] is None
         assert card["request"] is None
         assert not card["expected_edits"]
         assert not card["evidence_confirmed"]
+        assert card["observed_before"] is None and card["observed_after"] is None
         assert card["evidence"]

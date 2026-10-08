@@ -22,6 +22,7 @@ from redshield_package_review import (
 )
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
+from wps_pilot_acceptance import pilot_report
 
 REVIEW_TOPICS = (
     (
@@ -120,7 +121,11 @@ def trajectory_card(topic):
         "trajectory_ref": None,
         "split": None,
         "request": None,
+        "observed_before": None,
+        "observed_after": None,
         "expected_edits": [],
+        "expected_questions": [],
+        "expected_decision": None,
         "evidence": topic["source_evidence"],
         "question_to_review": topic["question"],
         "missing": [
@@ -141,6 +146,7 @@ def review_bundle(plan, *, variants, imports):
     topics = [
         topic_review(topic, sources=sources, rules=rules) for topic in REVIEW_TOPICS
     ]
+    cards = [trajectory_card(topic) for topic in topics]
     return {
         "schema_version": 1,
         "generated_at": datetime.now(UTC).isoformat(),
@@ -165,7 +171,8 @@ def review_bundle(plan, *, variants, imports):
         "maintenance_fingerprint": plan["fingerprint"],
         "pinned_rules": rules,
         "topics": topics,
-        "trajectory_cards": [trajectory_card(topic) for topic in topics],
+        "trajectory_cards": cards,
+        "pilot_readiness": pilot_report(cards, []),
         "scored_trajectories": 0,
         "acceptance_verified": False,
     }
@@ -220,6 +227,7 @@ def main():
                 ("plan.json", plan),
                 ("review.json", bundle),
                 ("trajectory-cards.json", bundle["trajectory_cards"]),
+                ("pilot-readiness.json", bundle["pilot_readiness"]),
             ):
                 (args.output / name).write_text(
                     json.dumps(value, ensure_ascii=False, indent=2) + "\n"
