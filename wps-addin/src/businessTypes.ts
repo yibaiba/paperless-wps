@@ -82,8 +82,8 @@ export interface EditDecision {
 }
 export interface CompletionPreviewResult {
   items: NextEditSuggestion[]; issues: unknown[]; context_fingerprint: string;
-  local_revision: number; versions: Record<string, string | null>; line_bindings: LineBinding[];
-  configuration: WorkbookBusinessContext['configuration'];
+  local_revision: number; versions: Record<string, string | null>; line_bindings?: LineBinding[];
+  configuration?: WorkbookBusinessContext['configuration'];
   primary_suggestion_id?: string | null;
   decision?: EditDecision;
   next_target?: NextEditTarget | null;
@@ -109,6 +109,7 @@ export interface KnowledgeSummary {
 }
 export interface CompletionContextSummary {
   mode: 'business'; project_id: string; scope: BusinessScope;
+  detail: 'inline' | 'panel'; row_count: number; rows_omitted: number;
   system: { id: string; name: string; kind: string };
   room: { id: string; name: string } | null;
   versions: Record<string, string | null>; local_revision: number;
@@ -125,6 +126,7 @@ export interface CompletionContextSummary {
     uses: Array<{ requirement_id: string; system_id: string; role: string }>;
   }>;
   unresolved_rows?: UnresolvedWorkbookRow[];
+  local_change_count: number; local_changes_omitted: number;
   local_changes: Array<{ kind: string; id: string }>;
   knowledge: KnowledgeSummary[]; issues: unknown[];
 }

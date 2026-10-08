@@ -69,23 +69,24 @@ def workbook_projection(sync, request):
     state = sync._state(request)
     repository = scoped_repository(sync, request=request, state=state)
     key = projection_key(request, state=state, session=sync.session)
-    cached = sync.projection_cache.get(key) if sync.projection_cache else None
-    if cached is None:
+
+    def calculate():
         checked, bindings = calculate_projection(
             sync, request=request, state=state, repository=repository
         )
-        if sync.projection_cache:
-            sync.projection_cache.put(
-                key,
-                {
-                    "checked": checked,
-                    "bindings": bindings,
-                    "runtime_snapshots": runtime_snapshots(sync.session, checked),
-                },
-            )
-    else:
-        restore_runtime_snapshots(sync.session, cached["runtime_snapshots"])
-        checked, bindings = cached["checked"], cached["bindings"]
+        return {
+            "checked": checked,
+            "bindings": bindings,
+            "runtime_snapshots": runtime_snapshots(sync.session, checked),
+        }
+
+    result = (
+        sync.projection_cache.get_or_compute(key, calculate)
+        if sync.projection_cache
+        else calculate()
+    )
+    restore_runtime_snapshots(sync.session, result["runtime_snapshots"])
+    checked, bindings = result["checked"], result["bindings"]
     repository = repository.scoped(
         repository.evaluation_scope.scope, before=checked["configuration"]
     )
@@ -191,7 +192,7 @@ def projection_result(request, *, state, repository, checked, bindings):
         "versions": context_versions(state["draft"]),
         "fingerprint": digest(
             [
-                request.model_dump(mode="json"),
+                request.model_dump(mode="json", exclude={"response_detail"}),
                 state["binding"].revision,
                 state["draft"].revision,
                 checked["configuration"],

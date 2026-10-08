@@ -7,6 +7,7 @@ from presales.rules.calculation import digest
 
 PRODUCT_FIELDS = ("model", "name", "description", "unit", "brand", "price")
 SNAPSHOT_FIELDS = {"variant_snapshot", "source_snapshot"}
+DERIVED_CHANGE_KINDS = {"quotation"}
 
 
 def business_changes(changes):
@@ -15,14 +16,19 @@ def business_changes(changes):
     return [
         change
         for change in changes
-        if not (
-            change["kind"] == "devices"
-            and change["before"]
-            and change["after"]
-            and {k: v for k, v in change["before"].items() if k not in SNAPSHOT_FIELDS}
-            == {k: v for k, v in change["after"].items() if k not in SNAPSHOT_FIELDS}
-        )
+        if change["kind"] not in DERIVED_CHANGE_KINDS
+        and not hydration_only(change)
     ]
+
+
+def hydration_only(change):
+    return (
+        change["kind"] == "devices"
+        and change["before"]
+        and change["after"]
+        and {key: value for key, value in change["before"].items() if key not in SNAPSHOT_FIELDS}
+        == {key: value for key, value in change["after"].items() if key not in SNAPSHOT_FIELDS}
+    )
 
 
 def project_next_edit(option, *, request, profile, projection):

@@ -16,6 +16,7 @@ import { BusinessRowPanel } from './BusinessRowPanel';
 import { BusinessContextDetails, KnowledgeDetails } from './BusinessContextDetails';
 import { completionMode, decisionText } from '../businessContextPresentation';
 import { assertWorkbookSession, captureWorkbookSession, inWorkbookSession } from '../workbookSession';
+import { requirePanelConfiguration } from '../completionProtocol';
 
 export function BusinessPanel({ api, host, profile, metadata, onChanged, resolution }: {
   api: WpsApi; host: HostAdapter; profile: TemplateProfile; metadata: WorkbookMetadata;
@@ -49,9 +50,10 @@ export function BusinessPanel({ api, host, profile, metadata, onChanged, resolut
       assertWorkbookSession(host, session);
       const cell = host.activeCell();
       const value = await api.completionPreview({ ...completionRequest({ host, profile,
-        metadata: host.readMetadata(), cell, index, query: '' }), intent });
+        metadata: host.readMetadata(), cell, index, query: '', responseDetail: 'panel' }), intent });
       assertWorkbookSession(host, session);
       if (value.local_revision !== host.businessRevision()) throw new Error('工作簿在计算时发生变化，请重新预览');
+      requirePanelConfiguration(value);
       setResult(value);
     } catch (reason) { setError(String(reason)); }
     finally { setBusy(false); }

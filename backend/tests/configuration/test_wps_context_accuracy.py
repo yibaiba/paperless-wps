@@ -1,3 +1,4 @@
+import json
 from types import SimpleNamespace
 
 from presales.configuration.projects.planning.roles import prepare_roles
@@ -43,6 +44,25 @@ def test_query_changes_reuse_the_same_workbook_projection(client, catalog, monke
     body = accept(body, second["items"][0])
     preview(client, headers, body)
     assert len(projections) == 2
+
+
+def test_completion_response_detail_keeps_panel_compatibility_and_slims_inline(client, catalog):
+    headers, body = completion_body(client, catalog)
+    panel = preview(client, headers, body)
+    assert panel["configuration"]
+    assert isinstance(panel["line_bindings"], list)
+    assert panel["context_summary"]["detail"] == "panel"
+    assert panel["context_summary"]["rows_omitted"] == 0
+    assert panel["context_summary"]["row_count"] == len(panel["context_summary"]["rows"])
+
+    body["response_detail"] = "inline"
+    inline = preview(client, headers, body)
+    assert "configuration" not in inline
+    assert "line_bindings" not in inline
+    assert "evaluation_scope" not in inline
+    assert inline["context_summary"]["detail"] == "inline"
+    assert inline["context_summary"]["row_count"] >= len(inline["context_summary"]["rows"])
+    assert inline["items"] == panel["items"]
 
 
 def test_live_rule_revision_invalidates_cached_projection(client, catalog, monkeypatch):
@@ -203,6 +223,72 @@ def test_context_inventory_excludes_other_catalog_sources():
     assert context_rows(projection, request, allowed_sources={"v": ["inside"]}) == []
     rows = context_rows(projection, request, allowed_sources={"v": ["outside-source"]})
     assert rows[0]["participation"] == "inventory"
+
+
+def test_inline_context_rows_do_not_include_unrelated_thousand_row_business_area():
+    from presales.wps.context_summary import context_rows, inline_context_rows
+
+    devices = [
+        dict(
+            id=f"device-{index}",
+            name=f"产品 {index}",
+            kind="hardware",
+            quantity="1",
+            variant_id=f"variant-{index}",
+            source_id=f"source-{index}",
+        )
+        for index in range(1000)
+    ]
+    projection = dict(
+        checked=dict(
+            evaluation_scope=dict(device=[]),
+            configuration=dict(devices=devices, requirements=[], supply_allocations=[]),
+        ),
+        line_bindings=[
+            dict(device_id=device["id"], line_id=device["id"], sheet="q", row=index + 3)
+            for index, device in enumerate(devices)
+        ],
+    )
+    request = SimpleNamespace(
+        scope=SimpleNamespace(sheet="q", start_row=3, end_row=1002),
+        active_cell=SimpleNamespace(sheet="q", row=3),
+        target_cells=[SimpleNamespace(sheet="q", row=1002)],
+    )
+    rows = context_rows(projection, request, allowed_sources={})
+    visible = inline_context_rows(rows, request=request, items=[], issues=[])
+
+    assert len(rows) == 1000
+    assert [(row["sheet"], row["row"]) for row in visible] == [("q", 3), ("q", 1002)]
+
+
+def test_inline_response_size_does_not_grow_with_thousand_unrelated_rows(client, catalog):
+    headers, body = completion_body(client, catalog)
+    body.update(response_detail="inline", query=catalog["variants"][0]["name"])
+    small = preview(client, headers, body)
+    source = catalog["sources"][1]
+    body["lines"] = [
+        dict(
+            line_id=f"unrelated-{index}",
+            sheet="报价表",
+            row=index + 3,
+            variant_id=catalog["variants"][1]["id"],
+            source_id=source["id"],
+            kind="hardware",
+            quantity="1",
+        )
+        for index in range(1000)
+    ]
+    body["scope"]["end_row"] = 1004
+    body["active_cell"]["row"] = 1003
+    body["target_cells"][0]["row"] = 1004
+    large = preview(client, headers, body)
+
+    def encoded(value):
+        return len(json.dumps(value, ensure_ascii=False).encode("utf-8"))
+
+    assert encoded(large) < encoded(small) + 50_000
+    assert large["context_summary"]["row_count"] == 1000
+    assert large["context_summary"]["rows_omitted"] >= 998
 
 
 def test_exact_configuration_filters_prefix_alternatives_before_ranking_http(client, catalog):

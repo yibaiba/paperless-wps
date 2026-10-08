@@ -117,7 +117,7 @@ def completion_preview(sync, request):
     )
     if primary:
         items = [primary, *[item for item in items if item["id"] != primary["id"]]]
-    return dict(
+    result = dict(
         items=items,
         issues=issues,
         decision=decision,
@@ -126,17 +126,22 @@ def completion_preview(sync, request):
         context_fingerprint=projection["fingerprint"],
         versions=projection["versions"],
         local_revision=request.local_revision,
-        line_bindings=projection["line_bindings"],
-        configuration=checked["configuration"],
-        evaluation_scope=checked["evaluation_scope"],
         context_summary=completion_context_summary(
             projection,
             request=request,
             profile=profile,
             context=context,
             issues=issues,
+            items=items,
         ),
     )
+    if request.response_detail == "panel":
+        result.update(
+            line_bindings=projection["line_bindings"],
+            configuration=checked["configuration"],
+            evaluation_scope=checked["evaluation_scope"],
+        )
+    return result
 
 
 def active_recent_edits(edits):

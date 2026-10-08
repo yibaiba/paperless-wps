@@ -39,10 +39,10 @@ export function businessSyncRequest(metadata: WorkbookMetadata, lines: WorkbookL
 
 export function completionRequest(options: {
   host: HostAdapter; profile: TemplateProfile; metadata: WorkbookMetadata;
-  cell: ActiveCell; index: WorkbookRowIndex; query: string;
+  cell: ActiveCell; index: WorkbookRowIndex; query: string; responseDetail: 'inline' | 'panel';
 }) {
   const started = performance.now();
-  const { host, profile, metadata, cell, index, query } = options;
+  const { host, profile, metadata, cell, index, query, responseDetail } = options;
   const business = metadata.business;
   const scopes = business?.scopes.filter((s) => s.sheet === cell.sheet
     && s.start_row <= cell.row && s.end_row >= cell.row) ?? [];
@@ -73,6 +73,7 @@ export function completionRequest(options: {
       ?? business?.row_requirements?.find((r) => r.sheet === cell.sheet && r.row === cell.row)?.requirement_id
       ?? scope.requirement_id },
     active_cell: { ...active, column: cell.column }, target_cells, query,
+    response_detail: responseDetail,
     recent_edits: [...business?.recent_edits ?? [], ...observedQuantityEdits(index, metadata,
       { resolveBinding: (row) => cache.resolvedBinding(row) })],
   };

@@ -115,6 +115,7 @@ def fixture_request(client, *, catalog, count):
         "known_device_ids": [],
         "lines": lines,
         "local_revision": 0,
+        "response_detail": "inline",
         "query": selected[0]["name"],
         "scope": {
             "sheet": "报价表",
@@ -159,7 +160,9 @@ def fixture_request(client, *, catalog, count):
 
 
 def measure(client, *, headers, request, repeats):
-    samples = []
+    samples, decode_samples, encoding_samples, response_bytes = [], [], [], []
+    component_bytes = {}
+    item_component_bytes = {}
     for index in range(repeats + 1):
         started = perf_counter()
         response = client.post(
@@ -167,14 +170,58 @@ def measure(client, *, headers, request, repeats):
         )
         elapsed = round((perf_counter() - started) * 1000, 3)
         response.raise_for_status()
+        decode_started = perf_counter()
+        payload = response.json()
+        decode_samples.append(round((perf_counter() - decode_started) * 1000, 3))
+        encoding_started = perf_counter()
+        json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+        encoding_samples.append(round((perf_counter() - encoding_started) * 1000, 3))
+        response_bytes.append(len(response.content))
+        if not component_bytes:
+            component_bytes = {
+                key: len(
+                    json.dumps({key: value}, ensure_ascii=False, separators=(",", ":")).encode(
+                        "utf-8"
+                    )
+                )
+                for key, value in payload.items()
+            }
+            if payload["items"]:
+                changes = payload["items"][0]["changes"]
+                item_component_bytes = {
+                    key: len(
+                        json.dumps(
+                            {key: value}, ensure_ascii=False, separators=(",", ":")
+                        ).encode("utf-8")
+                    )
+                    for key, value in payload["items"][0].items()
+                }
+                item_component_bytes["change_count"] = len(changes)
+                item_component_bytes["change_kinds"] = sorted(
+                    {change["kind"] for change in changes}
+                )
+                item_component_bytes["change_bytes"] = [
+                    {
+                        "kind": change["kind"],
+                        "bytes": len(
+                            json.dumps(change, ensure_ascii=False, separators=(",", ":")).encode(
+                                "utf-8"
+                            )
+                        ),
+                    }
+                    for change in changes
+                ]
         samples.append(elapsed)
         print(
             json.dumps(
                 {
                     "query": index,
                     "duration_ms": elapsed,
-                    "decision": response.json()["decision"],
-                    "suggestions": len(response.json()["items"]),
+                    "decision": payload["decision"],
+                    "suggestions": len(payload["items"]),
+                    "response_bytes": response_bytes[-1],
+                    "decode_ms": decode_samples[-1],
+                    "isolated_encoding_ms": encoding_samples[-1],
                 },
                 ensure_ascii=False,
             ),
@@ -183,7 +230,15 @@ def measure(client, *, headers, request, repeats):
     return {
         "cold_ms": samples[0],
         "warm_p95_ms": sorted(samples[1:])[math.ceil(repeats * 0.95) - 1],
+        "warm_response_bytes_max": max(response_bytes[1:]),
+        "warm_decode_p95_ms": sorted(decode_samples[1:])[math.ceil(repeats * 0.95) - 1],
+        "warm_isolated_encoding_p95_ms": sorted(encoding_samples[1:])[
+            math.ceil(repeats * 0.95) - 1
+        ],
         "samples_ms": samples,
+        "response_bytes": response_bytes,
+        "cold_component_bytes": component_bytes,
+        "cold_item_component_bytes": item_component_bytes,
     }
 
 

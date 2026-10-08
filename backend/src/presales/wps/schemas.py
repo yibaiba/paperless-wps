@@ -267,6 +267,7 @@ class UnresolvedRow(Input):
 
 class CompletionPreview(SyncPreview, CompletionLocation):
     schema_version: Literal[2] = 2
+    response_detail: Literal["inline", "panel"] = "panel"
     selected_variant_id: str | None = None
     selected_source_id: str | None = None
     intent: Literal["next", "remove"] = "next"

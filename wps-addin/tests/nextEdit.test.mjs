@@ -197,7 +197,8 @@ test('full completion request searches a filled 1000-row area without sequential
   const index = new WorkbookRowIndex(host, profile);
   for (let i = 0; i < 20; i++) {
     const request = completionRequest({ host, index, profile, metadata,
-      cell: { sheet: 'q', row: i + 2, column: 1 }, query: `m${i}` });
+      cell: { sheet: 'q', row: i + 2, column: 1 }, query: `m${i}`,
+      responseDetail: 'inline' });
     assert.ok(request.target_cells.some((c) => c.row === 1002));
   }
   assert.equal(scans, 1); assert.equal(reads, 21);

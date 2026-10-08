@@ -19,6 +19,6 @@ export function contextWorkload(count = 1000) {
   const profile = { id: 'p', revision: 1, sheet_selector: 'q', managed_fields: ['model', 'name'] };
   const index = new WorkbookRowIndex(host, profile);
   const request = (query = 'm0') => completionRequest({ host, index, profile, metadata,
-    cell: { sheet: 'q', row: 2, column: 1 }, query });
+    cell: { sheet: 'q', row: 2, column: 1 }, query, responseDetail: 'inline' });
   return { metrics, rows, metadata, host, profile, index, request };
 }

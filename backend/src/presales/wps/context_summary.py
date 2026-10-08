@@ -98,13 +98,71 @@ def context_rows(projection, request, *, allowed_sources):
     return rows
 
 
-def completion_context_summary(projection, *, request, profile, context, issues):
+def referenced_device_ids(items, issues):
+    identities = {
+        binding.get("device_id")
+        for item in items
+        for binding in item.get("line_bindings", [])
+    }
+    identities.update(
+        change.get("id")
+        for item in items
+        for change in item.get("changes", [])
+        if change.get("kind") == "devices"
+    )
+    for issue in issues:
+        identities.add(issue.get("device_id"))
+        identities.update(issue.get("device_ids", []))
+    return identities - {None}
+
+
+def inline_context_rows(rows, *, request, items, issues):
+    positions = {
+        (request.active_cell.sheet, request.active_cell.row),
+        *((cell.sheet, cell.row) for cell in request.target_cells),
+        *((issue.get("sheet"), issue.get("row")) for issue in issues),
+    }
+    device_ids = referenced_device_ids(items, issues)
+    return [
+        row
+        for row in rows
+        if row["participation"] == "inventory"
+        or row["id"] in device_ids
+        or (row["sheet"], row["row"]) in positions
+    ]
+
+
+def completion_context_summary(projection, *, request, profile, context, issues, items):
     configuration = projection["checked"]["configuration"]
     system = next(s for s in configuration["systems"] if s["id"] == request.scope.system_id)
     room = next((r for r in configuration["rooms"] if r["id"] == system["room_id"]), None)
+    rows = context_rows(projection, request, allowed_sources=context.allowed_sources or {})
+    visible_rows = (
+        inline_context_rows(rows, request=request, items=items, issues=issues)
+        if request.response_detail == "inline"
+        else rows
+    )
+    local_changes = [
+        {key: change[key] for key in ("kind", "id")}
+        for change in configuration_diff(
+            projection["state"]["configuration"],
+            configuration,
+        )
+    ]
+    if request.response_detail == "inline":
+        visible_ids = {row["id"] for row in visible_rows}
+        visible_ids.update(
+            change["id"] for item in items for change in item.get("changes", [])
+        )
+        visible_changes = [change for change in local_changes if change["id"] in visible_ids]
+    else:
+        visible_changes = local_changes
     # PlanningContext already loaded this immutable definition snapshot for the request.
     return dict(
         mode="business",
+        detail=request.response_detail,
+        row_count=len(rows),
+        rows_omitted=len(rows) - len(visible_rows),
         project_id=projection["state"]["binding"].payload["project_id"],
         scope=request.scope.model_dump(mode="json"),
         system={key: system[key] for key in ("id", "name", "kind")},
@@ -117,14 +175,10 @@ def completion_context_summary(projection, *, request, profile, context, issues)
             row.model_dump(mode="json", exclude={"confirmed_line"})
             for row in request.unresolved_rows
         ],
-        rows=context_rows(projection, request, allowed_sources=context.allowed_sources or {}),
-        local_changes=[
-            {key: change[key] for key in ("kind", "id")}
-            for change in configuration_diff(
-                projection["state"]["configuration"],
-                configuration,
-            )
-        ],
+        rows=visible_rows,
+        local_change_count=len(local_changes),
+        local_changes_omitted=len(local_changes) - len(visible_changes),
+        local_changes=visible_changes,
         knowledge=knowledge_summary(configuration, context.definitions, system_ids={system["id"]}),
         issues=issues,
     )

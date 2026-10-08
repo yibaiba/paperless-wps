@@ -114,7 +114,8 @@ export function BusinessInlineEditor({ host: suppliedHost, api: suppliedApi }: {
         const cached = pending && await pending;
         if (cached && 'error' in cached) throw cached.error;
         const value = cached ? cached.value : await api.completionPreview({ ...completionRequest({ host,
-          profile: context.profile, metadata, cell: context.cell, index, query }), ...choice }, request.signal);
+          profile: context.profile, metadata, cell: context.cell, index, query,
+          responseDetail: 'inline' }), ...choice }, request.signal);
         if (!request.isCurrent()) return;
         assertInlineSession(host, context);
         if (value.local_revision !== host.businessRevision()) { setEpoch((v) => v + 1); return; }
@@ -147,7 +148,8 @@ export function BusinessInlineEditor({ host: suppliedHost, api: suppliedApi }: {
         setQuery('');
         index?.refreshRows(suggestion.patches);
         if (index && metadata.binding) {
-          const payload = completionRequest({ host, profile: context.profile, metadata, cell: context.cell, index, query: '' });
+          const payload = completionRequest({ host, profile: context.profile, metadata,
+            cell: context.cell, index, query: '', responseDetail: 'inline' });
           prefetch.current.start(businessPrefetchKey({ context, binding: metadata.binding,
             localRevision: host.businessRevision(), versions: versions.current }),
           (signal) => api.completionPreview(payload, signal));
@@ -224,7 +226,8 @@ export function BusinessInlineEditor({ host: suppliedHost, api: suppliedApi }: {
     try {
       const value = await resolveBusinessChoice({ host, context, request, load: (signal) =>
         api.completionPreview({ ...completionRequest({ host, profile: context.profile,
-          metadata: host.readMetadata(), cell: context.cell, index, query }),
+          metadata: host.readMetadata(), cell: context.cell, index, query,
+          responseDetail: 'inline' }),
           selected_variant_id: binding.variant_id, selected_source_id: binding.source_id }, signal) });
       if (!value) return;
       const selection = resolvedBusinessChoice({ result: value, cell: context.cell, query });
