@@ -189,7 +189,9 @@ def test_fulfilled_role_resolves_all_parent_demands(client, catalog, existing, s
         assert alias["device_id"] in servers
     else:
         assert alias["device_id"] is None, "Ambiguous parent demands silently chose one server"
-        assert not read(client, draft)["checked"]["readiness"]["ready_for_confirmation"]
+        if existing != "manual":
+            assert {allocation["device_id"] for allocation in alias["allocations"]} == servers
+            assert read(client, draft)["checked"]["readiness"]["ready_for_confirmation"]
     questions = client.post(
         "/api/list-tools/list_get",
         json=dict(
@@ -199,8 +201,10 @@ def test_fulfilled_role_resolves_all_parent_demands(client, catalog, existing, s
             view="proposal_questions",
         ),
     ).json()
-    assert any(q["code"] == "role_fulfillment_missing" for q in questions["items"]) == (
-        scope == "device"
+    codes = {question["code"] for question in questions["items"]}
+    assert "role_fulfillment_missing" not in codes
+    assert ("manual_fulfillment_conflict" in codes) == (
+        scope == "device" and existing == "manual"
     )
 
 
