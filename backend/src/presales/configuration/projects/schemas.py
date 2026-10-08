@@ -225,6 +225,7 @@ class CheckRequest(Input):
     refresh_knowledge: bool = False
     upgrade_calculation: bool = False
     upgrade_decisions: bool = False
+    usage_detail: Literal["full", "summary"] = "full"
 
 
 class SuggestionApply(CheckRequest):

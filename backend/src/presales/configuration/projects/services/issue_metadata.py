@@ -1,5 +1,7 @@
 """Stable issue references and conservative grouping, without parsing display messages."""
 
+from hashlib import sha256
+
 from presales.rules.calculation import digest
 
 CATEGORIES = {
@@ -14,6 +16,21 @@ CATEGORIES = {
     "edit_resources": "requirements",
     "edit_system_inputs": "requirements",
 }
+ISSUE_HASH_VERSION = "issue-v2"
+
+
+def stable_issue_id(cause, objects):
+    values = [
+        ISSUE_HASH_VERSION,
+        cause["code"],
+        cause["resource"],
+        cause["profile_id"],
+        cause["rule_id"],
+        *sorted(cause["fields"]),
+        *sorted(f'{item["kind"]}:{item["id"]}' for item in objects),
+    ]
+    framed = "".join(f"{len(str(value or ''))}:{value or ''}" for value in values)
+    return sha256(framed.encode()).hexdigest()
 
 
 def annotate_issues(checks):
@@ -56,7 +73,7 @@ def annotate_issues(checks):
             rule_id=check.get("rule_id"),
             fields=action.get("missing_fields", []),
         )
-        identity = digest(dict(cause=cause, objects=objects))
+        identity = stable_issue_id(cause, objects)
         occurrence = occurrences.get(identity, 0)
         occurrences[identity] = occurrence + 1
         identity = f"{identity}:{occurrence}"

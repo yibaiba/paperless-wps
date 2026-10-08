@@ -1,5 +1,6 @@
 """Calculation-only values; serialized views cannot mutate the projection or its input."""
 
+import json
 from dataclasses import dataclass
 from decimal import Decimal
 from types import MappingProxyType
@@ -24,32 +25,16 @@ def freeze(value, *, memo=None):
     return value
 
 
-def payload(value, *, memo=None):
-    memo = {} if memo is None else memo
-    if isinstance(value, MappingProxyType):
-        if id(value) in memo:
-            return memo[id(value)]
-        result = {key: payload(item, memo=memo) for key, item in value.items()}
-        memo[id(value)] = result
-        return result
-    if isinstance(value, tuple):
-        if id(value) in memo:
-            return memo[id(value)]
-        result = [payload(item, memo=memo) for item in value]
-        memo[id(value)] = result
-        return result
-    return value
-
-
 @dataclass(frozen=True, kw_only=True)
 class UsageProjection:
     devices: tuple
     fingerprint: str
+    serialized: str
     version: int = PROJECTION_VERSION
     fulfilled_ids: frozenset = frozenset()
 
     def views(self):
-        return payload(self.devices)
+        return json.loads(self.serialized)
 
     def device(self, identity):
         return next(d for d in self.devices if d["device_id"] == identity)

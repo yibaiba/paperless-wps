@@ -43,6 +43,19 @@ def test_mixed_direct_and_accessory_capacity_is_partitioned(client, catalog, con
     assert data == before
 
 
+def test_check_summary_omits_usage_traces_but_keeps_table_projection(client, catalog, config):
+    data, _ = pooled_project(client, catalog, config)
+    full = post(client, "/check", dict(configuration=data))
+    summary = post(client, "/check", dict(configuration=data, usage_detail="summary"))
+    assert summary["usage_projection"] == full["usage_projection"]
+    assert summary["checks"] == [check for check in full["checks"] if check["status"] != "pass"]
+    assert summary["project_output"] == full["project_output"]
+    usage = next(item for item in summary["device_usages"] if item["device_id"] == "pool")
+    assert usage["consumers"] and usage["quantity_summary"]
+    assert "allocation_groups" not in usage
+    assert "resource_calculations" not in usage
+
+
 def test_apply_cannot_reuse_stock_already_assigned_to_direct_roles(client, catalog, config):
     data, _ = pooled_project(client, catalog, config)
     data["accessory_allocations"] = []

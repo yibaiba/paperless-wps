@@ -84,3 +84,21 @@ def test_invalid_batch_atomic(client, catalog):
     )
     assert response.status_code == 422, response.text
     assert client.get("/api/work-drafts/" + draft["id"]).json()["revision"] == 1
+
+
+def test_device_usage_details_are_bound_to_the_draft_revision(client, catalog):
+    draft = start(client, saved_project(client, catalog))
+    response = client.get(
+        f"/api/work-drafts/{draft['id']}/device-usages",
+        params=dict(revision=draft["revision"], device_id="server"),
+    )
+    assert response.status_code == 200, response.text
+    detail = response.json()
+    assert detail["total"] == 1
+    assert detail["items"][0]["device_id"] == "server"
+    write(client, draft, [dict(action="device_patch", device_id="server", note="新版")])
+    stale = client.get(
+        f"/api/work-drafts/{draft['id']}/device-usages",
+        params=dict(revision=draft["revision"], device_id="server"),
+    )
+    assert stale.status_code == 409

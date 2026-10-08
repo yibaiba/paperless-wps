@@ -1,4 +1,3 @@
-from copy import deepcopy
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
 from .schemas import QuotedPrice
@@ -8,10 +7,12 @@ CENT = Decimal("0.01")
 
 def adopt_prices(configuration):
     """Bind source prices once; replacing a product leaves the old binding visibly stale."""
-    data = deepcopy(configuration)
-    quote = data.get("quotation")
-    if quote is None:
+    data = dict(configuration)
+    original = configuration.get("quotation")
+    if original is None:
         return data
+    quote = dict(original)
+    data["quotation"] = quote
     previous = {p["device_id"]: p for p in quote["prices"]}
     prices = []
     for device in data["devices"]:

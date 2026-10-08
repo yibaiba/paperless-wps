@@ -1,6 +1,8 @@
 """Construct the canonical device-use projection from fixed calculation inputs."""
 
+import json
 from collections import defaultdict
+from hashlib import sha256
 
 from presales.rules.calculation import digest
 
@@ -31,7 +33,9 @@ def build_usage_projection(data, *, demands, definitions, policies=None, inspect
         )
         for usage in raw
     ]
-    projected = scope_resources(projected)
+    projected = sorted(scope_resources(projected), key=lambda usage: usage["device_id"])
+    serialized = json.dumps(projected, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
+    content_hash = sha256(serialized.encode()).hexdigest()
     fingerprint = digest(
         [
             PROJECTION_VERSION,
@@ -44,7 +48,7 @@ def build_usage_projection(data, *, demands, definitions, policies=None, inspect
                 )
                 for d in sorted(data["devices"], key=lambda d: d["id"])
             ],
-            sorted(projected, key=lambda u: u["device_id"]),
+            content_hash,
             data.get("definition_snapshot_id"),
             data.get("knowledge_snapshot_id"),
             data.get("decision_bundle_id"),
@@ -57,6 +61,7 @@ def build_usage_projection(data, *, demands, definitions, policies=None, inspect
     return UsageProjection(
         devices=tuple(freeze(p) for p in projected),
         fingerprint=fingerprint,
+        serialized=serialized,
         fulfilled_ids=frozenset(linked - unlinked),
     )
 

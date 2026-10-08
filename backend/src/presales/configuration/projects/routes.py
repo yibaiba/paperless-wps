@@ -68,14 +68,19 @@ def check(
     session: Session = Depends(session_dependency),
     engine=Depends(quantity_engine),
 ):
+    from .calculation.usage.response import usage_response
+
     return execute(
         lambda: commit(
             session,
-            lambda: ProjectConfigurations(session, engine).check(
-                data.configuration,
-                refresh=data.refresh_knowledge,
-                upgrade=data.upgrade_calculation,
-                upgrade_decisions=data.upgrade_decisions,
+            lambda: usage_response(
+                ProjectConfigurations(session, engine).check(
+                    data.configuration,
+                    refresh=data.refresh_knowledge,
+                    upgrade=data.upgrade_calculation,
+                    upgrade_decisions=data.upgrade_decisions,
+                ),
+                detail=data.usage_detail,
             ),
         )
     )
