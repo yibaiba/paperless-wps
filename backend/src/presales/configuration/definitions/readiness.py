@@ -50,6 +50,60 @@ def role_inventory(role, *, definition, package):
     )
 
 
+def role_generation_support(role, *, definition, package, gaps):
+    rules = role_rules(role, definition=definition, package=package)
+    candidates = sorted(
+        {
+            variant_id
+            for rule in rules
+            if rule["status"] == "confirmed" and rule.get("effect", "allow") == "allow"
+            for variant_id in rule["selector"]["variant_ids"]
+            if variant_id not in rule["selector"].get("exclude_variant_ids", [])
+        }
+    )
+    issues = [item for item in gaps if item.get("role_id") == role["id"]]
+    published = package["status"] == "published" and definition["status"] == "confirmed"
+    if published and not issues:
+        status = "supported"
+    elif published and candidates:
+        status = "partial"
+    else:
+        status = "missing"
+    return dict(
+        id=role["id"],
+        name=role["name"],
+        status=status,
+        candidate_ids=candidates,
+        rule_ids=[rule["id"] for rule in rules],
+        issue_ids=[item["id"] for item in issues],
+        missing_fields=sorted({field for item in issues for field in item["missing_fields"]}),
+    )
+
+
+def scenario_readiness(gaps, generation):
+    independent = [item for item in gaps if item["scenario"] != "shared"]
+    shared = list(gaps)
+    supported_roles = sum(role["status"] == "supported" for role in generation["roles"])
+
+    def report(identity, issues):
+        if not issues:
+            status = "supported"
+        elif identity == "shared" and not independent:
+            status = "partial"
+        elif supported_roles:
+            status = "partial"
+        else:
+            status = "missing"
+        return dict(
+            id=identity,
+            status=status,
+            issue_count=len(issues),
+            issue_ids=[item["id"] for item in issues],
+        )
+
+    return [report("independent", independent), report("shared", shared)]
+
+
 def package_readiness(package, *, latest):
     definition = package["definition"]
     rules = [rule_readiness(r) for r in package["rules"]]
@@ -72,6 +126,17 @@ def package_readiness(package, *, latest):
         if latest.get(r["id"]) != r["revision"]
     ]
     sharing = [r["id"] for r in rules if r["kind"] == "sharing" and r["status"] == "confirmed"]
+    generation = dict(
+        roles=[
+            role_generation_support(role, definition=definition, package=package, gaps=gaps)
+            for role in definition["roles"]
+        ],
+        supported_rule_ids=[
+            rule["id"]
+            for rule in package["rules"]
+            if rule["status"] == "confirmed" and not relation_gaps(rule)
+        ],
+    )
     return dict(
         id=package["id"],
         revision=package["revision"],
@@ -86,6 +151,9 @@ def package_readiness(package, *, latest):
         version_changes=changes,
         sharing_rule_ids=sharing,
         gaps=gaps,
+        issues=gaps,
+        generation_support=generation,
+        scenarios=scenario_readiness(gaps, generation),
         summary=dict(
             roles=len(roles),
             rules=len(rules),
