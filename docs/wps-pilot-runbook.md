@@ -9,6 +9,8 @@
 - 后端 WPS 测试在 60 秒内通过，前端测试、构建及高危依赖审计通过。
 - 40 例目录序列回归通过；它与建序数据同源，不能证明真实业务准确率。业务门槛必须由独立项目操作轨迹衡量 Top-1 ≥ 95%、Top-3 = 100%、错误直接写入为 0、可判定灰字覆盖率 ≥ 80%。
 
+机器门禁入口为 `scripts/wps_pilot_acceptance.py`。只有 30 条带证据哈希的人工核对轨迹、三类模板和双平台全部真机结果同时通过时才返回成功；浏览器或模拟宿主记录会被拒绝。当前红盾采集卡运行结果为 0/30、0/3，macOS/Windows 矩阵均缺失，状态保持未验收。
+
 ## 双平台真机矩阵
 
 在同一份已映射并确认来源的测试工作簿上逐项记录“通过/失败、WPS 构建号、操作者、时间、诊断会话 ID”：
@@ -58,6 +60,16 @@ env LC_ALL=C perl -e 'alarm 60; exec @ARGV' .venv/bin/python -m pytest backend/t
 - 硬指标：候选 API p95 ≤ 500ms；灰字出现后写入 ≤ 100ms；自动写入错误数为 0。
 - 准确率：统计可判定空白下一行的灰字覆盖率、Top-1、展开选择次数和无候选次数。
 - 任何错误自动写入立即暂停扩大范围，保留诊断会话 ID，修复后重跑后端、前端和完整双平台矩阵。
+
+双平台记录完成后先运行门禁，再开始两周试点：
+
+```sh
+env LC_ALL=C PYTHONPATH=.:backend:scripts .venv/bin/python scripts/wps_pilot_acceptance.py \
+  --cards data/maintenance/wps-redshield-tab-20261005/trajectory-cards.json \
+  --host-results /path/to/wps-host-results.json \
+  --output /path/to/pilot-readiness.json \
+  --manifest-output /path/to/replay-manifest-v2.json
+```
 
 ## 数据与清理
 
