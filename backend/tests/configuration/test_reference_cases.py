@@ -281,8 +281,9 @@ def test_same_device_from_multiple_demands_is_one_physical_server():
 
 def test_duplicate_included_references_reject_at_boundary():
     import pytest
-    from presales.configuration.reference_cases.schemas import RowBinding
     from pydantic import ValidationError
+
+    from presales.configuration.reference_cases.schemas import RowBinding
 
     b = binding()
     b["included_allocation_ids"] = ["credit", "credit"]

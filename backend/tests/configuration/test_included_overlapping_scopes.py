@@ -4,6 +4,7 @@ from copy import deepcopy
 from uuid import uuid4
 
 import pytest
+
 from presales.configuration.knowledge.schemas import KnowledgeInput
 
 from .conftest import BASE, post

@@ -3,6 +3,7 @@
 from copy import deepcopy
 
 import pytest
+
 from presales.configuration.knowledge.schemas import KnowledgeInput
 
 from .conftest import AUTHOR, BASE, post

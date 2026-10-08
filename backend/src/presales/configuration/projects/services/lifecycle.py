@@ -1,8 +1,9 @@
 from uuid import NAMESPACE_URL, uuid5
 
+from sqlalchemy import select
+
 from presales.rules.repository import RuleConflict
 from presales.storage import Project
-from sqlalchemy import select
 
 from ...common import Entities, view
 from ...definitions.service import Definitions

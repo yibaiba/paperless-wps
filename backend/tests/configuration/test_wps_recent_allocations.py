@@ -1,6 +1,7 @@
 from types import SimpleNamespace
 
 import pytest
+
 from presales.wps.next_edits import recent_requirement
 
 

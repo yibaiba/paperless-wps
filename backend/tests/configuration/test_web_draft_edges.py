@@ -149,7 +149,18 @@ def test_lightweight_projection_equals_full_check(client, catalog):
 def test_layout_only_does_not_recalculate_procurement(client, catalog, monkeypatch):
     draft = start(client, saved_project(client, catalog))
     from presales.configuration.projects.services import incremental
-    monkeypatch.setattr(incremental, 'supply_projection', lambda *_: (_ for _ in ()).throw(AssertionError('supply recalculated')))
-    monkeypatch.setattr(incremental, 'with_quotation', lambda *_: (_ for _ in ()).throw(AssertionError('quote recalculated')))
-    result = write(client, draft, [dict(action='drawing_set',xml=draft['configuration']['drawing_xml'])])
+
+    def unexpected(message):
+        def fail(*_):
+            raise AssertionError(message)
+
+        return fail
+
+    monkeypatch.setattr(incremental, "supply_projection", unexpected("supply recalculated"))
+    monkeypatch.setattr(incremental, "with_quotation", unexpected("quote recalculated"))
+    result = write(
+        client,
+        draft,
+        [dict(action="drawing_set", xml=draft["configuration"]["drawing_xml"])],
+    )
     assert result.status_code == 200, result.text

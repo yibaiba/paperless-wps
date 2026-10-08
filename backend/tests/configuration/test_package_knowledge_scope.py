@@ -44,6 +44,7 @@ def test_mixed_package_and_legacy_systems_keep_separate_rules(client, catalog, c
             kind=definition["name"],
             definition_id=definition["id"],
             knowledge_package_id=package["id"],
+            inputs=[dict(key="seats", value="1", kind="quantity", unit="台")],
         ),
         dict(
             id="legacy",
@@ -51,6 +52,7 @@ def test_mixed_package_and_legacy_systems_keep_separate_rules(client, catalog, c
             name="未采用包",
             kind=definition["name"],
             definition_id=definition["id"],
+            inputs=[dict(key="seats", value="1", kind="quantity", unit="台")],
         ),
     ]
     config["requirements"] = [

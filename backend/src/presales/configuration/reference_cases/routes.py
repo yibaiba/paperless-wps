@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
+
 from presales.api import session_dependency
 from presales.rules.routes import quantity_engine
-from sqlalchemy.orm import Session
 
 from ..common import Entities
 from ..http import execute

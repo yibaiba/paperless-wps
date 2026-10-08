@@ -1,6 +1,7 @@
 """Per-unit allocated capacity stays local; deployment-wide metrics retain their basis."""
 
 import pytest
+
 from presales.configuration.projects.calculation.resource_metrics import metric_checks
 
 

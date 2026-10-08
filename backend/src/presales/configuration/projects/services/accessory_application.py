@@ -90,6 +90,13 @@ class AccessoryApplication:
         if not device or device["variant_id"] not in suggestion["rule"]["target_variant_ids"]:
             raise ValueError("已有设备不属于该配套需求的候选配置")
         if data.get("calculation_version") == 3:
+            AccessoryApplication._validate_same_shared_demand(
+                data,
+                suggestion=suggestion,
+                device_id=device_id,
+                amount=amount,
+                device_quantity=Decimal(device["quantity"]),
+            )
             usage = next(u for u in checked["device_usages"] if u["device_id"] == device_id)
             if amount > available_quantity(usage, demand=suggestion):
                 raise ValueError("已有设备的可分配数量不足，请核对角色及配套用途")
@@ -113,3 +120,15 @@ class AccessoryApplication:
             assigned = demand_quantities(allocations, demand_id=suggestion["id"])[device_id]
             if assigned + amount > Decimal(device["quantity"]):
                 raise ValueError("同一配套需求的共享分配合计超过设备数量")
+
+    @staticmethod
+    def _validate_same_shared_demand(
+        data, *, suggestion, device_id, amount, device_quantity
+    ):
+        if suggestion["rule"].get("allocation_mode", "consumable") != "shareable":
+            return
+        assigned = demand_quantities(
+            data.get("accessory_allocations", []), demand_id=suggestion["id"]
+        )[device_id]
+        if assigned + amount > device_quantity:
+            raise ValueError("同一配套需求的共享分配合计超过设备数量")
