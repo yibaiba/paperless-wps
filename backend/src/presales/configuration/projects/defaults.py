@@ -1,0 +1,20 @@
+def empty_configuration(*, decision_runtime="python-v3"):
+    return dict(
+        calculation_version=3,
+        decision_runtime=decision_runtime,
+        decision_bundle_id=None,
+        actor="",
+        evidence="",
+        rooms=[],
+        systems=[],
+        requirements=[],
+        devices=[],
+        accessory_allocations=[],
+        included_allocations=[],
+        accessory_choices=[],
+        supply_allocations=[],
+        definition_snapshot_id=None,
+        drawing_xml="",
+        knowledge_snapshot=None,
+        knowledge_snapshot_id=None,
+    )
