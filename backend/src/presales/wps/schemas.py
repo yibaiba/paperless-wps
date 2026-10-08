@@ -233,6 +233,7 @@ class SyncPreview(Input):
     known_device_ids: list[str] = Field(default_factory=list)
     lines: list[WorkbookLine]
     removed_lines: list[WorkbookLine] = Field(default_factory=list)
+    upgrade_decisions: bool = False
 
     @model_validator(mode="after")
     def unique_lines(self):
@@ -275,6 +276,8 @@ class CompletionPreview(SyncPreview, CompletionLocation):
 
     @model_validator(mode="after")
     def unresolved_identities(self):
+        if self.upgrade_decisions:
+            raise ValueError("补全请求不能升级项目决策，请在同步面板显式预览")
         positions = {(line.sheet, line.row) for line in [*self.lines, *self.removed_lines]}
         identities = {line.line_id for line in [*self.lines, *self.removed_lines]}
         for row in self.unresolved_rows:

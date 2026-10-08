@@ -5,6 +5,7 @@ from pydantic import TypeAdapter
 from presales.configuration.common import Entities
 from presales.configuration.projects.edit_schemas import Operation
 from presales.configuration.projects.projections.comparison import configuration_diff
+from presales.configuration.projects.schemas import Configuration
 from presales.configuration.projects.services.incremental import edit_check
 from presales.lists.catalog_snapshot import DraftCatalog
 from presales.lists.receipts import once
@@ -30,6 +31,7 @@ class WorkbookSync:
         state = self._state(request)
         operations, line_bindings = self._operations(request, state)
         proposed = self._proposed(state, operations)
+        proposed = self._decision_preview(request, proposed)
         changes = configuration_diff(state["configuration"], proposed["configuration"])
         fingerprint = digest(
             [
@@ -47,6 +49,9 @@ class WorkbookSync:
             "has_changes": bool(changes),
             "operation_count": len(operations),
             "configuration": proposed["configuration"],
+            "decision_runtime": proposed["configuration"].get("decision_runtime", "python-v3"),
+            "decision_bundle_id": proposed["configuration"].get("decision_bundle_id"),
+            "upgrade_decisions": request.upgrade_decisions,
         }
 
     def commit(self, request: SyncCommit, *, actor: str):
@@ -76,21 +81,17 @@ class WorkbookSync:
             }
         state = self._state(preview_request)
         operations, line_bindings = self._operations(preview_request, state)
-        updated = self.lists.update(
-            UpdateList(
-                draft_id=state["draft"].id,
-                expected_revision=state["draft"].revision,
-                operation_id=f"{request.operation_id}:update",
-                operations=operations,
-            )
-        )
+        updated = self._update_draft(state, operations, operation_id=request.operation_id)
         checked = self.lists.check(
             CheckList(
                 draft_id=updated["id"],
                 expected_revision=updated["revision"],
                 operation_id=f"{request.operation_id}:check",
+                upgrade_decisions=request.upgrade_decisions,
             )
         )
+        checked_record = self.entities.get(checked["id"], kind="list_draft")
+        checked_configuration = checked_record.payload["configuration"]
         saved = self.lists.save(
             SaveList(
                 draft_id=checked["id"],
@@ -110,6 +111,8 @@ class WorkbookSync:
             managed_device_ids=[item["device_id"] for item in line_bindings],
             line_bindings=line_bindings,
             last_synced_by=actor,
+            decision_runtime=checked_configuration.get("decision_runtime", "python-v3"),
+            decision_bundle_id=checked_configuration.get("decision_bundle_id"),
             historical_line_devices={
                 **binding.payload.get("historical_line_devices", {}),
                 **{
@@ -132,7 +135,21 @@ class WorkbookSync:
             "binding_revision": binding_view["revision"],
             "project_revision": saved["project_revision"],
             "web_url": saved["web_url"],
+            "decision_runtime": checked_configuration.get("decision_runtime", "python-v3"),
+            "decision_bundle_id": checked_configuration.get("decision_bundle_id"),
         }
+
+    def _update_draft(self, state, operations, *, operation_id):
+        if not operations:
+            return {"id": state["draft"].id, "revision": state["draft"].revision}
+        return self.lists.update(
+            UpdateList(
+                draft_id=state["draft"].id,
+                expected_revision=state["draft"].revision,
+                operation_id=f"{operation_id}:update",
+                operations=operations,
+            )
+        )
 
     def _state(self, request):
         binding = self.entities.get(request.binding_id, kind="wps_workbook_binding")
@@ -248,6 +265,13 @@ class WorkbookSync:
             state["draft"].payload["checked"],
             operations,
             repository=self.lists.repository,
+        )
+
+    def _decision_preview(self, request, proposed):
+        if not request.upgrade_decisions:
+            return proposed
+        return self.lists.repository.check(
+            Configuration.model_validate(proposed["configuration"]), upgrade_decisions=True
         )
 
     @staticmethod

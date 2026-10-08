@@ -143,6 +143,8 @@ export interface BindingState {
   managed_device_ids: string[];
   line_bindings: LineBinding[];
   created_by: string;
+  decision_runtime?: 'python-v3' | 'zen-v1';
+  decision_bundle_id?: string | null;
 }
 
 export interface WorkbookMetadata {
@@ -194,5 +196,8 @@ export interface SyncPreviewResult {
   line_bindings: LineBinding[];
   has_changes: boolean;
   operation_count: number;
+  decision_runtime?: 'python-v3' | 'zen-v1';
+  decision_bundle_id?: string | null;
+  upgrade_decisions?: boolean;
 }
 import type { ProductKind, WorkbookBusinessState } from './businessTypes';

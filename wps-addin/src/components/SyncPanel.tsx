@@ -24,9 +24,10 @@ export function SyncPanel({ api, host, profile, metadata, onSynced }: {
   const [error, setError] = useState('');
   const [scan, setScan] = useState<ReturnType<typeof scanWorkbook>>({ lines: [], unresolved: [] });
   const [previewRevision, setPreviewRevision] = useState(-1);
+  const [upgradeDecisions, setUpgradeDecisions] = useState(false);
   useEffect(() => host.onSheetChange(() => { setPreview(undefined); setOperationId(''); }), [host]);
 
-  function request() {
+  function request(upgrade = upgradeDecisions) {
     if (!metadata.binding) throw new Error('请先绑定项目');
     if (host.journals().some((j) => ['prepared', 'recovery_required'].includes(j.state))) {
       throw new Error('有未完成的本地编辑，请先恢复日志再同步');
@@ -35,18 +36,19 @@ export function SyncPanel({ api, host, profile, metadata, onSynced }: {
     const fresh = scanWorkbook(host.readRows(profile), current);
     setScan(fresh);
     if (fresh.unresolved.length) throw new Error(fresh.unresolved.join('；'));
-    return businessSyncRequest(current, fresh.lines);
+    return { ...businessSyncRequest(current, fresh.lines), upgrade_decisions: upgrade };
   }
 
-  async function loadPreview() {
+  async function loadPreview(upgrade = false) {
     setBusy(true); setError(''); setPreview(undefined); setOperationId('');
     try {
       const session = captureWorkbookSession(host);
       const revision = host.businessRevision();
-      const result = await api.preview(request());
+      const result = await api.preview(request(upgrade));
       assertWorkbookSession(host, session);
       if (host.businessRevision() !== revision) throw new Error('工作簿在预览期间变化，请重新预览');
       setPreview(result);
+      setUpgradeDecisions(upgrade);
       setPreviewRevision(revision);
       setOperationId(crypto.randomUUID());
     } catch (reason) {
@@ -111,6 +113,8 @@ export function SyncPanel({ api, host, profile, metadata, onSynced }: {
         <span><strong>{preview.changes.length}</strong> 项业务变化</span>
         <span><strong>{preview.issues.length}</strong> 项检查问题</span>
       </div>
+      <p>决策：{preview.decision_runtime === 'zen-v1' ? 'ZEN 业务推荐' : '基础产品补全'}
+        {preview.decision_bundle_id ? ` · 固定包 ${preview.decision_bundle_id}` : ''}</p>
       {preview.changes.map((change) => <details className="change" key={`${change.kind}:${change.id}`}>
         <summary>
           <span>{changeLabel(change.before, change.after)} · {change.kind}</span><code>{change.id}</code>
@@ -127,7 +131,9 @@ export function SyncPanel({ api, host, profile, metadata, onSynced }: {
     {error ? <div className="error" role="alert">{error}</div> : null}
     <div className="button-row">
       {metadata.pending_sync && <button onClick={commit} disabled={busy}>重试原操作 / 恢复同步回执</button>}
-      <button onClick={loadPreview} disabled={busy || !metadata.binding || Boolean(metadata.pending_sync)}>预览差异</button>
+      <button onClick={() => loadPreview(false)} disabled={busy || !metadata.binding || Boolean(metadata.pending_sync)}>预览差异</button>
+      {metadata.binding?.decision_runtime !== 'zen-v1' && <button onClick={() => loadPreview(true)}
+        disabled={busy || !metadata.binding || Boolean(metadata.pending_sync)}>预览升级 ZEN</button>}
       <button className="primary" onClick={commit} disabled={busy || !preview?.has_changes || Boolean(metadata.pending_sync)}>
         <CloudSyncOutlined />{busy ? '处理中' : '确认同步'}
       </button>

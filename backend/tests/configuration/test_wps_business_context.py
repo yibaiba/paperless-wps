@@ -1,3 +1,4 @@
+from copy import deepcopy
 from uuid import uuid4
 
 from sqlalchemy import select
@@ -137,3 +138,65 @@ def test_preview_returns_projected_local_supply_without_mutating_baseline(client
         f"/api/wps/bindings/{bound['binding_id']}/context", headers=headers
     ).json()
     assert baseline["configuration"]["supply_allocations"] == []
+
+
+def test_explicit_zen_upgrade_previews_then_commits_once(client, catalog):
+    headers, _, bound, body = setup_workbook(client, catalog)
+    with client.app.state.session_factory() as session:
+        binding = session.get(Entity, bound["binding_id"])
+        draft = session.get(Entity, binding.payload["draft_id"])
+        payload = deepcopy(draft.payload)
+        payload["configuration"]["decision_runtime"] = "python-v3"
+        payload["configuration"]["decision_bundle_id"] = None
+        payload["checked"]["configuration"] = deepcopy(payload["configuration"])
+        draft.payload = payload
+        session.commit()
+        draft_revision = draft.revision
+
+    normal = client.post("/api/wps/sync/preview", headers=headers, json=body)
+    assert normal.status_code == 200, normal.text
+    assert normal.json()["decision_runtime"] == "python-v3"
+    upgrade = client.post(
+        "/api/wps/sync/preview", headers=headers, json={**body, "upgrade_decisions": True}
+    )
+    assert upgrade.status_code == 200, upgrade.text
+    previewed = upgrade.json()
+    assert previewed["decision_runtime"] == "zen-v1"
+    assert previewed["decision_bundle_id"]
+    assert any(change["kind"] == "decision_runtime" for change in previewed["changes"])
+    with client.app.state.session_factory() as session:
+        assert session.get(Entity, bound["draft_id"]).revision == draft_revision
+
+    request = {
+        **body,
+        "upgrade_decisions": True,
+        "preview_fingerprint": previewed["preview_fingerprint"],
+        "operation_id": str(uuid4()),
+    }
+    committed = client.post("/api/wps/sync/commit", headers=headers, json=request)
+    repeated = client.post("/api/wps/sync/commit", headers=headers, json=request)
+    assert committed.status_code == 200, committed.text
+    assert committed.json() == repeated.json()
+    assert committed.json()["decision_runtime"] == "zen-v1"
+    assert committed.json()["decision_bundle_id"] == previewed["decision_bundle_id"]
+
+
+def test_completion_cannot_smuggle_a_decision_upgrade(client, catalog):
+    headers, _, _, body = setup_workbook(client, catalog)
+    body.update(
+        local_revision=0,
+        query="",
+        scope={
+            "sheet": "报价表",
+            "start_row": 2,
+            "end_row": 20,
+            "room_id": "room",
+            "system_id": "system",
+        },
+        active_cell={"sheet": "报价表", "row": 3, "column": 2, "values": {}},
+        target_cells=[],
+        upgrade_decisions=True,
+    )
+    response = client.post("/api/wps/completion/preview", headers=headers, json=body)
+    assert response.status_code == 422
+    assert "不能升级" in response.text
