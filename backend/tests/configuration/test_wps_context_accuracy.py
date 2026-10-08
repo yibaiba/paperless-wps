@@ -21,6 +21,64 @@ def test_explicit_exact_product_wins_over_unrelated_zero_purchase():
     assert primary_choice([other, exact], "HARDWARE") == (exact, "exact_input")
 
 
+def test_query_changes_reuse_the_same_workbook_projection(client, catalog, monkeypatch):
+    from presales.wps import business
+
+    original = business.edit_configuration
+    projections = []
+
+    def tracked_projection(*args, **kwargs):
+        projections.append(args[1])
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(business, "edit_configuration", tracked_projection)
+    headers, body = completion_body(client, catalog)
+    first = preview(client, headers, body)
+    body["query"] = catalog["variants"][0]["name"]
+    second = preview(client, headers, body)
+
+    assert first["context_fingerprint"] != second["context_fingerprint"]
+    assert len(projections) == 1
+
+    body = accept(body, second["items"][0])
+    preview(client, headers, body)
+    assert len(projections) == 2
+
+
+def test_live_rule_revision_invalidates_cached_projection(client, catalog, monkeypatch):
+    from presales.wps import business
+
+    original = business.edit_configuration
+    projections = []
+
+    def tracked_projection(*args, **kwargs):
+        projections.append(args[1])
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(business, "edit_configuration", tracked_projection)
+    headers, body = completion_body(client, catalog)
+    preview(client, headers, body)
+    package_id = body["business_operations"][0]["system"]["knowledge_package_id"]
+    package = next(
+        item
+        for item in client.get("/api/configuration/knowledge-packages").json()
+        if item["id"] == package_id
+    )
+    payload = {
+        key: value
+        for key, value in package.items()
+        if key not in {"id", "revision", "updated_at", "definition", "rules"}
+    }
+    response = client.put(
+        "/api/configuration/knowledge-packages/" + package_id,
+        json=dict(expected_revision=package["revision"], payload=dict(payload, name="新规则修订")),
+    )
+    assert response.status_code == 200, response.text
+
+    preview(client, headers, body)
+    assert len(projections) == 2
+
+
 def test_draft_optional_role_does_not_mean_requirements_satisfied():
     definition = dict(
         status="draft",

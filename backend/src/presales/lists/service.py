@@ -10,6 +10,7 @@ from presales.rules.calculation import digest
 from presales.rules.repository import RuleConflict
 from presales.storage import Project
 
+from .baseline import draft_baseline
 from .catalog_snapshot import DraftCatalog, capture_catalog
 from .queries import saved_revision
 from .receipts import once
@@ -143,19 +144,7 @@ class ListService:
             upgrade_decisions=request.upgrade_decisions,
         )
         config = checked["configuration"]
-        baseline = record.payload["configuration"]
-        if record.payload["project_id"]:
-            from presales.configuration.projects.runtime_defaults import project_runtime
-
-            baseline = empty_configuration(
-                decision_runtime=project_runtime(self.session, record.payload["project_id"])
-            )
-            if record.payload["base_revision"] > 0:
-                baseline = saved_revision(
-                    self.repository,
-                    project_id=record.payload["project_id"],
-                    revision=record.payload["base_revision"],
-                )["configuration"]
+        baseline = draft_baseline(self.session, self.repository, record.payload)
         fingerprint = digest([config, checked["fingerprint"]])
         payload = dict(
             record.payload,

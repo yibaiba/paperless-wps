@@ -180,9 +180,21 @@ def preview_sync(
 
 @router.post("/completion/preview")
 def preview_completion(
-    data: CompletionPreview, app=Depends(application), access=Depends(principal)
+    data: CompletionPreview,
+    request: Request,
+    app=Depends(application),
+    access=Depends(principal),
 ):
-    return execute(lambda: completion_preview(WorkbookSync(app.session, app.lists), data))
+    return execute(
+        lambda: completion_preview(
+            WorkbookSync(
+                app.session,
+                app.lists,
+                projection_cache=request.app.state.wps_projection_cache,
+            ),
+            data,
+        )
+    )
 
 
 @router.post("/sync/commit")

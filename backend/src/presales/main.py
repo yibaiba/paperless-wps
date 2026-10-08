@@ -36,6 +36,7 @@ from .rules.routes import router as rules_router
 from .storage import database_factory
 from .topology.routes import router as topology_router
 from .wps.catalog_index import CatalogSuggestionIndex
+from .wps.projection_cache import CompletionProjectionCache
 from .wps.routes import router as wps_router
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -75,6 +76,7 @@ def create_app(
             ROOT / "data/private/search.json"
         )
         app.state.wps_catalog_index = CatalogSuggestionIndex()
+        app.state.wps_projection_cache = CompletionProjectionCache()
         with httpx.Client() as model_http:
             app.state.model_provider = model_provider or (
                 lambda: ModelClient(model_http, app.state.model_settings.read())

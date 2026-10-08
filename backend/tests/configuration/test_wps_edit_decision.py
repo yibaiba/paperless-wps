@@ -1,7 +1,21 @@
 from copy import deepcopy
 
+from presales.wps.edit_decision import decision_for
+
 from .test_wps_next_edits import accept, completion_body, preview
 from .test_wps_reuse_continuation import reused_workbook
+
+
+def test_nonblocking_issue_does_not_turn_satisfied_into_confirmation_required():
+    primary, decision = decision_for(
+        [],
+        query="",
+        issues=[dict(code="unrelated_unresolved_row", blocking=False)],
+        suppressed=False,
+    )
+
+    assert primary is None
+    assert decision == dict(status="satisfied", reason_code="requirements_satisfied")
 
 
 def test_identity_ambiguity_never_gets_a_primary_even_with_confirmed_order(client, catalog):

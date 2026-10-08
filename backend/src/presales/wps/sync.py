@@ -20,10 +20,11 @@ OPERATIONS = TypeAdapter(list[Operation])
 
 
 class WorkbookSync:
-    def __init__(self, session, lists):
+    def __init__(self, session, lists, *, projection_cache=None):
         self.session = session
         self.lists = lists
         self.entities = Entities(session)
+        self.projection_cache = projection_cache
 
     def preview(self, request: SyncPreview):
         state = self._state(request)

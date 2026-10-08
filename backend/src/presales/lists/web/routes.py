@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+
 from presales.configuration.http import execute
 from presales.configuration.transactions import commit
 from presales.lists.routes import application

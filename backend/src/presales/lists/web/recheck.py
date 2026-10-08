@@ -2,7 +2,9 @@
 
 from presales.configuration.projects.calculation.usage.differences import usage_differences
 from presales.configuration.projects.change_schemas import ApplyPreview
+from presales.configuration.projects.projections.comparison import configuration_diff
 from presales.configuration.projects.services.changes import ProjectChanges
+from presales.lists.baseline import draft_baseline
 from presales.lists.catalog_snapshot import DraftCatalog, capture_catalog
 from presales.rules.calculation import digest
 from presales.rules.repository import RuleConflict
@@ -37,6 +39,9 @@ def adopt_recheck(web, request):
             checked=checked,
             checked_config_hash=digest(config),
             check_fingerprint=digest([config, checked["fingerprint"]]),
+            changes=configuration_diff(
+                draft_baseline(web.session, web.repository, payload), config
+            ),
             usage_changes=usage_differences(payload["checked"], checked),
         ),
         entity_id=record.id,

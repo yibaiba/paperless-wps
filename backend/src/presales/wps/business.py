@@ -2,6 +2,10 @@
 
 from uuid import NAMESPACE_URL, uuid5
 
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
+
+from presales.configuration.models import Entity
 from presales.configuration.projects.planning.dependency_scope import (
     DependencyScope,
 )
@@ -11,6 +15,19 @@ from presales.lists.catalog_snapshot import DraftCatalog
 from presales.rules.calculation import digest
 
 from .unresolved_rows import projection_input
+
+RUNTIME_SNAPSHOT_FIELDS = {
+    "knowledge_snapshot_id": "knowledge_snapshot",
+    "definition_snapshot_id": "definition_snapshot",
+    "decision_bundle_id": "decision_bundle",
+}
+LIVE_RULE_KINDS = (
+    "system_definition",
+    "knowledge_package",
+    "capability",
+    "inspection_profile",
+    "knowledge",
+)
 
 
 def context_versions(draft):
@@ -50,21 +67,122 @@ def binding_context(sync, binding_id):
 
 def workbook_projection(sync, request):
     state = sync._state(request)
-    projected_request, preserved = projection_input(request, state)
-    operations, bindings = sync._operations(
-        projected_request, state, preserved_device_ids=preserved
-    )
-    repository = sync.lists.repository
+    repository = scoped_repository(sync, request=request, state=state)
+    key = projection_key(request, state=state, session=sync.session)
+    cached = sync.projection_cache.get(key) if sync.projection_cache else None
+    if cached is None:
+        checked, bindings = calculate_projection(
+            sync, request=request, state=state, repository=repository
+        )
+        if sync.projection_cache:
+            sync.projection_cache.put(
+                key,
+                {
+                    "checked": checked,
+                    "bindings": bindings,
+                    "runtime_snapshots": runtime_snapshots(sync.session, checked),
+                },
+            )
+    else:
+        restore_runtime_snapshots(sync.session, cached["runtime_snapshots"])
+        checked, bindings = cached["checked"], cached["bindings"]
     repository = repository.scoped(
+        repository.evaluation_scope.scope, before=checked["configuration"]
+    )
+    return projection_result(
+        request,
+        state=state,
+        repository=repository,
+        checked=checked,
+        bindings=bindings,
+    )
+
+
+def scoped_repository(sync, *, request, state):
+    repository = sync.lists.repository.scoped(
         DependencyScope(request.scope.system_id),
         before=state["configuration"],
     )
     repository.catalog = DraftCatalog(sync.session, state["draft"].payload["catalog_snapshot_id"])
+    return repository
+
+
+def calculate_projection(sync, *, request, state, repository):
+    projected_request, preserved = projection_input(request, state)
+    operations, bindings = sync._operations(
+        projected_request, state, preserved_device_ids=preserved
+    )
     data = edit_configuration(state["configuration"], operations, repository=repository)
     checked = repository.check(data)
-    repository = repository.scoped(
-        repository.evaluation_scope.scope, before=checked["configuration"]
+    return checked, bindings
+
+
+def projection_key(request, *, state, session):
+    projected_fields = (
+        "schema_version",
+        "business_operations",
+        "binding_id",
+        "template_profile_revision",
+        "known_device_ids",
+        "lines",
+        "removed_lines",
+        "unresolved_rows",
     )
+    data = request.model_dump(mode="json", include=set(projected_fields))
+    return digest(
+        [
+            data,
+            request.scope.system_id,
+            state["binding"].revision,
+            state["draft"].revision,
+            live_rule_fingerprint(session),
+        ]
+    )
+
+
+def live_rule_fingerprint(session):
+    revisions = session.execute(
+        select(Entity.id, Entity.kind, Entity.revision).where(Entity.kind.in_(LIVE_RULE_KINDS))
+    )
+    return digest(sorted(tuple(row) for row in revisions))
+
+
+def runtime_snapshots(session, checked):
+    snapshots = []
+    configuration = checked["configuration"]
+    for field, kind in RUNTIME_SNAPSHOT_FIELDS.items():
+        identity = configuration.get(field)
+        if not identity:
+            continue
+        record = session.get(Entity, identity)
+        if record is None or record.kind != kind:
+            raise ValueError("补全计算未生成完整的固定业务快照")
+        snapshots.append(dict(id=identity, kind=kind, payload=record.payload))
+    return snapshots
+
+
+def restore_runtime_snapshots(session, snapshots):
+    for snapshot in snapshots:
+        existing = session.get(Entity, snapshot["id"])
+        if existing:
+            if existing.kind != snapshot["kind"] or existing.payload != snapshot["payload"]:
+                raise ValueError("固定业务快照标识与内容不一致")
+            continue
+        try:
+            with session.begin_nested():
+                session.add(Entity(**snapshot))
+                session.flush()
+        except IntegrityError:
+            existing = session.get(Entity, snapshot["id"])
+            if (
+                existing is None
+                or existing.kind != snapshot["kind"]
+                or existing.payload != snapshot["payload"]
+            ):
+                raise
+
+
+def projection_result(request, *, state, repository, checked, bindings):
     return {
         "state": state,
         "repository": repository,

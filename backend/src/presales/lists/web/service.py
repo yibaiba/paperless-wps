@@ -2,6 +2,8 @@
 
 from copy import deepcopy
 
+from sqlalchemy import select
+
 from presales.configuration.models import Entity, Revision
 from presales.configuration.projects.calculation.usage.versioning import projection_status
 from presales.configuration.projects.schemas import Configuration
@@ -9,7 +11,6 @@ from presales.configuration.projects.services.incremental import edit_check
 from presales.lists.catalog_snapshot import DraftCatalog, capture_catalog, edit_catalog_snapshot
 from presales.lists.receipts import once
 from presales.rules.repository import RuleConflict
-from sqlalchemy import select
 
 from .projection_patch import projection_patch
 

@@ -96,7 +96,8 @@ def confirmed_choice(valid):
 
 
 def empty_decision(*, query, issues, suppressed):
-    codes = {q.get("code") for q in issues if isinstance(q, dict)}
+    blocking = [q for q in issues if not isinstance(q, dict) or q.get("blocking", True)]
+    codes = {q.get("code") for q in blocking if isinstance(q, dict)}
     if "role_ambiguous" in codes or "product_source_ambiguous" in codes:
         return dict(status="choice_required", reason_code="identity_ambiguous")
     if suppressed:
@@ -111,7 +112,7 @@ def empty_decision(*, query, issues, suppressed):
         for code, status in input_reasons.items():
             if code in codes:
                 return dict(status=status, reason_code=code)
-    if issues:
+    if blocking:
         return dict(status="confirmation_required", reason_code="evidence_required")
     return dict(
         status="no_match" if query else "satisfied",
