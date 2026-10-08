@@ -5,6 +5,7 @@ import { api } from "../../../shared/api";
 import { ROOT, Status } from "../shared";
 import { BusinessChangeTable } from "./BusinessChangeTable";
 import { checkLabels } from "./checkLabels";
+import { businessKey } from "./configurationIdentity";
 import type { ChangePreview, Check, Configuration } from "../types";
 import type { RecheckInput } from './drafts/usePersistentDraft';
 
@@ -15,14 +16,16 @@ export function ProjectChangePanel({ projectId, revision, configuration, refresh
   const [upgradeDecisions, setUpgradeDecisions] = useState(false);
   const [baselineRequest] = useState(() => ({ expected_revision: revision, configuration: structuredClone(configuration), refresh_knowledge: refresh, upgrade_calculation: refresh, cleanup_allocations: cleanup }));
   const request = { ...baselineRequest, upgrade_decisions: upgradeDecisions };
+  const baselineKey = businessKey(request.configuration);
   const { message } = App.useApp();
-  const query = useQuery({ queryKey: ["configuration", "change-preview", projectId, request], retry: false, refetchOnWindowFocus: false,
+  const query = useQuery({ queryKey: ["configuration", "change-preview", projectId, revision, baselineKey, refresh, cleanup, upgradeDecisions], retry: false, refetchOnWindowFocus: false,
     queryFn: () => api<ChangePreview>(`${ROOT}/projects/${projectId}/change-preview`, { method: "POST", body: JSON.stringify(request) }),
   });
-  const stale = JSON.stringify(current()) !== JSON.stringify(request.configuration);
+  const currentMatchesPreview = () => businessKey(current()) === baselineKey;
+  const stale = !currentMatchesPreview();
   const apply = useMutation({
     mutationFn: () => {
-      if (JSON.stringify(current()) !== JSON.stringify(request.configuration)) throw new Error("草稿已变化，请关闭后重新预览");
+      if (!currentMatchesPreview()) throw new Error("草稿已变化，请关闭后重新预览");
       const { configuration: _configuration, expected_revision, ...flags } = request;
       return onApply({ ...flags, expected_project_revision: expected_revision, fingerprint: query.data!.fingerprint });
     },

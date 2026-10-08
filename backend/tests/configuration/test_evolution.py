@@ -205,6 +205,28 @@ def test_explicit_confirmation_and_saved_revision_stays_frozen(client, catalog, 
     assert stale.status_code == 409
 
 
+def test_change_preview_ignores_drawing_only_changes(client, catalog, config, project):
+    current = post(client, "/check", dict(configuration=ready_project(client, catalog, config)))[
+        "configuration"
+    ]
+    request = dict(expected_revision=0, configuration=current)
+    preview = post(client, f"/projects/{project['id']}/change-preview", request)
+    drawing = current["drawing_xml"].replace('name="项目配置"', 'name="移动后的图纸"')
+    assert drawing != current["drawing_xml"]
+
+    applied = client.post(
+        BASE + f"/projects/{project['id']}/change-apply",
+        json=dict(
+            request,
+            configuration={**current, "drawing_xml": drawing},
+            fingerprint=preview["fingerprint"],
+        ),
+    )
+
+    assert applied.status_code == 200, applied.text
+    assert 'name="移动后的图纸"' in applied.json()["configuration"]["drawing_xml"]
+
+
 def test_check_does_not_prune_allocations_in_version_three(client, catalog, config):
     data = dict(
         config,

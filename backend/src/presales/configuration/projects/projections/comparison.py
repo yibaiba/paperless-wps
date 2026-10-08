@@ -70,4 +70,6 @@ def preview_cleanup(checked):
 
 
 def preview_fingerprint(*, current, proposed, baseline_revision):
-    return digest([business_input(current), proposed, baseline_revision])
+    return digest(
+        [business_input(current), business_input(proposed), baseline_revision]
+    )
