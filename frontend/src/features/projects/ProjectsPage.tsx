@@ -29,7 +29,7 @@ export default function ProjectsPage() {
   const legacyActions = configuration.isSuccess && !unified;
   const create = useMutation({
     mutationFn: (values: { name: string }) => api<Project>('/projects', { method: 'POST', body: JSON.stringify(values) }),
-    onSuccess: async result => { await client.invalidateQueries({ queryKey: ['projects'] }); setCreating(false); form.resetFields(); navigate(`/projects/${result.id}`); },
+    onSuccess: async result => { await client.invalidateQueries({ queryKey: ['projects'] }); setCreating(false); form.resetFields(); navigate(`/configuration/${result.id}`); },
     onError: error => message.error(error.message),
   });
   const remove = useMutation({
@@ -62,10 +62,10 @@ export default function ProjectsPage() {
       {legacyActions&&(adding || editing) ? <ItemModal key={editing?.id ?? 'new'} projectId={projectId} item={editing} open onClose={() => { setAdding(false); setEditing(undefined); }} /> : null}
       {legacyActions&&calculating?<ProjectRulesDrawer projectId={projectId} onClose={()=>setCalculating(false)}/>:null}
     </> : <Card><Table<Project> rowKey="id" loading={projects.isLoading} dataSource={projects.data} locale={{ emptyText: <Empty description="还没有项目，创建后即可从产品库添加配置" /> }} columns={[
-      { title: '项目名称', dataIndex: 'name', render: (name, project) => <Button type="link" onClick={() => navigate(`/projects/${project.id}`)}>{name}</Button> },
+      { title: '项目名称', dataIndex: 'name', render: (name, project) => <Button type="link" onClick={() => navigate(`/configuration/${project.id}`)}>{name}</Button> },
       { title: '清单行数', dataIndex: 'item_count', render: value => <Tag>{value} 项</Tag> },
       { title: '创建时间', dataIndex: 'created_at', render: value => new Date(value).toLocaleString('zh-CN') },
-      { title: '操作', key: 'action', render: (_, project) => <Button onClick={() => navigate(`/projects/${project.id}`)}>打开清单</Button> },
+      { title: '操作', key: 'action', render: (_, project) => <Button onClick={() => navigate(`/configuration/${project.id}`)}>进入售前配置</Button> },
     ]} /></Card>}
     <Modal title="新建项目" open={creating} onCancel={() => setCreating(false)} onOk={() => form.submit()} confirmLoading={create.isPending} okText="创建项目" cancelText="取消">
       <Form form={form} layout="vertical" onFinish={values => create.mutate(values)}><Form.Item label="项目名称" name="name" rules={[{ required: true, whitespace: true, message: '请填写项目名称' }]}><Input placeholder="例如：办公楼会议系统改造" /></Form.Item></Form>

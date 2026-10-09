@@ -4,6 +4,7 @@ import DatabaseOutlined from '@ant-design/icons/DatabaseOutlined';
 import AuditOutlined from '@ant-design/icons/AuditOutlined';
 import ProfileOutlined from '@ant-design/icons/ProfileOutlined';
 import ApartmentOutlined from '@ant-design/icons/ApartmentOutlined';
+import SettingOutlined from '@ant-design/icons/SettingOutlined';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 
 const CatalogPage = lazy(() => import('./features/catalog/CatalogPage'));
@@ -27,14 +28,20 @@ export function Workbench() {
       <div className="nav-label">工作空间</div>
       <Menu mode="inline" selectedKeys={[location.pathname.split('/')[1] || 'catalog']}
         onClick={({ key }) => navigate(`/${key}`)} items={[
-          { key: 'catalog', icon: <DatabaseOutlined />, label: '产品资料库' },
-          { key: 'organize', icon: <DatabaseOutlined />, label: '产品整理' },
-          { key: 'knowledge', icon: <ApartmentOutlined />, label: '搭配知识' },
-          { key: 'extraction', icon: <AuditOutlined />, label: 'AI 资料整理' },
-          { key: 'issues', icon: <AuditOutlined />, label: '资料核对' },
-          { key: 'rules', icon: <ApartmentOutlined />, label: '旧配套规则' },
-          { key: 'topologies', icon: <ApartmentOutlined />, label: '方案拓扑' },
-          { key: 'projects', icon: <ProfileOutlined />, label: '项目清单' },
+          { key: 'product-workspace', icon: <DatabaseOutlined />, label: '产品与价格', children: [
+            { key: 'catalog', label: '产品资料库' },
+            { key: 'organize', label: '产品整理与价格' },
+          ] },
+          { key: 'knowledge', icon: <ApartmentOutlined />, label: '系统与搭配知识' },
+          { key: 'projects', icon: <ProfileOutlined />, label: '售前项目' },
+          { key: 'maintenance', icon: <AuditOutlined />, label: '资料维护', children: [
+            { key: 'issues', label: '资料核对' },
+            { key: 'extraction', label: 'AI 资料整理' },
+            { key: 'advanced-history', icon: <SettingOutlined />, label: '高级与历史', children: [
+              { key: 'rules', label: '旧配套规则' },
+              { key: 'topologies', label: '独立拓扑' },
+            ] },
+          ] },
         ]} />
       <div className="sidebar-footer"><span className="status-dot" />本地工作空间</div>
     </Layout.Sider>

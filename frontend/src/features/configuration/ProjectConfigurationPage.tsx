@@ -1,27 +1,17 @@
 import { ReferenceCasePanel } from "./referenceCases/ReferenceCasePanel";
-import { QuantityInputsForm } from "./projects/forms/QuantityInputsForm";
-import type { IssueAction, QuantityInputIssue } from "./types";
 import { DeviceInspector } from "./projects/DeviceInspector";
-import { requirementDeviceIds } from "./projects/roleAllocations";
 import { ProposalPanel } from "./projects/ProposalPanel";
-import { AssignDeviceDialog } from "./projects/AssignDeviceDialog";
 import { DraftRecovery } from "./projects/drafts/DraftRecovery";
 import { DraftPreviewContext } from "./projects/drafts/context";
 import type { Workspace } from "./projects/drafts/transport";
 import { preloadQuotationSheet } from './quotation/loadSheet';
-import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { Alert, Button, Card, Modal, Space, Tabs, Typography } from "antd";
+import { useParams } from "react-router-dom";
+import { Alert, Button, Card, Space, Tabs, Typography } from "antd";
 import { api } from "../../shared/api";
 import type { ProjectConfiguration } from "./types";
 import { ROOT } from "./shared";
 import { businessKey, useProjectEditor } from "./projects/useProjectEditor";
-import {
-  ProjectAuthor,
-  RequirementForm,
-  SystemForm,
-} from "./ProjectForms";
 import { ProjectCandidates } from "./ProjectCandidates";
 import { ConfigurationDrawing } from "./ConfigurationDrawing";
 import { ProjectReviewDrawer } from "./projects/ProjectReviewDrawer";
@@ -38,10 +28,10 @@ import { ProjectDefinitionPanel } from "./projects/ProjectDefinitionPanel";
 import { ProjectChangePanel } from "./projects/ProjectChangePanel";
 import { ProjectConfirmation } from "./projects/ProjectConfirmation";
 import { QuotationPanel } from "./quotation/QuotationPanel";
-import { requestedRole } from "./projects/definitionSelection";
-import { SystemInputsForm } from "./projects/forms/SystemInputsForm";
 import { ProjectStageNav, type ProjectStage } from "./projects/ProjectStageNav";
 import { ProjectRequirementsOverview } from "./projects/ProjectRequirementsOverview";
+import { useProjectInteractions } from "./projects/useProjectInteractions";
+import { ProjectDialogHost } from "./projects/ProjectDialogHost";
 
 export default function ProjectConfigurationPage() {
   const { projectId } = useParams();
@@ -69,30 +59,16 @@ function ConfigurationEditor({
   initial: ProjectConfiguration;
   workspace?: Workspace;
 }) {
-  const [inputSystemChoices, setInputSystemChoices] = useState<string[]>([]);
-  const [inputsSystemId, setInputsSystemId] = useState<string>();
-  const [quantityInputs, setQuantityInputs] = useState<QuantityInputIssue[]>();
-  const [customInputsSystemId, setCustomInputsSystemId] = useState<string>();
-  const [resourceRoles, setResourceRoles] = useState<string[]>([]);
-  const [assignDevice, setAssignDevice] = useState<string>();
-  const navigate = useNavigate();
-  const [returnParams] = useSearchParams();
-  const [sheetPending, setSheetPending] = useState(false);
-  const [reviewOpen, setReviewOpen] = useState(false);
-  const [reviewTab, setReviewTab] = useState("todo");
   const editor = useProjectEditor({ projectId, initial, workspace });
-  const [changeRequest, setChangeRequest] = useState<{ refresh: boolean; cleanup: boolean }>();
+  const interactions = useProjectInteractions(projectId, editor);
   const {
     draft,
     config,
     saved,
     dirty,
     checked,
-    systemModal,
     setSystemModal,
-    author,
     setAuthor,
-    requirementModal,
     setRequirementModal,
     selectedSystem,
     setSelectedSystem,
@@ -113,6 +89,10 @@ function ConfigurationEditor({
     close,
     tree,
   } = editor;
+  const {
+    sheetPending, setSheetPending, reviewOpen, setReviewOpen, reviewTab, setReviewTab,
+    changeRequest, setChangeRequest, returnedFromKnowledge, handleIssueAction,
+  } = interactions;
   const checkedStale =
     !checked || businessKey(checked.configuration) !== businessKey(config) ||
     (config.calculation_version === 3 && (!checked.usage_projection?.version || checked.usage_projection.current === false));
@@ -128,30 +108,6 @@ function ConfigurationEditor({
   const selectStage = (next: ProjectStage) => setTab(next === "requirements" ? "requirements" : next === "quotation" ? "quotation" : "list");
   const selecting = stage !== "quotation";
   const showInspector = stage === "configuration" && (tab === "list" || tab === "drawing") && (!!requirement || !!editingDevice);
-  const openMaintenance = (query: Record<string, string>, context?: { systemId?: string; requirementId?: string }) => navigate('/knowledge?' + new URLSearchParams({ ...query,
-    return_project: projectId, return_draft: editor.persistence.id ?? '', return_system: context?.systemId ?? selectedSystem ?? '',
-    return_requirement: context?.requirementId ?? requirement?.id ?? '' }));
-  const handleIssueAction = (action: IssueAction) => {
-        if (action.type === 'edit_accessory') { setReviewTab('accessories'); setReviewOpen(true); return; }
-        setReviewOpen(false);
-        if (action.type === 'edit_quantity_inputs' && action.quantity_inputs?.length) { setQuantityInputs(action.quantity_inputs); return; }
-        if (action.type === 'edit_resources' && action.requirement_ids?.length) { setResourceRoles(action.requirement_ids); return; }
-        if (action.type === 'assign_device' && action.device_id) { setAssignDevice(action.device_id); return; }
-        if (action.type === 'add_system') { setSystemModal(true); return; }
-        if (action.type === 'add_requirement' && action.system_id) { setRequirementModal({ systemId: action.system_id, requestedRole: requestedRole(action) }); return; }
-        if (action.type === 'edit_price') { setTab('quotation'); return; }
-        if (action.type === 'edit_supply') { setTab('supply'); return; }
-        if (action.type === 'edit_system_inputs') { if (action.system_id) setInputsSystemId(action.system_id); else setInputSystemChoices(action.system_ids ?? []); return; }
-        if (action.type === 'edit_inspection') { openMaintenance({ view: 'inspections', ...(action.profile_id ? { profile: action.profile_id } : {}) }); return; }
-        if (action.type === 'edit_definition') { openMaintenance({ view: 'systems', system: config.systems.find(s => s.id === action.system_id)?.definition_id ?? '' }, { systemId: action.system_id, requirementId: action.requirement_id }); return; }
-        if (action.type === 'edit_knowledge') { openMaintenance(action.rule_id ? { rule: action.rule_id, variant: action.variant_id ?? '' } : { variant: action.variant_id ?? '' }); return; }
-        setTab('list');
-        const role = config.requirements.find((r) => r.id === action.requirement_id);
-        if (['edit_resources', 'edit_requirement'].includes(action.type) && role) setRequirementModal({ systemId: role.system_id, initial: role });
-        else if (role) { setDeviceModal(undefined); setSelectedRequirement(role.id); setSelectedSystem(role.system_id); }
-        else if (action.device_id) { const related = config.requirements.filter((r) => requirementDeviceIds(r).includes(action.device_id!)); if (related.length === 1) setRequirementModal({ systemId: related[0].system_id, initial: related[0] }); else setAssignDevice(action.device_id); }
-
-  };
   return (
     <DraftPreviewContext.Provider value={editor.persistence.preview}><div className="configuration-page">
       {editor.persistence.error ? <Alert type="error" title={editor.persistence.phase === 'conflict' ? '草稿版本冲突' : editor.persistence.error}
@@ -161,12 +117,8 @@ function ConfigurationEditor({
       </Space>} /> : <Typography.Text type="secondary" role="status">
         {editor.persistence.phase === 'creating' ? "正在建立工作草稿…" : editor.persistence.syncing || editor.persistence.unsynced ? "草稿同步中…" : editor.persistence.id ? "工作草稿已同步；保存版本后可导出" : "修改会自动保存为工作草稿"}
       </Typography.Text>}
-      {returnParams.get('from_knowledge') ? <Alert type="info" title="已返回原项目草稿，维护后的资料尚未应用" action={<Button onClick={() => setChangeRequest({ refresh: true, cleanup: false })}>预览资料升级差异</Button>} /> : null}
-      {assignDevice && config.devices.some((d) => d.id === assignDevice) ? <AssignDeviceDialog deviceId={assignDevice} configuration={config} onApply={draft.commit} onClose={() => setAssignDevice(undefined)} /> : null}
-      <Modal open={inputSystemChoices.length > 0} title="选择需要核对规模的系统" footer={null} onCancel={() => setInputSystemChoices([])}><Space orientation="vertical">{config.systems.filter((s) => inputSystemChoices.includes(s.id)).map((s) => <Button key={s.id} onClick={() => { setInputsSystemId(s.id); setInputSystemChoices([]); }}>{s.name}</Button>)}</Space></Modal>
-      <Modal open={resourceRoles.length > 0} title="选择需要补充资源需求的角色" footer={null} onCancel={() => setResourceRoles([])}>
-        <Space orientation="vertical">{config.requirements.filter((r) => resourceRoles.includes(r.id)).map((r) => <Button key={r.id} onClick={() => { setRequirementModal({ systemId: r.system_id, initial: r }); setResourceRoles([]); }}>{config.systems.find((s) => s.id === r.system_id)?.name} / {r.role}</Button>)}</Space>
-      </Modal>
+      {returnedFromKnowledge ? <Alert type="info" title="已返回原项目草稿，维护后的资料尚未应用" action={<Button onClick={() => setChangeRequest({ refresh: true, cleanup: false })}>预览资料升级差异</Button>} /> : null}
+      <ProjectDialogHost editor={editor} dialogs={interactions} />
       <ReferenceCasePanel configuration={config} checked={checked} busy={busy} onChange={draft.commit}
         onDevice={id => { setDeviceModal(id); setSelectedRequirement(undefined); setTab("list"); }}
         onRole={id => { setDeviceModal(undefined); setSelectedRequirement(id); setTab("list"); }}
@@ -190,7 +142,7 @@ function ConfigurationEditor({
         onView={setTab}
         proposalAction={<ProposalPanel disabled={busy || sheetPending} readyWorkspace={editor.persistence.readyWorkspace} execute={editor.persistence.execute} onApply={editor.acceptChecked} />}
         secondaryActions={<>
-          <Button disabled={!selectedSystem || busy} onClick={() => setCustomInputsSystemId(selectedSystem)}>高级：系统自定义输入</Button>
+          <Button disabled={!selectedSystem || busy} onClick={() => interactions.setCustomInputsSystemId(selectedSystem)}>高级：系统自定义输入</Button>
           <Button onClick={() => setChangeRequest({ refresh: false, cleanup: false })}>预览本次改单</Button>
           <Button onClick={() => setChangeRequest({ refresh: false, cleanup: true })}>预览失效配套关联清理</Button>
           <ProjectConfirmation projectId={projectId} saved={saved} dirty={dirty} onConfirmed={editor.reloadSaved} />
@@ -221,7 +173,7 @@ function ConfigurationEditor({
           tree={tree}
           requirement={requirement}
           selectedSystem={selectedSystem}
-          onSystemInputs={(id) => setInputsSystemId(id)}
+          onSystemInputs={(id) => interactions.setInputsSystemId(id)}
           busy={busy}
           onAddSystem={() => setSystemModal(true)}
           onAddRequirement={(systemId) => setRequirementModal({ systemId })}
@@ -259,7 +211,7 @@ function ConfigurationEditor({
             items={[
               { key: "requirements", label: "需求与系统", children: <ProjectRequirementsOverview
                 configuration={config} selectedSystemId={selectedSystem}
-                onEditInputs={setInputsSystemId}
+                onEditInputs={interactions.setInputsSystemId}
                 onAddRequirement={(systemId) => setRequirementModal({ systemId })} /> },
               { key: "quotation", label: "报价与导出", children: <QuotationPanel configuration={config} output={checked?.quotation_output ?? saved.quotation_output} saved={saved} dirty={dirty} stale={checkedStale} busy={busy || sheetPending} checking={check.isPending} onApply={draft.commit} onCheck={recheck} sheetControls={{ configuration: config, saved, draftVersion: draft.version,
                 onChecked: editor.acceptChecked, onPending: setSheetPending, onUndo: draft.undo, onRedo: draft.redo, canUndo: draft.canUndo, canRedo: draft.canRedo,
@@ -357,49 +309,6 @@ function ConfigurationEditor({
           apply.mutate({ suggestion, choice })
         }
         onAction={handleIssueAction} />
-      {customInputsSystemId && config.systems.some(s => s.id === customInputsSystemId) ? <SystemInputsForm system={config.systems.find(s => s.id === customInputsSystemId)!} configuration={config} onClose={() => setCustomInputsSystemId(undefined)} onApply={inputs => draft.commit({ ...config, systems: config.systems.map(s => s.id === customInputsSystemId ? { ...s, inputs } : s) })} /> : null}
-      {inputsSystemId && config.systems.find((s) => s.id === inputsSystemId) ? <SystemForm
-        configuration={config} systemId={inputsSystemId} onClose={() => setInputsSystemId(undefined)} onApply={draft.commit} /> : null}
-      {systemModal ? (
-        <SystemForm
-          configuration={config}
-          onApply={draft.commit}
-          onClose={() => setSystemModal(false)}
-        />
-      ) : null}
-      {quantityInputs ? <QuantityInputsForm configuration={config} inputs={quantityInputs} onClose={() => setQuantityInputs(undefined)} onApply={draft.commit} /> : null}
-      {author ? (
-        <ProjectAuthor
-          configuration={config}
-          onApply={draft.commit}
-          onClose={() => setAuthor(false)}
-        />
-      ) : null}
-      {requirementModal ? (
-        <RequirementForm
-          devices={config.devices}
-          systemId={requirementModal.systemId}
-          definitionId={config.systems.find((s) => s.id === requirementModal.systemId)?.definition_id}
-          definitionSnapshotId={config.definition_snapshot_id}
-          knowledgePackageId={config.systems.find((s) => s.id === requirementModal.systemId)?.knowledge_package_id}
-          requestedRole={requirementModal.requestedRole}
-          systemName={
-            config.systems.find((s) => s.id === requirementModal.systemId)!.kind
-          }
-          initial={requirementModal.initial}
-          onClose={() => setRequirementModal(undefined)}
-          onApply={(r) =>
-            draft.commit({
-              ...config,
-              requirements: [
-                ...config.requirements.filter((old) => old.id !== r.id),
-                r,
-              ],
-            })
-          }
-        />
-      ) : null}
-
       <ProjectImportDialog editor={editor} />
       {changeRequest ? <ProjectChangePanel projectId={projectId} revision={saved.revision} configuration={config}
         refresh={changeRequest.refresh} cleanup={changeRequest.cleanup} current={() => draft.current.current}
