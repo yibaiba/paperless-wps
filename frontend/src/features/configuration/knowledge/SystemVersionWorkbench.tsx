@@ -14,6 +14,7 @@ import { SystemKnowledgeWorkbench } from './SystemKnowledgeWorkbench';
 import { requiredRoleLabel } from "../projects/definitionSelection";
 import { PackageReadiness } from "./PackageReadiness";
 import { KnowledgeReconciliation } from './KnowledgeReconciliation';
+import { PackagePortfolio } from './PackagePortfolio';
 
 const labels = { suitability: '适用候选', accessory: '配套需求', sharing: '共享条件', combination: '互斥 / 必选组合' };
 export function SystemVersionWorkbench() {
@@ -36,6 +37,7 @@ export function SystemVersionWorkbench() {
   const sourceVariants = variants.data?.filter((v) => referenced.has(v.id)) ?? [];
   return <Space orientation="vertical" size="middle" style={{ width: '100%' }}>
     <Alert type="info" title="按系统版本核对整套知识" description="适用、需要配套、候选、数量和共享分别核对。知识包尚未发布或数量未确认时，项目仍会显示资料不足。" />
+    <PackagePortfolio />
     {(definitions.error || knowledge.error || variants.error || packages.error) ? <Alert type="error" title={(definitions.error || knowledge.error || variants.error || packages.error)?.message} /> : null}
     <Select aria-label="维护系统版本" allowClear placeholder="选择系统版本" value={systemId} onChange={(value) => { setSystemId(value); setSelected([]); }} style={{ width: 440 }} options={definitions.data?.definitions.map((d) => ({ value: d.id, label: d.name }))} />
     {active ? <Card title={`${active.name} · 角色与知识覆盖`}>

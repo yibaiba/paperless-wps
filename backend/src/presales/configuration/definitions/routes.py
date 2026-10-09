@@ -46,6 +46,31 @@ def packages(session: Session = Depends(session_dependency)):
     return Entities(session).list("knowledge_package")
 
 
+@router.get("/knowledge-packages/readiness-summary")
+def package_readiness_summary(session: Session = Depends(session_dependency)):
+    from sqlalchemy import select
+
+    from ..models import Entity
+    from .readiness import package_portfolio
+
+    def read():
+        records = Entities(session).list("knowledge_package")
+        ids = {
+            identity
+            for package in records
+            for identity in [
+                package["system_definition_id"],
+                *[member["id"] for member in package["members"]],
+            ]
+        }
+        latest = dict(
+            session.execute(select(Entity.id, Entity.revision).where(Entity.id.in_(ids))).all()
+        )
+        return package_portfolio(records, latest=latest)
+
+    return execute(read)
+
+
 @router.get("/knowledge-packages/{identity}/readiness")
 def package_readiness(identity: str, session: Session = Depends(session_dependency)):
     from sqlalchemy import select

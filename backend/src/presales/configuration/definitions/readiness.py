@@ -1,5 +1,7 @@
 """Read-only package inventory, not project compatibility or publication approval."""
 
+from collections import Counter
+
 from ..knowledge.gaps import relation_gaps
 from .gaps import knowledge_gaps, role_gaps, role_rules
 
@@ -163,4 +165,50 @@ def package_readiness(package, *, latest):
         ),
         notice="按包内固定修订盘点；不执行项目环境、容量或数量检查，不代表整套方案通过。"
         "项目还会使用匹配的通用知识；未确认共享不影响独立部署，但共用时须补依据。",
+    )
+
+
+def package_portfolio(packages, *, latest):
+    return [portfolio_row(package_readiness(package, latest=latest)) for package in packages]
+
+
+def portfolio_row(report):
+    scenarios = {scenario["id"]: scenario for scenario in report["scenarios"]}
+    roles = report["generation_support"]["roles"]
+    issue_counts = Counter(issue["code"] for issue in report["issues"])
+    independent_blockers = [
+        issue
+        for issue in report["issues"]
+        if issue["scenario"] != "shared" and issue["code"] != "published_package_missing"
+    ]
+    shared_blockers = [
+        issue for issue in report["issues"] if issue["code"] != "published_package_missing"
+    ]
+    return dict(
+        id=report["id"],
+        revision=report["revision"],
+        name=report["name"],
+        status=report["status"],
+        definition_id=report["definition_id"],
+        definition_revision=report["definition_revision"],
+        definition_status=report["definition_status"],
+        scenarios=scenarios,
+        independent_content_ready=not independent_blockers,
+        shared_content_ready=not shared_blockers,
+        generation_roles=dict(
+            supported=sum(role["status"] == "supported" for role in roles),
+            partial=sum(role["status"] == "partial" for role in roles),
+            missing=sum(role["status"] == "missing" for role in roles),
+            with_confirmed_candidates=sum(bool(role["candidate_ids"]) for role in roles),
+            total=len(roles),
+        ),
+        confirmed_relations=report["summary"]["confirmed_relations"],
+        relation_count=report["summary"]["rules"],
+        blocker_fields=sorted(
+            {field for issue in report["issues"] for field in issue["missing_fields"]}
+        ),
+        issue_counts=dict(sorted(issue_counts.items())),
+        issue_count=len(report["issues"]),
+        version_change_count=len(report["version_changes"]),
+        readiness_path=f"/api/configuration/knowledge-packages/{report['id']}/readiness",
     )

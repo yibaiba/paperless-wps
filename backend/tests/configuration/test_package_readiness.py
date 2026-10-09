@@ -49,6 +49,20 @@ def test_draft_and_uncovered_role_not_reported_complete(client, catalog):
     assert support["roles"][0]["candidate_ids"] == [catalog["variants"][0]["id"]]
 
 
+def test_readiness_summary_uses_same_package_report_without_writing(client, catalog):
+    _, _, package = bundle(client, catalog)
+    before = client.get(BASE + "/knowledge-packages").json()
+    response = client.get(BASE + "/knowledge-packages/readiness-summary")
+    assert response.status_code == 200, response.text
+    row = next(item for item in response.json() if item["id"] == package["id"])
+    assert row["status"] == "draft"
+    assert row["scenarios"]["independent"]["status"] == "missing"
+    assert not row["independent_content_ready"]
+    assert row["generation_roles"]["with_confirmed_candidates"] == 1
+    assert row["readiness_path"].endswith(f"/{package['id']}/readiness")
+    assert client.get(BASE + "/knowledge-packages").json() == before
+
+
 def test_independent_scenario_ignores_only_shared_gap(client, catalog):
     definition, rule, package = bundle(client, catalog)
     definition.update(status="confirmed", roles=[dict(definition["roles"][0], required=True,
