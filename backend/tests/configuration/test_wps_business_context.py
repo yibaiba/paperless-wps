@@ -38,6 +38,59 @@ def test_context_requires_token_and_reads_fixed_baseline_without_writes(client, 
     assert entity_versions(client) == before
 
 
+def test_binding_captures_runtime_and_old_binding_can_migrate_without_project_save(
+    client, catalog
+):
+    headers, _, bound, body = setup_workbook(client, catalog)
+    assert bound["decision_runtime"] == "zen-v1"
+    assert bound["decision_bundle_id"]
+    initial_preview = client.post("/api/wps/sync/preview", headers=headers, json=body).json()
+    initial = client.post(
+        "/api/wps/sync/commit",
+        headers=headers,
+        json={
+            **body,
+            "preview_fingerprint": initial_preview["preview_fingerprint"],
+            "operation_id": str(uuid4()),
+        },
+    ).json()
+    body.update(
+        expected_binding_revision=initial["binding_revision"],
+        expected_draft_revision=initial["draft_revision"],
+        expected_project_revision=initial["base_revision"],
+        known_device_ids=initial["managed_device_ids"],
+    )
+    body["lines"][0]["device_id"] = initial["managed_device_ids"][0]
+    with client.app.state.session_factory() as session:
+        record = session.get(Entity, bound["binding_id"])
+        payload = deepcopy(record.payload)
+        payload.pop("decision_runtime")
+        payload.pop("decision_bundle_id")
+        record.payload = payload
+        session.commit()
+        draft_revision = session.get(Entity, bound["draft_id"]).revision
+
+    previewed = client.post(
+        "/api/wps/sync/preview", headers=headers, json={**body, "upgrade_decisions": True}
+    ).json()
+    assert previewed["has_changes"]
+    assert any(change["kind"] == "binding_runtime" for change in previewed["changes"])
+    committed = client.post(
+        "/api/wps/sync/commit",
+        headers=headers,
+        json={
+            **body,
+            "upgrade_decisions": True,
+            "preview_fingerprint": previewed["preview_fingerprint"],
+            "operation_id": str(uuid4()),
+        },
+    )
+    assert committed.status_code == 200, committed.text
+    assert committed.json()["decision_runtime"] == "zen-v1"
+    with client.app.state.session_factory() as session:
+        assert session.get(Entity, bound["draft_id"]).revision == draft_revision
+
+
 def test_v2_preview_keeps_software_and_unknown_supply_without_saving(client, catalog):
     headers, _, _, body = setup_workbook(client, catalog)
     body["lines"][0]["kind"] = "software"

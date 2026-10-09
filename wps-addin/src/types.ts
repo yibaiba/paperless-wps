@@ -195,6 +195,7 @@ export interface SyncPreviewResult {
   issues: Array<Record<string, unknown>>;
   line_bindings: LineBinding[];
   has_changes: boolean;
+  configuration_changed: boolean;
   operation_count: number;
   decision_runtime?: 'python-v3' | 'zen-v1';
   decision_bundle_id?: string | null;

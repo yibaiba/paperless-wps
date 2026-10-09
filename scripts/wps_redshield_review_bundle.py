@@ -7,13 +7,15 @@ import argparse
 import json
 import os
 from collections import Counter
+from copy import deepcopy
 from datetime import UTC, datetime
 from pathlib import Path
 from uuid import NAMESPACE_URL, uuid5
 
 from dotenv import load_dotenv
-from paperless_review.maintenance import apply_plan
+from paperless_review.maintenance import apply_plan, proposal
 from presales.configuration.catalog.service import CatalogService
+from presales.configuration.definitions.schemas import KnowledgePackage
 from presales.configuration.knowledge.schemas import KnowledgeInput
 from presales.configuration.models import Entity, SourceLink
 from presales.rules.calculation import digest
@@ -84,10 +86,9 @@ COMBINATION_ID = str(
 )
 
 
-def zen_combination_review(*, sources, package):
+def zen_combination_review(*, sources, package, change):
     evidence_rows = [*range(41, 48)]
     evidence_refs = combination_evidence(sources, rows=evidence_rows)
-    payload = combination_payload(sources, package=package, evidence_refs=evidence_refs)
     retained = [
         rule["id"]
         for rule in package["rules"]
@@ -95,9 +96,9 @@ def zen_combination_review(*, sources, package):
         in {"redshield.windows.client-software", "redshield.windows.server-software"}
     ]
     draft = {
-        "id": COMBINATION_ID,
-        "expected_revision": 0,
-        "payload": payload,
+        "id": change["id"],
+        "expected_revision": change["expected_revision"],
+        "payload": change["payload"],
         "evidence_hash": digest(evidence_refs),
         "source_guards": {
             sources[row][1]["id"]: digest(sources[row][1]) for row in evidence_rows
@@ -108,6 +109,40 @@ def zen_combination_review(*, sources, package):
         ],
     }
     return combination_report(package, retained=retained, draft=draft)
+
+
+def add_combination_change(plan, *, sources, current_rule=None):
+    package = next(change for change in plan["changes"] if change["kind"] == "knowledge_package")
+    if current_rule and current_rule["payload"].get("status") != "draft":
+        raise ValueError("现有红盾组合规则不是草稿，不能由只读复核覆盖")
+    evidence_refs = combination_evidence(sources, rows=range(41, 48))
+    payload = combination_payload(sources, package=package["before"], evidence_refs=evidence_refs)
+    current = {COMBINATION_ID: current_rule} if current_rule else {}
+    combination = proposal(current, kind="knowledge", identity=COMBINATION_ID, payload=payload)
+    members = {item["id"]: item for item in package["payload"]["members"]}
+    members[COMBINATION_ID] = {
+        "id": COMBINATION_ID,
+        "revision": combination["result_revision"],
+    }
+    package_payload = KnowledgePackage.model_validate(
+        dict(package["payload"], members=sorted(members.values(), key=lambda item: item["id"]))
+    ).model_dump(mode="json")
+    package_current = {
+        package["id"]: {
+            "kind": "knowledge_package",
+            "revision": package["expected_revision"],
+            "payload": package["before"],
+        }
+    }
+    updated_package = proposal(
+        package_current,
+        kind="knowledge_package",
+        identity=package["id"],
+        payload=package_payload,
+    )
+    changes = [change for change in plan["changes"] if change["id"] != package["id"]]
+    changes.extend([combination, updated_package])
+    return dict(deepcopy(plan), changes=changes, fingerprint=digest(changes))
 
 
 def combination_evidence(sources, *, rows):
@@ -259,6 +294,7 @@ def review_bundle(plan, *, variants, imports):
             "revision": package["expected_revision"],
             **current,
         },
+        change=next(change for change in plan["changes"] if change["id"] == COMBINATION_ID),
     )
     return {
         "schema_version": 1,
@@ -318,7 +354,22 @@ def main():
         with Session(engine) as session:
             before = {r.id: r.revision for r in session.scalars(select(Entity))}
             variants = CatalogService(session).variants()
-            plan = dict(build_plan(session), **source_guards(session, variants))
+            existing = session.get(Entity, COMBINATION_ID)
+            current_rule = (
+                {
+                    "kind": existing.kind,
+                    "revision": existing.revision,
+                    "payload": existing.payload,
+                }
+                if existing
+                else None
+            )
+            plan = add_combination_change(
+                build_plan(session),
+                sources=reviewed_sources(variants),
+                current_rule=current_rule,
+            )
+            plan = dict(plan, **source_guards(session, variants))
             import_ids = {
                 source["import_id"] for _, source in reviewed_sources(variants).values()
             }

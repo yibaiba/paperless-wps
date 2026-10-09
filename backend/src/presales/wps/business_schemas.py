@@ -7,6 +7,7 @@ from pydantic import Field, JsonValue
 from presales.configuration.common import Input, Text
 from presales.configuration.projects.edit_schemas import (
     AccessoryChoice,
+    AccessoryChoiceClear,
     AccessoryLink,
     AccessoryRemove,
     IncludedLink,
@@ -36,6 +37,7 @@ BusinessOperation = Annotated[
     | AccessoryLink
     | AccessoryRemove
     | AccessoryChoice
+    | AccessoryChoiceClear
     | IncludedLink
     | IncludedRemove
     | RequirementRemove,

@@ -40,13 +40,11 @@ def combination_step_branches(
     check = checks[0]
     if check["code"] == "combination_exclude" or not check["generation_enabled"]:
         return [], [combination_question(check)]
-    selected = selected_groups(check, variant_id=getattr(context, "selected_variant_id", ""))
-    branches = []
-    for group in selected:
+    groups = selected_groups(check, variant_id=getattr(context, "selected_variant_id", ""))
+    generated = []
+    for group in groups:
         for proposed, gaps, decisions, _ in group_branches(context, data, group=group, tasks=tasks):
-            if len(selected) > 1:
-                gaps = [*gaps, alternative_question(check)]
-            branches.append(
+            generated.append(
                 {
                     "proposed": proposed,
                     "gaps": gaps,
@@ -54,6 +52,13 @@ def combination_step_branches(
                     "planning": combination_planning(check, group),
                 }
             )
+    branches = select_generated_branches(
+        generated, variant_id=getattr(context, "selected_variant_id", "")
+    )
+    ambiguous = len({branch["planning"]["target_id"] for branch in branches}) > 1
+    if ambiguous:
+        for branch in branches:
+            branch["gaps"] = [*branch["gaps"], alternative_question(check)]
     if branches:
         return branches, []
     return [], [combination_question(check)]
@@ -65,6 +70,33 @@ def selected_groups(check, *, variant_id=""):
         return groups[:1]
     matching = [group for group in groups if variant_id in group["target"]["variant_ids"]]
     return matching or groups
+
+
+def select_generated_branches(branches, *, variant_id=""):
+    if not variant_id:
+        return branches
+    matching = [branch for branch in branches if variant_id in branch_variant_ids(branch)]
+    return matching or branches
+
+
+def branch_variant_ids(branch):
+    devices = {device["id"]: device for device in branch.get("proposed", {}).get("devices", [])}
+    identities = {
+        evidence["variant_id"]
+        for evidence in branch.get("evidence", [])
+        if isinstance(evidence, dict) and evidence.get("variant_id")
+    }
+    device_ids = {
+        identity
+        for evidence in branch.get("evidence", [])
+        if isinstance(evidence, dict)
+        for identity in [evidence.get("device_id"), *(evidence.get("device_ids") or [])]
+        if identity
+    }
+    identities.update(
+        devices[identity]["variant_id"] for identity in device_ids if identity in devices
+    )
+    return identities
 
 
 def combination_evidence(check, group):

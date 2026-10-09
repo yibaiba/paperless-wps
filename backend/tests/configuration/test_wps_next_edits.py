@@ -1,8 +1,12 @@
 from copy import deepcopy
 from uuid import NAMESPACE_URL, uuid4, uuid5
 
-from presales.configuration.projects.planning.combination_steps import selected_groups
-from presales.wps.next_edit_projection import deferred_combination
+from presales.configuration.projects.planning.combination_steps import (
+    select_generated_branches,
+    selected_groups,
+)
+from presales.wps.edit_scope import scope_errors
+from presales.wps.next_edit_projection import deferred_combination, semantic_operations
 
 from .conftest import AUTHOR, post
 from .test_proposal_generation import published
@@ -70,7 +74,7 @@ def preview(client, headers, body):
     return response.json()
 
 
-def combination_completion_body(client, catalog, *, mode="require_all"):
+def combination_completion_body(client, catalog, *, mode="require_all", scope="system"):
     terminal, addon = catalog["variants"][:2]
     quantity = dict(status="confirmed", scope="system", mode="per_group", factor="1", **AUTHOR)
     definition = post(
@@ -117,7 +121,7 @@ def combination_completion_body(client, catalog, *, mode="require_all"):
                 selector=dict(variant_ids=[terminal["id"]]),
                 combination=dict(
                     mode=mode,
-                    scope="system",
+                    scope=scope,
                     targets=[
                         dict(
                             id="addon",
@@ -496,6 +500,174 @@ def test_explicit_variant_selects_one_require_any_branch():
     check = {"code": "combination_require_any", "groups": groups}
     assert selected_groups(check) == groups
     assert selected_groups(check, variant_id="b") == [groups[1]]
+
+
+def test_explicit_variant_selects_indirect_need_branch_after_generation():
+    branches = [
+        {
+            "evidence": [{"variant_id": "a"}],
+            "planning": {"target_id": "need-a"},
+        },
+        {
+            "evidence": [{"device_id": "device-b"}],
+            "planning": {"target_id": "need-b"},
+            "proposed": {"devices": [{"id": "device-b", "variant_id": "b"}]},
+        },
+    ]
+    assert select_generated_branches(branches, variant_id="b") == [branches[1]]
+
+
+def test_project_combination_does_not_write_other_system_into_active_scope(client, catalog):
+    headers, body = combination_completion_body(client, catalog, scope="project")
+    other = deepcopy(body["business_operations"][0])
+    other["new_room"] = {"id": "other-room", "name": "另一会议室"}
+    other["system"].update(id="other-system", room_id="other-room")
+    other["role_ids"] = []
+    body["business_operations"].append(other)
+    body = accept(body, preview(client, headers, body)["items"][0])
+
+    item = preview(client, headers, body)["items"][0]
+
+    assert not item["applicable"]
+    assert any("other-system" in str(issue) for issue in item["issues"])
+
+
+def test_semantic_only_change_does_not_write_other_system_into_active_scope():
+    requirement = {
+        "id": "other-requirement",
+        "system_id": "other-system",
+        "allocations": [],
+    }
+    checked = {
+        "configuration": {
+            "requirements": [requirement],
+            "accessory_allocations": [],
+            "included_allocations": [],
+        },
+        "suggestions": [],
+    }
+    errors = scope_errors(
+        {"checked": checked},
+        [
+            {
+                "kind": "requirements",
+                "id": requirement["id"],
+                "before": None,
+                "after": requirement,
+            }
+        ],
+        baseline={"configuration": {"requirements": []}, "suggestions": []},
+        active_system_id="active-system",
+    )
+
+    assert len(errors) == 1
+    assert "other-system" in errors[0]
+
+
+def test_accessory_semantics_do_not_cross_the_active_system_scope():
+    checked = {
+        "configuration": {
+            "requirements": [
+                {
+                    "id": "other-requirement",
+                    "system_id": "other-system",
+                    "allocations": [],
+                }
+            ],
+            "accessory_allocations": [],
+            "included_allocations": [],
+        },
+        "suggestions": [
+            {"id": "other-demand", "consumer_requirement_ids": ["other-requirement"]}
+        ],
+    }
+    allocation = {
+        "kind": "accessory_allocations",
+        "id": "allocation",
+        "before": None,
+        "after": {"id": "allocation", "demand_id": "other-demand", "device_id": "device"},
+    }
+    choice = {
+        "kind": "accessory_choices",
+        "id": "choices",
+        "before": [],
+        "after": [{"demand_id": "other-demand", "selected": True}],
+    }
+
+    for change in (allocation, choice):
+        errors = scope_errors(
+            {"checked": checked},
+            [change],
+            baseline=checked,
+            active_system_id="active-system",
+        )
+        assert len(errors) == 1
+        assert "other-system" in errors[0]
+
+
+def test_unknown_device_scope_is_blocked_unless_row_belongs_to_active_scope():
+    checked = {
+        "configuration": {
+            "requirements": [],
+            "accessory_allocations": [],
+            "included_allocations": [],
+        },
+        "suggestions": [],
+    }
+    change = {
+        "kind": "devices",
+        "id": "unassigned-device",
+        "before": None,
+        "after": {"id": "unassigned-device"},
+    }
+    arguments = dict(
+        option={"checked": checked},
+        changes=[change],
+        baseline=checked,
+        active_system_id="active-system",
+    )
+
+    assert "无法确定所属系统" in scope_errors(**arguments)[0]
+    assert not scope_errors(**arguments, active_device_ids={"unassigned-device"})
+
+
+def test_accessory_choice_is_persisted_and_can_be_cleared():
+    configuration = {"supply_allocations": []}
+    choice = {"demand_id": "microphone-demand", "selected": True}
+
+    apply = semantic_operations(
+        configuration,
+        [
+            {
+                "kind": "accessory_choices",
+                "id": "choices",
+                "before": [],
+                "after": [choice],
+            }
+        ],
+    )
+    clear = semantic_operations(
+        configuration,
+        [
+            {
+                "kind": "accessory_choices",
+                "id": "choices",
+                "before": [choice],
+                "after": [],
+            }
+        ],
+    )
+
+    assert apply == [
+        {
+            "action": "accessory_choice",
+            "demand_id": "microphone-demand",
+            "selected": True,
+        }
+    ]
+    assert clear == [
+        {"action": "accessory_choice_clear", "demand_id": "microphone-demand"}
+    ]
 
 
 def test_replacement_cannot_carry_an_unmanaged_old_price_into_new_identity(client, catalog):

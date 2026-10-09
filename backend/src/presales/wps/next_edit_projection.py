@@ -5,6 +5,8 @@ from uuid import NAMESPACE_URL, uuid5
 from presales.quotation.calculation import unit_price
 from presales.rules.calculation import digest
 
+from .edit_scope import scope_errors
+
 PRODUCT_FIELDS = ("model", "name", "description", "unit", "brand", "price")
 SNAPSHOT_FIELDS = {"variant_snapshot", "source_snapshot"}
 DERIVED_CHANGE_KINDS = {"quotation"}
@@ -34,7 +36,21 @@ def project_next_edit(option, *, request, profile, projection):
     option = normalized_identities(option, request=request, projection=projection)
     changes = business_changes(option["changes"])
     devices = [c for c in changes if c["kind"] == "devices"]
-    patches, bindings, errors, used = [], [], [], set()
+    active_device_ids = {
+        line.device_id
+        for line in request.lines
+        if line.device_id
+        and line.sheet == request.scope.sheet
+        and request.scope.start_row <= line.row <= request.scope.end_row
+    }
+    errors = scope_errors(
+        option,
+        changes,
+        baseline=projection["checked"],
+        active_system_id=request.scope.system_id,
+        active_device_ids=active_device_ids,
+    )
+    patches, bindings, used = [], [], set()
     removed_lines = []
     for change in devices:
         device = change["after"]
@@ -297,6 +313,8 @@ def semantic_operations(configuration, changes):
                 operations.append(dict(action="included_remove", allocation_id=before["id"]))
             if after:
                 operations.append(dict(action="included_link", value=after))
+        if kind == "accessory_choices":
+            operations.extend(accessory_choice_operations(before or [], after or []))
     devices = {
         c[side]["device_id"]
         for c in changes
@@ -314,4 +332,24 @@ def semantic_operations(configuration, changes):
         )
         for identity in sorted(devices)
     )
+    return operations
+
+
+def accessory_choice_operations(before, after):
+    old = {item["demand_id"]: item for item in before}
+    new = {item["demand_id"]: item for item in after}
+    operations = []
+    for identity in sorted(old.keys() | new.keys()):
+        if old.get(identity) == new.get(identity):
+            continue
+        if identity not in new:
+            operations.append(dict(action="accessory_choice_clear", demand_id=identity))
+            continue
+        operations.append(
+            dict(
+                action="accessory_choice",
+                demand_id=identity,
+                selected=new[identity]["selected"],
+            )
+        )
     return operations

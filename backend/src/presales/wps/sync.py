@@ -32,7 +32,13 @@ class WorkbookSync:
         operations, line_bindings = self._operations(request, state)
         proposed = self._proposed(state, operations)
         proposed = self._decision_preview(request, proposed)
-        changes = configuration_diff(state["configuration"], proposed["configuration"])
+        configuration_changes = configuration_diff(
+            state["configuration"], proposed["configuration"]
+        )
+        binding_changes = self._binding_runtime_changes(
+            state["binding"], proposed["configuration"]
+        )
+        changes = [*configuration_changes, *binding_changes]
         fingerprint = digest(
             [
                 request.model_dump(mode="json"),
@@ -47,6 +53,7 @@ class WorkbookSync:
             "issues": self._issues(proposed),
             "line_bindings": line_bindings,
             "has_changes": bool(changes),
+            "configuration_changed": bool(configuration_changes),
             "operation_count": len(operations),
             "configuration": proposed["configuration"],
             "decision_runtime": proposed["configuration"].get("decision_runtime", "python-v3"),
@@ -78,8 +85,12 @@ class WorkbookSync:
                 "binding_revision": binding.revision,
                 "project_revision": binding.payload["base_revision"],
                 "line_bindings": preview["line_bindings"],
+                "decision_runtime": preview["decision_runtime"],
+                "decision_bundle_id": preview["decision_bundle_id"],
             }
         state = self._state(preview_request)
+        if not preview["configuration_changed"]:
+            return self._commit_binding_runtime(state, preview=preview, actor=actor)
         operations, line_bindings = self._operations(preview_request, state)
         updated = self._update_draft(state, operations, operation_id=request.operation_id)
         checked = self.lists.check(
@@ -150,6 +161,51 @@ class WorkbookSync:
                 operations=operations,
             )
         )
+
+    def _commit_binding_runtime(self, state, *, preview, actor):
+        binding = state["binding"]
+        payload = dict(
+            binding.payload,
+            decision_runtime=preview["decision_runtime"],
+            decision_bundle_id=preview["decision_bundle_id"],
+            managed_device_ids=[item["device_id"] for item in preview["line_bindings"]],
+            line_bindings=preview["line_bindings"],
+            historical_line_devices={
+                **binding.payload.get("historical_line_devices", {}),
+                **{
+                    line["line_id"]: line["device_id"]
+                    for line in binding.payload.get("line_bindings", [])
+                },
+                **{line["line_id"]: line["device_id"] for line in preview["line_bindings"]},
+            },
+            last_synced_by=actor,
+        )
+        saved = self.entities.save(
+            "wps_workbook_binding",
+            payload,
+            entity_id=binding.id,
+            expected_revision=binding.revision,
+        )
+        return {
+            **payload,
+            "status": "saved",
+            "binding_id": binding.id,
+            "binding_revision": saved["revision"],
+            "project_revision": binding.payload["base_revision"],
+            "line_bindings": preview["line_bindings"],
+        }
+
+    @staticmethod
+    def _binding_runtime_changes(binding, configuration):
+        fields = ("decision_runtime", "decision_bundle_id")
+        before = {field: binding.payload.get(field) for field in fields}
+        after = {
+            "decision_runtime": configuration.get("decision_runtime", "python-v3"),
+            "decision_bundle_id": configuration.get("decision_bundle_id"),
+        }
+        if before == after:
+            return []
+        return [dict(kind="binding_runtime", id=binding.id, before=before, after=after)]
 
     def _state(self, request):
         binding = self.entities.get(request.binding_id, kind="wps_workbook_binding")

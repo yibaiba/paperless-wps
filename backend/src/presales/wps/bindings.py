@@ -36,6 +36,8 @@ class WorkbookBindings:
                 operation_id=f"{request.operation_id}:draft",
             )
         )
+        draft_record = self.entities.get(draft["id"], kind="list_draft")
+        configuration = draft_record.payload["configuration"]
         binding_id = str(uuid5(NAMESPACE_URL, f"presales-wps-binding:{request.operation_id}"))
         payload = {
             "schema_version": 1,
@@ -48,6 +50,8 @@ class WorkbookBindings:
             "template_profile_revision": request.template_profile_revision,
             "managed_device_ids": [],
             "line_bindings": [],
+            "decision_runtime": configuration.get("decision_runtime", "python-v3"),
+            "decision_bundle_id": configuration.get("decision_bundle_id"),
             "created_by": actor,
         }
         result = self.entities.save("wps_workbook_binding", payload, create_id=binding_id)

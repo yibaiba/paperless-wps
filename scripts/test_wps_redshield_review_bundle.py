@@ -1,7 +1,7 @@
 from copy import deepcopy
 
 from test_redshield_package_review import sources
-from wps_redshield_review_bundle import review_bundle
+from wps_redshield_review_bundle import add_combination_change, review_bundle
 
 
 def test_review_does_not_confirm_rules_or_invent_accepted_trajectories():
@@ -27,7 +27,29 @@ def test_review_does_not_confirm_rules_or_invent_accepted_trajectories():
                     "status": "draft",
                     "name": "隔离测试知识包",
                     "rules": [rule],
+                    "branch": "Windows",
+                    "system_definition_id": "d",
+                    "definition_revision": 2,
+                    "members": [{"id": "r", "revision": 2}],
+                    "coverage": [],
+                    "recommendations": [],
+                    "actor": "隔离测试",
+                    "evidence": "隔离测试",
                 },
+                "payload": {
+                    "status": "draft",
+                    "name": "隔离测试知识包",
+                    "branch": "Windows",
+                    "system_definition_id": "d",
+                    "definition_revision": 2,
+                    "members": [{"id": "r", "revision": 2}],
+                    "coverage": [],
+                    "recommendations": [],
+                    "actor": "隔离测试",
+                    "evidence": "隔离测试",
+                },
+                "changed": False,
+                "result_revision": 2,
             },
             {
                 "kind": "system_definition",
@@ -37,6 +59,7 @@ def test_review_does_not_confirm_rules_or_invent_accepted_trajectories():
             },
         ],
     }
+    plan = add_combination_change(plan, sources=selected)
     original = deepcopy(plan)
     result = review_bundle(plan, variants=variants, imports=[])
     assert plan == original
@@ -49,6 +72,14 @@ def test_review_does_not_confirm_rules_or_invent_accepted_trajectories():
     assert zen["mode"] == "review_only"
     assert zen["draft_rules"][0]["payload"]["status"] == "draft"
     assert zen["draft_rules"][0]["payload"]["combination"]["mode"] == "require_all"
+    combination = next(
+        change for change in plan["changes"] if change["id"] == zen["draft_rules"][0]["id"]
+    )
+    package = next(
+        change for change in plan["changes"] if change["kind"] == "knowledge_package"
+    )
+    assert combination["kind"] == "knowledge"
+    assert {member["id"] for member in package["payload"]["members"]} >= {combination["id"]}
     assert zen["blocked_items"][0]["id"] == "redshield.windows.server-hardware"
     assert "Windows" in zen["blocked_items"][0]["reason"]
     assert not result["pilot_readiness"]["ready_for_pilot"]
