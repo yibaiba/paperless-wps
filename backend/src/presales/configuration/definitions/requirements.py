@@ -170,9 +170,8 @@ def role_fields(profile, rules, attributes):
 
 
 def read_description(session, request, *, catalog=None):
-    from presales.lists.catalog_snapshot import DraftCatalog
-
     from ..catalog.service import CatalogService
+    from ..catalog.snapshots import DraftCatalog
 
     catalog = catalog or (
         DraftCatalog(session, request.catalog_snapshot_id)

@@ -1,19 +1,12 @@
-"""Shared transport dependencies; business services do not import route modules."""
+"""Compatibility imports and configuration transport dependencies."""
 
-from fastapi import HTTPException, Request
+from fastapi import Request
 
-from presales.api import require_found
-from presales.rules.repository import RuleConflict
+from presales.http import execute
 
 
 def quantity_engine(request: Request):
     return request.app.state.quantity_engine
 
 
-def execute(action):
-    try:
-        return require_found(action())
-    except RuleConflict as error:
-        raise HTTPException(status_code=409, detail=str(error)) from error
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error)) from error
+__all__ = ["execute", "quantity_engine"]

@@ -1,9 +1,9 @@
 from copy import deepcopy
 
+from presales.application.idempotency import once
 from presales.configuration.catalog.service import CatalogService
 from presales.configuration.common import Entities, view
 from presales.configuration.models import SourceLink
-from presales.lists.receipts import once
 from presales.rules.calculation import digest
 from presales.rules.repository import RuleConflict
 

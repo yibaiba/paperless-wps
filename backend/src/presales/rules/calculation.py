@@ -1,13 +1,9 @@
-import json
 from collections import defaultdict
 from decimal import Decimal
-from hashlib import sha256
+
+from presales.application.hashing import digest
 
 from .definition import source_ids, target_ids
-
-
-def digest(value) -> str:
-    return sha256(json.dumps(value, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
 
 
 def quantities(items: list[dict]) -> dict:

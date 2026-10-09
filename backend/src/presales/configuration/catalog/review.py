@@ -1,8 +1,7 @@
 """All configuration editors use the same technical-change review policy."""
 
-from presales.catalog_updates.impacts import affected
-
 from ..common import Entities
+from .impacts import affected
 from .schemas import VariantInput
 
 TECHNICAL_FIELDS = (

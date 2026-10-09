@@ -1,5 +1,6 @@
 """The same transaction boundary is called by both HTTP and MCP."""
 
+from presales.configuration.projects.revision_reading import saved_revision
 from presales.quotation.artifacts import ListExports
 
 from . import queries
@@ -26,6 +27,9 @@ class ListApplication:
         self.exports = ListExports(
             session,
             repository=self.lists.repository,
+            revision_reader=lambda project_id, revision: saved_revision(
+                self.lists.repository, project_id=project_id, revision=revision
+            ),
             renderer=renderer,
             files=files,
             web_origin=web_origin,

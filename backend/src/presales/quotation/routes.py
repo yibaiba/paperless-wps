@@ -1,6 +1,6 @@
 from fastapi import APIRouter, UploadFile
 
-from presales.configuration.http import execute
+from presales.http import execute
 
 from .importing import workbook_cells
 

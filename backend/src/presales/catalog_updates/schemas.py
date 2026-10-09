@@ -7,6 +7,9 @@ from pydantic import Field, model_validator
 from presales.catalog.parser import PRICE_HEADERS
 from presales.configuration.catalog.schemas import ProductInput, VariantInput
 from presales.configuration.common import Authored, Input, Text
+from presales.pricing.schemas import AdoptPrice as AdoptPrice
+from presales.pricing.schemas import PriceAdoptOperation as PriceAdoptOperation
+from presales.pricing.schemas import PriceRef as PriceRef
 
 
 class PriceChange(Input):
@@ -73,23 +76,6 @@ class PreviewBatch(Input):
 class ApplyBatch(PreviewBatch):
     fingerprint: Text
     operation_id: Text
-
-
-class PriceRef(Input):
-    id: Text
-    revision: int = Field(ge=1)
-
-
-class AdoptPrice(Input):
-    device_id: Text
-    price: PriceRef
-
-
-class PriceAdoptOperation(Input):
-    action: Literal["price_versions_adopt"]
-    adoption_date: date
-    items: list[AdoptPrice] = Field(min_length=1)
-    fingerprint: Text
 
 
 class ProjectPricePreview(Input):

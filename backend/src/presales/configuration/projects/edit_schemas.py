@@ -3,7 +3,6 @@ from typing import Annotated, Literal
 
 from pydantic import Field, model_validator
 
-from presales.catalog_updates.schemas import PriceAdoptOperation
 from presales.configuration.common import Input, Text
 from presales.configuration.projects.evolution_schemas import SupplyAllocation
 from presales.configuration.projects.schemas import (
@@ -14,6 +13,7 @@ from presales.configuration.projects.schemas import (
     Room,
     System,
 )
+from presales.pricing.schemas import PriceAdoptOperation
 from presales.quotation.schemas import Quotation, QuotedPrice
 
 from ..reference_cases.schemas import CaseSet

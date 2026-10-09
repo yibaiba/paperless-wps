@@ -1,7 +1,5 @@
-"""Transaction boundary shared by configuration HTTP routes."""
+"""Compatibility import for existing configuration routes."""
 
+from presales.application.transactions import commit
 
-def commit(session, operation):
-    result = operation()
-    session.commit()
-    return result
+__all__ = ["commit"]

@@ -30,7 +30,7 @@ def prepare_configuration(session, catalog, data, *, refresh=False):
         session, data=result, refresh=refresh
     )
     result["drawing_xml"] = project_drawing(result["drawing_xml"], devices=result["devices"])
-    from presales.catalog_updates.project_prices import validate_references
+    from .price_adoption import validate_references
 
     validate_references(session, result)
     return adopt_prices(result), variants, current

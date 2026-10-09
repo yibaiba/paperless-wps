@@ -1,39 +1,19 @@
 from sqlalchemy import select
 
+from presales.application.pagination import page
 from presales.configuration.catalog.service import CatalogService
 from presales.configuration.common import Entities
-from presales.configuration.definitions.service import Definitions
 from presales.configuration.knowledge.evaluator import scope_matches
 from presales.configuration.models import Entity, Revision
 from presales.configuration.projects.calculation.inspections import effective_environment
 from presales.configuration.projects.candidates import candidate_results
 from presales.configuration.projects.knowledge_snapshot import candidate_knowledge
+from presales.configuration.projects.revision_reading import saved_revision as saved_revision
 from presales.configuration.projects.schemas import CandidateRequest
 from presales.storage import ProductRecord, Project
 
 from .catalog_snapshot import DraftCatalog
 from .search_matching import matches_query
-
-
-def page(items, request):
-    end = request.offset + request.limit
-    return dict(
-        items=items[request.offset : end],
-        total=len(items),
-        offset=request.offset,
-        next_offset=end if end < len(items) else None,
-    )
-
-
-def saved_revision(repository, *, project_id, revision=None):
-    if revision is None:
-        return repository.get(project_id)
-    record = repository.record(project_id)
-    if record is None:
-        raise ValueError("项目没有保存版本")
-    result = Definitions(repository.session).revision(record.id, revision, kind="project")
-    project = repository.session.get(Project, project_id)
-    return dict(result, name=project.name)
 
 
 def search_projects(session, request):

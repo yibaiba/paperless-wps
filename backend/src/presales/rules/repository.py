@@ -1,16 +1,13 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from presales.application.errors import RuleConflict
 from presales.storage import ProductRecord, now
 
 from .definition import source_ids, target_ids, with_defaults
 from .models import AccessoryRule, RuleRevision
 from .schemas import RuleInput, RuleUpdate
 from .selector import SourceResolver
-
-
-class RuleConflict(Exception):
-    pass
 
 
 def product_label(product: ProductRecord) -> dict:

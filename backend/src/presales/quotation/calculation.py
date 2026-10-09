@@ -51,7 +51,7 @@ def unit_price(device, selection):
     if any(selection[k] != device[k] for k in identity_fields):
         return None, "型号或资料来源已更换，原报价单价已过期，请重新采用价格"
     if selection["mode"] == "version":
-        from presales.catalog_updates.hashing import configuration_hash
+        from presales.pricing.hashing import configuration_hash
 
         if (
             configuration_hash(device.get("variant_snapshot") or {})

@@ -1,4 +1,4 @@
-from presales.lists.receipts import once
+from presales.application.idempotency import once
 
 from ..catalog.service import CatalogService
 from ..common import Entities

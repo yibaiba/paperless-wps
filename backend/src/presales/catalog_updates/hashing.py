@@ -1,18 +1,3 @@
-from presales.rules.calculation import digest
+from presales.pricing.hashing import configuration_hash
 
-
-def configuration_hash(variant):
-    return digest(
-        {
-            key: variant.get(key, [] if key != "product_id" else "")
-            for key in (
-                "product_id",
-                "attributes",
-                "series",
-                "functions",
-                "interfaces",
-                "systems",
-                "included_items",
-            )
-        }
-    )
+__all__ = ["configuration_hash"]

@@ -40,8 +40,7 @@ class ProjectConfigurations:
         from ..reference_cases.service import validate_reference
 
         validate_reference(self.session, data.reference_case)
-        from presales.catalog_updates.impacts import apply_review_checks
-
+        from ..catalog.impacts import apply_review_checks
         from .services.issue_actions import with_issue_actions
 
         partition = (

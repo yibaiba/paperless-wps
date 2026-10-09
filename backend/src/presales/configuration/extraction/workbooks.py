@@ -6,7 +6,7 @@ from openpyxl.utils.cell import get_column_letter
 from openpyxl.worksheet.cell_range import CellRange
 from sqlalchemy import select
 
-from presales.lists.receipts import once
+from presales.application.idempotency import once
 from presales.quotation.importing import workbook_cells
 from presales.rules.calculation import digest
 from presales.rules.repository import RuleConflict

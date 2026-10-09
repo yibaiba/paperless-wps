@@ -45,7 +45,7 @@ def edit_check(previous, operations, *, repository):
     payload = data.model_dump(mode="json")
     if payload.get("quotation") is not None:
         payload = adopt_prices(payload)
-    from presales.catalog_updates.project_prices import validate_references
+    from .price_adoption import validate_references
 
     validate_references(repository.session, payload)
     supply, supply_checks = supply_projection(payload)

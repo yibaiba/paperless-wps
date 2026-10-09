@@ -1,8 +1,9 @@
 from copy import deepcopy
 from itertools import islice
 
-from presales.configuration.common import view
-from presales.lists.receipts import once
+from presales.application.idempotency import once
+from presales.application.pagination import page
+from presales.application.revisions import view
 from presales.rules.calculation import digest
 from presales.rules.repository import RuleConflict
 
@@ -134,16 +135,12 @@ class ProposalService:
             matches = [
                 p for p in self.entities.list("list_proposal") if p["draft_id"] == request.draft_id
             ]
-            from presales.lists.queries import page
-
             return page([proposal_summary(p) for p in matches], request)
         if proposal["draft_id"] != request.draft_id:
             raise ValueError("提案不属于此草稿")
         result = dict(
             proposal_summary(proposal), stale=proposal["draft_revision"] != record["revision"]
         )
-        from presales.lists.queries import page
-
         if request.view == "proposals":
             return dict(result, **page([option_summary(o) for o in proposal["options"]], request))
         option = next((o for o in proposal["options"] if o["id"] == request.option_id), None)

@@ -76,7 +76,7 @@ def apply_operation(data, *, operation, repository):
 
         return apply_proposal(data, operation, repository=repository)
     if action == "price_versions_adopt":
-        from presales.catalog_updates.project_prices import adopt_versions
+        from .price_adoption import adopt_versions
 
         return adopt_versions(repository.session, data, operation)
     if action == "system_setup":
@@ -230,7 +230,7 @@ def quote_edit(data, operation):
             **operation.value.model_dump(mode="json", exclude_unset=True),
         }
         if data.get("quotation") is None and not merged.get("price_adoption_date"):
-            from presales.catalog_updates.prices import beijing_today
+            from presales.pricing.prices import beijing_today
 
             merged["price_adoption_date"] = str(beijing_today())
         data["quotation"] = Quotation.model_validate(merged).model_dump(mode="json")

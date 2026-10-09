@@ -1,7 +1,7 @@
 from copy import deepcopy
 
-from presales.catalog_updates.hashing import configuration_hash
-from presales.catalog_updates.prices import Prices
+from presales.pricing.hashing import configuration_hash
+from presales.pricing.prices import Prices
 from presales.quotation.calculation import with_quotation
 from presales.rules.repository import RuleConflict
 

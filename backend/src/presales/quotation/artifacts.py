@@ -2,10 +2,9 @@ from hashlib import sha256
 from pathlib import Path
 from uuid import NAMESPACE_URL, UUID, uuid5
 
-from presales.configuration.common import Entities, view
-from presales.configuration.models import Entity
-from presales.lists.queries import saved_revision
-from presales.lists.receipts import once
+from presales.application.idempotency import once
+from presales.application.models import Entity
+from presales.application.revisions import Entities, view
 
 from .calculation import with_quotation
 from .template import TEMPLATE_SHA256
@@ -44,8 +43,9 @@ class FileArtifacts:
 
 
 class ListExports:
-    def __init__(self, session, *, repository, renderer, files, web_origin):
+    def __init__(self, session, *, repository, revision_reader, renderer, files, web_origin):
         self.session, self.repository = session, repository
+        self.revision_reader = revision_reader
         self.renderer, self.files = renderer, files
         self.web_origin = web_origin.rstrip("/")
         self.pending_files = []
@@ -75,9 +75,7 @@ class ListExports:
 
     def _export(self, request):
         saved = with_quotation(
-            saved_revision(
-                self.repository, project_id=request.project_id, revision=request.revision
-            )
+            self.revision_reader(request.project_id, request.revision)
         )
         kinds = ("configuration", "quotation") if request.output == "both" else (request.output,)
         if "quotation" in kinds and saved["configuration"].get("quotation") is None:

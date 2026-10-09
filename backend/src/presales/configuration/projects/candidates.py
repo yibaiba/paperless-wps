@@ -101,7 +101,7 @@ def candidate_results(data, *, session, search=None, catalog=None, decisions=Non
             )
     for item in checked:
         variant = item["variant"]
-        from presales.catalog_updates.impacts import pending_reviews
+        from ..catalog.impacts import pending_reviews
 
         reviews = pending_reviews(variant, knowledge, uses=[requirement])
         if reviews and item["status"] == "pass":

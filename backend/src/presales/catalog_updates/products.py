@@ -3,8 +3,8 @@ from uuid import NAMESPACE_URL, uuid5
 from presales.configuration.catalog.schemas import LinkInput, ProductInput, VariantInput
 from presales.configuration.catalog.service import CatalogService
 from presales.configuration.common import Entities
-from presales.configuration.knowledge.routes import save as save_knowledge
 from presales.configuration.knowledge.schemas import KnowledgeInput
+from presales.configuration.knowledge.service import save_knowledge
 from presales.configuration.models import SourceLink
 
 from .impacts import affected

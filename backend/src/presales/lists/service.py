@@ -81,8 +81,8 @@ class ListService:
 
             return ProposalService(self).read(request, record)
         if request.view == "price_updates":
-            from presales.catalog_updates.prices import beijing_today
-            from presales.catalog_updates.project_prices import preview_prices
+            from presales.configuration.projects.services.price_adoption import preview_prices
+            from presales.pricing.prices import beijing_today
 
             data = record["configuration"]
             day = (

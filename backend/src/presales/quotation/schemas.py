@@ -4,7 +4,7 @@ from typing import Literal
 
 from pydantic import Field, model_validator
 
-from presales.configuration.common import Input, Text
+from presales.application.contracts import Input, Text
 
 TEMPLATE_ID = "meeting-system-v1"
 TAX_TERMS = (
